@@ -20,6 +20,29 @@ class BranchViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['company']
     search_fields = ['name', 'code', 'email']
+    
+    # API Endpoint مخصص - مثال
+    @action(detail=True, methods=['get'])
+    def statistics(self, request, pk=None):
+        """إحصائيات الفرع"""
+        branch = self.get_object()
+        # يمكن إضافة منطق إحصائيات هنا
+        data = {
+            'branch_id': branch.id,
+            'branch_name': branch.name,
+            'students_count': 0,  # يمكن ربطها بالنموذج الفعلي
+            'courses_count': 0,
+            'total_payments': 0
+        }
+        return Response(data)
+    
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """قائمة الفروع النشطة"""
+        # يمكن إضافة فلترة للفروع النشطة فقط
+        branches = self.get_queryset()
+        serializer = self.get_serializer(branches, many=True)
+        return Response(serializer.data)
 
 
 class BankViewSet(viewsets.ModelViewSet):
