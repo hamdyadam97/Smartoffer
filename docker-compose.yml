@@ -55,7 +55,6 @@ services:
       context: .
       dockerfile: ./nginx/Dockerfile
     ports:
-      -بس
     volumes:
       - static_volume:/var/www/static:ro
       - media_volume:/var/www/media:ro
