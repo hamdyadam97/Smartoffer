@@ -1,10 +1,11 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
+import { useCBVAuthStore } from '../stores/cbvAuthStore';
 
 const menuItems = [
   { path: '/', label: 'الرئيسية', icon: '📊' },
   { path: '/students', label: 'الطلاب', icon: '👨‍🎓' },
   { path: '/courses', label: 'الدورات', icon: '📚' },
+  { path: '/branches', label: 'الفروع', icon: '🏢' },
   { path: '/registrations', label: 'التسجيلات', icon: '📝' },
   { path: '/payments', label: 'المدفوعات', icon: '💰' },
   { path: '/offers', label: 'عروض الأسعار', icon: '🏷️' },
@@ -14,10 +15,10 @@ const menuItems = [
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout } = useCBVAuthStore();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

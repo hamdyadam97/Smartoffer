@@ -12,19 +12,6 @@ fi
 
 echo "🚀 Starting deployment..."
 
-# Build frontend using Docker (no need to install Node on host)
-echo "📦 Building frontend..."
-if [ -d "frontend" ]; then
-    docker run --rm \
-        -v "$(pwd)/frontend:/app" \
-        -w /app \
-        node:20-alpine \
-        sh -c "npm ci && npm run build"
-    echo "✅ Frontend built successfully"
-else
-    echo "⚠️  frontend directory not found, skipping frontend build"
-fi
-
 # Stop existing containers
 echo "🐳 Stopping existing containers..."
 ${COMPOSE_CMD} down

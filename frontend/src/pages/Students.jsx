@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useStudentStore } from '../stores/studentStore';
+import { useCBVStudentStore } from '../stores/cbvStudentStore';
 import { Plus, Search, Edit2, Trash2, User, GraduationCap } from 'lucide-react';
 
 export default function Students() {
-  const { students, fetchStudents, deleteStudent, isLoading } = useStudentStore();
+  const { students, fetchStudents, deleteStudent, isLoading } = useCBVStudentStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
@@ -54,9 +54,9 @@ export default function Students() {
       };
       
       if (editingStudent) {
-        await useStudentStore.getState().updateStudent(editingStudent.id, studentData);
+        await useCBVStudentStore.getState().updateStudent(editingStudent.id, studentData);
       } else {
-        await useStudentStore.getState().createStudent(studentData);
+        await useCBVStudentStore.getState().createStudent(studentData);
       }
       setShowModal(false);
       setEditingStudent(null);
@@ -126,7 +126,7 @@ export default function Students() {
         </div>
         <button 
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center justify-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           طالب جديد
@@ -134,7 +134,7 @@ export default function Students() {
       </div>
 
       {/* Search */}
-      <div className="card">
+      <div className="bg-white p-4 rounded-lg shadow-sm border">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -142,13 +142,13 @@ export default function Students() {
             placeholder="البحث بالاسم، الجوال، أو رقم الهوية..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pr-10"
+            className="w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
 
       {/* Students Table */}
-      <div className="card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
@@ -227,121 +227,121 @@ export default function Students() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">الاسم الأول *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الأول *</label>
                   <input
                     type="text"
                     value={formData.first_name}
                     onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label">الاسم الثاني</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الثاني</label>
                   <input
                     type="text"
                     value={formData.second_name}
                     onChange={(e) => setFormData({...formData, second_name: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="label">الاسم الثالث</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الثالث</label>
                   <input
                     type="text"
                     value={formData.third_name}
                     onChange={(e) => setFormData({...formData, third_name: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="label">الاسم الرابع *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الرابع *</label>
                   <input
                     type="text"
                     value={formData.forth_name}
                     onChange={(e) => setFormData({...formData, forth_name: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">رقم الجوال</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">رقم الجوال</label>
                   <input
                     type="text"
                     value={formData.mobile}
                     onChange={(e) => setFormData({...formData, mobile: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     dir="ltr"
                   />
                 </div>
                 <div>
-                  <label className="label">البريد الإلكتروني</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     dir="ltr"
                   />
                 </div>
               </div>
               <div>
-                <label className="label">العنوان</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">رقم الهوية</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهوية</label>
                   <input
                     type="text"
                     value={formData.identity_number}
                     onChange={(e) => setFormData({...formData, identity_number: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="label">الجنسية</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الجنسية</label>
                   <input
                     type="text"
                     value={formData.nationality}
                     onChange={(e) => setFormData({...formData, nationality: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">تاريخ الميلاد</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ الميلاد</label>
                   <input
                     type="date"
                     value={formData.birth_date}
                     onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="label">المؤهل</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المؤهل</label>
                   <input
                     type="text"
                     value={formData.qualification}
                     onChange={(e) => setFormData({...formData, qualification: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="label">المستوى</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المستوى</label>
                 <select
                   value={formData.level}
                   onChange={(e) => setFormData({...formData, level: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="مبتدئ">مبتدئ</option>
                   <option value="متوسط">متوسط</option>
@@ -349,13 +349,13 @@ export default function Students() {
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary">
-                  {editingStudent ? 'حفظ التChanges' : 'إضافة'}
+                <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors">
+                  {editingStudent ? 'حفظ التغييرات' : 'إضافة'}
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)}
-                  className="flex-1 btn-secondary"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition-colors"
                 >
                   إلغاء
                 </button>

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useAuthStore } from './stores/authStore';
+import { useCBVAuthStore } from './stores/cbvAuthStore';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -10,10 +10,11 @@ import Registrations from './pages/Registrations';
 import Payments from './pages/Payments';
 import Offers from './pages/Offers';
 import Reports from './pages/Reports';
+import Branches from './pages/Branches';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, fetchUser, isLoading } = useAuthStore();
+  const { isAuthenticated, fetchUser, isLoading } = useCBVAuthStore();
 
   useEffect(() => {
     fetchUser();
@@ -54,6 +55,7 @@ function App() {
           <Route path="payments" element={<Payments />} />
           <Route path="offers" element={<Offers />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="branches" element={<Branches />} />
         </Route>
       </Routes>
     </BrowserRouter>

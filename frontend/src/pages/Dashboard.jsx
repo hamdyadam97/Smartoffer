@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { studentService } from '../services/students';
-import { courseService } from '../services/courses';
-import { paymentService, offerService } from '../services/finance';
+import { studentsApi, coursesApi, paymentsApi, offersApi } from '../services/cbvApi';
 
 const StatCard = ({ title, value, icon, color }) => (
   <div className="card flex items-center gap-4">
@@ -28,17 +26,17 @@ export default function Dashboard() {
     const fetchStats = async () => {
       try {
         const [studentsRes, coursesRes, paymentsRes, offersRes] = await Promise.all([
-          studentService.getAll(),
-          courseService.getAll(),
-          paymentService.getAll(),
-          offerService.getAll(),
+          studentsApi.getAll(),
+          coursesApi.getAll(),
+          paymentsApi.getAll(),
+          offersApi.getAll(),
         ]);
 
         setStats({
-          students: studentsRes.count || studentsRes.results?.length || 0,
-          courses: coursesRes.count || coursesRes.results?.length || 0,
-          payments: paymentsRes.count || paymentsRes.results?.length || 0,
-          offers: offersRes.count || offersRes.results?.length || 0,
+          students: studentsRes.data.count || studentsRes.data.results?.length || 0,
+          courses: coursesRes.data.count || coursesRes.data.results?.length || 0,
+          payments: paymentsRes.data.count || paymentsRes.data.results?.length || 0,
+          offers: offersRes.data.count || offersRes.data.results?.length || 0,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
@@ -96,7 +94,7 @@ export default function Dashboard() {
       <div className="mt-8">
         <h2 className="text-xl font-bold text-gray-900 mb-4">إجراءات سريعة</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <a href="/students/new" className="card hover:shadow-md transition-shadow group">
+          <a href="/students" className="card hover:shadow-md transition-shadow group">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 ➕
@@ -108,7 +106,7 @@ export default function Dashboard() {
             </div>
           </a>
 
-          <a href="/registrations/new" className="card hover:shadow-md transition-shadow group">
+          <a href="/registrations" className="card hover:shadow-md transition-shadow group">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-xl group-hover:bg-green-600 group-hover:text-white transition-colors">
                 📝
@@ -120,7 +118,7 @@ export default function Dashboard() {
             </div>
           </a>
 
-          <a href="/offers/new" className="card hover:shadow-md transition-shadow group">
+          <a href="/offers" className="card hover:shadow-md transition-shadow group">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
                 🏷️

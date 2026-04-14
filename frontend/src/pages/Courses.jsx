@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useCourseStore } from '../stores/courseStore';
+import { useCBVCourseStore } from '../stores/cbvCourseStore';
 import { Plus, Search, Edit2, Trash2, BookOpen } from 'lucide-react';
 
 export default function Courses() {
-  const { courses, masters, fetchCourses, fetchMasters, deleteCourse, isLoading } = useCourseStore();
+  const { courses, fetchCourses, deleteCourse, isLoading } = useCBVCourseStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
@@ -20,7 +20,6 @@ export default function Courses() {
 
   useEffect(() => {
     fetchCourses();
-    fetchMasters();
   }, []);
 
   const filteredCourses = courses.filter(course => 
@@ -33,25 +32,29 @@ export default function Courses() {
     e.preventDefault();
     try {
       if (editingCourse) {
-        await useCourseStore.getState().updateCourse(editingCourse.id, formData);
+        await useCBVCourseStore.getState().updateCourse(editingCourse.id, formData);
       } else {
-        await useCourseStore.getState().createCourse(formData);
+        await useCBVCourseStore.getState().createCourse(formData);
       }
       setShowModal(false);
       setEditingCourse(null);
-      setFormData({
-        master: '',
-        code: '',
-        instructor: '',
-        company_name: '',
-        max_student_count: 1,
-        target_level: 'الكل',
-        start_date: '',
-        end_date: ''
-      });
+      resetForm();
     } catch (error) {
       console.error('Error saving course:', error);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      master: '',
+      code: '',
+      instructor: '',
+      company_name: '',
+      max_student_count: 1,
+      target_level: 'الكل',
+      start_date: '',
+      end_date: ''
+    });
   };
 
   const handleEdit = (course) => {
@@ -92,7 +95,7 @@ export default function Courses() {
         </div>
         <button 
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center justify-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus className="w-4 h-4" />
           إضافة دورة
@@ -100,7 +103,7 @@ export default function Courses() {
       </div>
 
       {/* Search */}
-      <div className="card">
+      <div className="bg-white p-4 rounded-lg shadow-sm border">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -108,13 +111,13 @@ export default function Courses() {
             placeholder="البحث في الدورات..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pr-10"
+            className="w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
 
       {/* Courses Table */}
-      <div className="card overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto" />
@@ -186,55 +189,51 @@ export default function Courses() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="label">التخصص</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">التخصص</label>
                 <select
                   value={formData.master}
                   onChange={(e) => setFormData({...formData, master: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">اختر التخصص</option>
-                  {masters.map((master) => (
-                    <option key={master.id} value={master.id}>
-                      {master.code} - {master.name}
-                    </option>
-                  ))}
+                  {/* TODO: Add masters list */}
                 </select>
               </div>
               <div>
-                <label className="label">الكود</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الكود</label>
                 <input
                   type="number"
                   value={formData.code}
                   onChange={(e) => setFormData({...formData, code: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="label">المحاضر</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المحاضر</label>
                 <input
                   type="text"
                   value={formData.instructor}
                   onChange={(e) => setFormData({...formData, instructor: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="label">الشركة</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الشركة</label>
                 <input
                   type="text"
                   value={formData.company_name}
                   onChange={(e) => setFormData({...formData, company_name: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="label">المستوى المستهدف</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">المستوى المستهدف</label>
                 <select
                   value={formData.target_level}
                   onChange={(e) => setFormData({...formData, target_level: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="مبتدئ">مبتدئ</option>
                   <option value="متوسط">متوسط</option>
@@ -243,43 +242,43 @@ export default function Courses() {
                 </select>
               </div>
               <div>
-                <label className="label">الحد الأقصى للطلاب</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى للطلاب</label>
                 <input
                   type="number"
                   value={formData.max_student_count}
                   onChange={(e) => setFormData({...formData, max_student_count: e.target.value})}
-                  className="input"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   min="1"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">تاريخ البداية</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ البداية</label>
                   <input
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="label">تاريخ النهاية</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ النهاية</label>
                   <input
                     type="date"
                     value={formData.end_date}
                     onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                    className="input"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary">
-                  {editingCourse ? 'حفظ التChanges' : 'إضافة'}
+                <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors">
+                  {editingCourse ? 'حفظ التغييرات' : 'إضافة'}
                 </button>
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)}
-                  className="flex-1 btn-secondary"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition-colors"
                 >
                   إلغاء
                 </button>
