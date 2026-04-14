@@ -56,7 +56,7 @@ services:
       dockerfile: ./nginx/Dockerfile
     ports:
       - "8080:80"
-      - "443:443"
+      - "8443:443"
     volumes:
       - static_volume:/var/www/static:ro
       - media_volume:/var/www/media:ro
