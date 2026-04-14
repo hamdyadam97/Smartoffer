@@ -22,7 +22,7 @@ services:
 
   backend:
     build: .
-    command: gunicorn smartoffer_django.wsgi:application --bind 0.0.0.0:8080 --workers 4 --timeout 120
+    command: gunicorn smartoffer_django.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
