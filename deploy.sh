@@ -1,34 +1,59 @@
 #!/bin/bash
 
-# Deploy script for VPS
-
+# Deploy script for Hostinger VPS
 set -e
+
+# Detect docker compose command
+if command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+else
+    COMPOSE_CMD="docker compose"
+fi
 
 echo "🚀 Starting deployment..."
 
-# Pull latest code
-echo "📥 Pulling latest code..."
-git pull origin main
+# Build frontend using Docker (no need to install Node on host)
+echo "📦 Building frontend..."
+if [ -d "frontend" ]; then
+    docker run --rm \
+        -v "$(pwd)/frontend:/app" \
+        -w /app \
+        node:20-alpine \
+        sh -c "npm ci && npm run build"
+    echo "✅ Frontend built successfully"
+else
+    echo "⚠️  frontend directory not found, skipping frontend build"
+fi
+
+# Stop existing containers
+echo "🐳 Stopping existing containers..."
+${COMPOSE_CMD} down
 
 # Build and start containers
 echo "🐳 Building and starting containers..."
-docker-compose down
-docker-compose pull
-docker-compose up -d --build
+${COMPOSE_CMD} up -d --build
 
 # Run migrations
 echo "🔄 Running migrations..."
-docker-compose exec -T backend python manage.py migrate --noinput
+${COMPOSE_CMD} exec -T backend python manage.py migrate --noinput
 
 # Collect static files
 echo "📁 Collecting static files..."
-docker-compose exec -T backend python manage.py collectstatic --noinput
+${COMPOSE_CMD} exec -T backend python manage.py collectstatic --noinput
 
-# Clean up
-echo "🧹 Cleaning up..."
+# Clean up old Docker images
+echo "🧹 Cleaning up old Docker images..."
 docker system prune -f
 
+# Get server IP for display
+SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "your-server-ip")
+
+echo ""
 echo "✅ Deployment completed successfully!"
 echo ""
-echo "📊 Check status: docker-compose ps"
-echo "📝 View logs: docker-compose logs -f"
+echo "📊 Check status: ${COMPOSE_CMD} ps"
+echo "📝 View backend logs: ${COMPOSE_CMD} logs -f backend"
+echo "📝 View nginx logs: ${COMPOSE_CMD} logs -f nginx"
+echo ""
+echo "🌐 Your app should be accessible at:"
+echo "   http://${SERVER_IP}"

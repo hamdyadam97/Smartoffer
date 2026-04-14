@@ -1,20 +1,14 @@
-from rest_framework import viewsets, filters, status, permissions
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from rest_framework import status, permissions
 from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 
-from .models import Team, Person, BranchAccess, Role, EmployeeRole, EmployeePerformance
-from .serializers import (
-    TeamSerializer, PersonSerializer, PersonCreateSerializer,
-    BranchAccessSerializer, CustomTokenObtainPairSerializer,
-    RoleSerializer, EmployeeRoleSerializer, EmployeePerformanceSerializer
-)
+from .models import Person
+from .serializers import CustomTokenObtainPairSerializer, PersonSerializer
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -68,65 +62,3 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({'detail': 'تم إعادة تعيين كلمة المرور بنجاح'}, status=status.HTTP_200_OK)
-
-
-class TeamViewSet(viewsets.ModelViewSet):
-    queryset = Team.objects.all()
-    serializer_class = TeamSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['name', 'code']
-
-
-class RoleViewSet(viewsets.ModelViewSet):
-    queryset = Role.objects.all()
-    serializer_class = RoleSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['name']
-
-
-class EmployeeRoleViewSet(viewsets.ModelViewSet):
-    queryset = EmployeeRole.objects.all()
-    serializer_class = EmployeeRoleSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['person', 'role', 'branch']
-
-
-class EmployeePerformanceViewSet(viewsets.ModelViewSet):
-    queryset = EmployeePerformance.objects.all()
-    serializer_class = EmployeePerformanceSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['person', 'branch', 'period_month', 'period_year']
-
-
-class PersonViewSet(viewsets.ModelViewSet):
-    queryset = Person.objects.all()
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ['email', 'first_name', 'forth_name', 'mobile']
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return PersonCreateSerializer
-        return PersonSerializer
-    
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def me(self, request):
-        """Get current user info"""
-        serializer = PersonSerializer(request.user)
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def by_branch(self, request):
-        """Get persons by branch"""
-        branch_id = request.query_params.get('branch_id')
-        if branch_id:
-            persons = Person.objects.filter(branch_id=branch_id)
-            serializer = PersonSerializer(persons, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class BranchAccessViewSet(viewsets.ModelViewSet):
-    queryset = BranchAccess.objects.all()
-    serializer_class = BranchAccessSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['person', 'branch']

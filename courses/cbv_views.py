@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
 from .models import Master, Course
-from .serializers import MasterSerializer, CourseSerializer
+from .serializers import MasterSerializer, MasterSimpleSerializer, CourseSerializer, CourseSimpleSerializer
 
 
 # ============================================================
@@ -40,7 +40,7 @@ class MasterListCreateAPIView(APIView):
         if category:
             queryset = queryset.filter(master_category_id=category)
         
-        serializer = MasterSerializer(queryset, many=True)
+        serializer = MasterSimpleSerializer(queryset, many=True)
         return Response({
             'count': queryset.count(),
             'results': serializer.data
@@ -145,7 +145,7 @@ class CourseListCreateAPIView(APIView):
         if start_after:
             queryset = queryset.filter(start_date__gte=start_after)
         
-        serializer = CourseSerializer(queryset, many=True)
+        serializer = CourseSimpleSerializer(queryset, many=True)
         return Response({
             'count': queryset.count(),
             'results': serializer.data
@@ -252,3 +252,48 @@ class CourseStatisticsAPIView(APIView):
             'fill_percentage': round((total_students / course.max_student_count) * 100, 2) if course.max_student_count > 0 else 0
         }
         return Response(data)
+
+
+class MasterByBranchAPIView(APIView):
+    """
+    GET /api/masters/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            masters = Master.objects.filter(branch_id=branch_id)
+            serializer = MasterSerializer(masters, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CourseByMasterAPIView(APIView):
+    """
+    GET /api/courses/by-master/?master_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        master_id = request.query_params.get('master_id')
+        if master_id:
+            courses = Course.objects.filter(master_id=master_id)
+            serializer = CourseSerializer(courses, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'master_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CourseByBranchAPIView(APIView):
+    """
+    GET /api/courses/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            courses = Course.objects.filter(master__branch_id=branch_id)
+            serializer = CourseSerializer(courses, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)

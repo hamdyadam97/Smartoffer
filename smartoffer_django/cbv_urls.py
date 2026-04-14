@@ -15,7 +15,7 @@ from core.cbv_views import (
 # Accounts CBV
 from accounts.cbv_views import (
     LoginAPIView, LogoutAPIView,
-    PersonListCreateAPIView, PersonDetailAPIView, CurrentUserAPIView,
+    PersonListCreateAPIView, PersonDetailAPIView, CurrentUserAPIView, PersonByBranchAPIView,
     TeamListCreateAPIView, TeamDetailAPIView,
     RoleListCreateAPIView, RoleDetailAPIView,
     EmployeeRoleListCreateAPIView, EmployeeRoleDetailAPIView,
@@ -27,20 +27,23 @@ from accounts.cbv_views import (
 from students.cbv_views import (
     ContactListCreateAPIView, ContactDetailAPIView,
     StudentListCreateAPIView, StudentDetailAPIView,
-    StudentCoursesAPIView
+    StudentCoursesAPIView, StudentByMobileAPIView, StudentByIdentityAPIView
 )
 
 # Courses CBV
 from courses.cbv_views import (
-    MasterListCreateAPIView, MasterDetailAPIView, MasterCoursesAPIView,
+    MasterListCreateAPIView, MasterDetailAPIView, MasterCoursesAPIView, MasterByBranchAPIView,
     CourseListCreateAPIView, CourseDetailAPIView,
-    CourseStudentsAPIView, CourseStatisticsAPIView
+    CourseStudentsAPIView, CourseStatisticsAPIView,
+    CourseByMasterAPIView, CourseByBranchAPIView
 )
 
 # Registrations CBV
 from registrations.cbv_views import (
     AccountListCreateAPIView, AccountDetailAPIView,
     AccountPaymentsAPIView, AccountSummaryAPIView,
+    AccountByCourseAPIView, AccountByMasterAPIView, AccountByBranchAPIView,
+    AccountByStudentAPIView, AccountByMobileAPIView,
     AttachTypeListCreateAPIView,
     AttachListCreateAPIView, AttachDetailAPIView,
     AccountAttachListCreateAPIView,
@@ -51,12 +54,14 @@ from registrations.cbv_views import (
 # Finance CBV
 from finance.cbv_views import (
     PaymentListCreateAPIView, PaymentDetailAPIView, PaymentStatisticsAPIView,
+    PaymentByAccountAPIView, PaymentByBranchAPIView,
     PaymentOutListCreateAPIView,
     DepositListCreateAPIView, DepositDetailAPIView,
     WithdrawListCreateAPIView,
     BillBuyTypeListCreateAPIView,
     BillBuyListCreateAPIView, BillBuyDetailAPIView,
     OfferListCreateAPIView, OfferDetailAPIView, OfferConvertAPIView,
+    OfferByBranchAPIView, OfferByMasterAPIView, OfferByMobileAPIView,
     CallListCreateAPIView, CallDetailAPIView
 )
 
@@ -72,6 +77,7 @@ urlpatterns = [
     # ============================================================
     path('persons/', PersonListCreateAPIView.as_view(), name='cbv-person-list'),
     path('persons/me/', CurrentUserAPIView.as_view(), name='cbv-person-me'),
+    path('persons/by-branch/', PersonByBranchAPIView.as_view(), name='cbv-person-by-branch'),
     path('persons/<int:pk>/', PersonDetailAPIView.as_view(), name='cbv-person-detail'),
     
     path('teams/', TeamListCreateAPIView.as_view(), name='cbv-team-list'),
@@ -113,6 +119,8 @@ urlpatterns = [
     path('contacts/<int:pk>/', ContactDetailAPIView.as_view(), name='cbv-contact-detail'),
     
     path('students/', StudentListCreateAPIView.as_view(), name='cbv-student-list'),
+    path('students/by-mobile/', StudentByMobileAPIView.as_view(), name='cbv-student-by-mobile'),
+    path('students/by-identity/', StudentByIdentityAPIView.as_view(), name='cbv-student-by-identity'),
     path('students/<int:pk>/', StudentDetailAPIView.as_view(), name='cbv-student-detail'),
     path('students/<int:pk>/courses/', StudentCoursesAPIView.as_view(), name='cbv-student-courses'),
     
@@ -120,10 +128,13 @@ urlpatterns = [
     # Courses
     # ============================================================
     path('masters/', MasterListCreateAPIView.as_view(), name='cbv-master-list'),
+    path('masters/by-branch/', MasterByBranchAPIView.as_view(), name='cbv-master-by-branch'),
     path('masters/<int:pk>/', MasterDetailAPIView.as_view(), name='cbv-master-detail'),
     path('masters/<int:pk>/courses/', MasterCoursesAPIView.as_view(), name='cbv-master-courses'),
     
     path('courses/', CourseListCreateAPIView.as_view(), name='cbv-course-list'),
+    path('courses/by-master/', CourseByMasterAPIView.as_view(), name='cbv-course-by-master'),
+    path('courses/by-branch/', CourseByBranchAPIView.as_view(), name='cbv-course-by-branch'),
     path('courses/<int:pk>/', CourseDetailAPIView.as_view(), name='cbv-course-detail'),
     path('courses/<int:pk>/students/', CourseStudentsAPIView.as_view(), name='cbv-course-students'),
     path('courses/<int:pk>/statistics/', CourseStatisticsAPIView.as_view(), name='cbv-course-statistics'),
@@ -133,6 +144,11 @@ urlpatterns = [
     # ============================================================
     path('accounts/', AccountListCreateAPIView.as_view(), name='cbv-account-list'),
     path('accounts/summary/', AccountSummaryAPIView.as_view(), name='cbv-account-summary'),
+    path('accounts/by-course/', AccountByCourseAPIView.as_view(), name='cbv-account-by-course'),
+    path('accounts/by-master/', AccountByMasterAPIView.as_view(), name='cbv-account-by-master'),
+    path('accounts/by-branch/', AccountByBranchAPIView.as_view(), name='cbv-account-by-branch'),
+    path('accounts/by-student/', AccountByStudentAPIView.as_view(), name='cbv-account-by-student'),
+    path('accounts/by-mobile/', AccountByMobileAPIView.as_view(), name='cbv-account-by-mobile'),
     path('accounts/<int:pk>/', AccountDetailAPIView.as_view(), name='cbv-account-detail'),
     path('accounts/<int:pk>/payments/', AccountPaymentsAPIView.as_view(), name='cbv-account-payments'),
     
@@ -152,6 +168,8 @@ urlpatterns = [
     # ============================================================
     path('payments/', PaymentListCreateAPIView.as_view(), name='cbv-payment-list'),
     path('payments/statistics/', PaymentStatisticsAPIView.as_view(), name='cbv-payment-statistics'),
+    path('payments/by-account/', PaymentByAccountAPIView.as_view(), name='cbv-payment-by-account'),
+    path('payments/by-branch/', PaymentByBranchAPIView.as_view(), name='cbv-payment-by-branch'),
     path('payments/<int:pk>/', PaymentDetailAPIView.as_view(), name='cbv-payment-detail'),
     
     path('payment-outs/', PaymentOutListCreateAPIView.as_view(), name='cbv-payment-out-list'),
@@ -166,6 +184,9 @@ urlpatterns = [
     path('bill-buys/<int:pk>/', BillBuyDetailAPIView.as_view(), name='cbv-bill-buy-detail'),
     
     path('offers/', OfferListCreateAPIView.as_view(), name='cbv-offer-list'),
+    path('offers/by-branch/', OfferByBranchAPIView.as_view(), name='cbv-offer-by-branch'),
+    path('offers/by-master/', OfferByMasterAPIView.as_view(), name='cbv-offer-by-master'),
+    path('offers/by-mobile/', OfferByMobileAPIView.as_view(), name='cbv-offer-by-mobile'),
     path('offers/<int:pk>/', OfferDetailAPIView.as_view(), name='cbv-offer-detail'),
     path('offers/<int:pk>/convert/', OfferConvertAPIView.as_view(), name='cbv-offer-convert'),
     

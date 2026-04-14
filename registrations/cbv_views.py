@@ -167,6 +167,81 @@ class AccountSummaryAPIView(APIView):
         })
 
 
+class AccountByCourseAPIView(APIView):
+    """
+    GET /api/accounts/by-course/?course_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        course_id = request.query_params.get('course_id')
+        if course_id:
+            accounts = Account.objects.filter(course_id=course_id)
+            serializer = AccountSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'course_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountByMasterAPIView(APIView):
+    """
+    GET /api/accounts/by-master/?master_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        master_id = request.query_params.get('master_id')
+        if master_id:
+            accounts = Account.objects.filter(course__master_id=master_id)
+            serializer = AccountSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'master_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountByBranchAPIView(APIView):
+    """
+    GET /api/accounts/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            accounts = Account.objects.filter(course__master__branch_id=branch_id)
+            serializer = AccountSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountByStudentAPIView(APIView):
+    """
+    GET /api/accounts/by-student/?student_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        student_id = request.query_params.get('student_id')
+        if student_id:
+            accounts = Account.objects.filter(student_id=student_id)
+            serializer = AccountSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'student_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AccountByMobileAPIView(APIView):
+    """
+    GET /api/accounts/by-mobile/?mobile=<value>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        mobile = request.query_params.get('mobile')
+        if mobile:
+            accounts = Account.objects.filter(student__contact__mobile__icontains=mobile)
+            serializer = AccountSerializer(accounts, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'mobile is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ============================================================
 # Attach Views
 # ============================================================

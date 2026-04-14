@@ -105,6 +105,36 @@ class PaymentStatisticsAPIView(APIView):
         })
 
 
+class PaymentByAccountAPIView(APIView):
+    """
+    GET /api/payments/by-account/?account_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        account_id = request.query_params.get('account_id')
+        if account_id:
+            payments = Payment.objects.filter(account_id=account_id)
+            serializer = PaymentSerializer(payments, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'account_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentByBranchAPIView(APIView):
+    """
+    GET /api/payments/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            payments = Payment.objects.filter(account__course__master__branch_id=branch_id)
+            serializer = PaymentSerializer(payments, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ============================================================
 # PaymentOut (Expenses) Views
 # ============================================================
@@ -357,6 +387,51 @@ class OfferConvertAPIView(APIView):
         offer.registered = True
         offer.save()
         return Response({'detail': 'تم تحويل العرض إلى تسجيل'})
+
+
+class OfferByBranchAPIView(APIView):
+    """
+    GET /api/offers/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            offers = Offer.objects.filter(master__branch_id=branch_id)
+            serializer = OfferSerializer(offers, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OfferByMasterAPIView(APIView):
+    """
+    GET /api/offers/by-master/?master_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        master_id = request.query_params.get('master_id')
+        if master_id:
+            offers = Offer.objects.filter(master_id=master_id)
+            serializer = OfferSerializer(offers, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'master_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OfferByMobileAPIView(APIView):
+    """
+    GET /api/offers/by-mobile/?mobile=<value>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        mobile = request.query_params.get('mobile')
+        if mobile:
+            offers = Offer.objects.filter(customer_mobile__icontains=mobile)
+            serializer = OfferSerializer(offers, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'mobile is required'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ============================================================

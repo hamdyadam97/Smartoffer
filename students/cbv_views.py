@@ -200,3 +200,33 @@ class StudentCoursesAPIView(APIView):
             })
         
         return Response(courses_data)
+
+
+class StudentByMobileAPIView(APIView):
+    """
+    GET /api/students/by-mobile/?mobile=<value>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        mobile = request.query_params.get('mobile')
+        if mobile:
+            students = Student.objects.filter(contact__mobile__icontains=mobile)
+            serializer = StudentSerializer(students, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'mobile is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StudentByIdentityAPIView(APIView):
+    """
+    GET /api/students/by-identity/?identity=<value>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        identity = request.query_params.get('identity')
+        if identity:
+            students = Student.objects.filter(contact__identity_number__icontains=identity)
+            serializer = StudentSerializer(students, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'identity is required'}, status=status.HTTP_400_BAD_REQUEST)

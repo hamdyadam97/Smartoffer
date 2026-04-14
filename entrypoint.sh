@@ -1,10 +1,22 @@
 #!/bin/sh
 
-# Wait for database
-while ! nc -z db 5432; do
-  echo "Waiting for database..."
-  sleep 1
-done
+set -e
+
+# Wait for database using Python (no external nc needed)
+echo "Waiting for database..."
+python -c "
+import socket
+import time
+while True:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('db', 5432))
+        s.close()
+        break
+    except socket.error:
+        time.sleep(1)
+"
+echo "Database is ready!"
 
 # Apply migrations
 echo "Applying migrations..."
@@ -15,7 +27,7 @@ echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
 # Create superuser if not exists
-echo "Creating superuser..."
+echo "Creating superuser if needed..."
 python << EOF
 import os
 import django
@@ -24,10 +36,13 @@ django.setup()
 
 from accounts.models import Person
 
-if not Person.objects.filter(email=os.getenv('ADMIN_EMAIL', 'admin@example.com')).exists():
+admin_email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
+admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+
+if not Person.objects.filter(email=admin_email).exists():
     Person.objects.create_superuser(
-        email=os.getenv('ADMIN_EMAIL', 'admin@example.com'),
-        password=os.getenv('ADMIN_PASSWORD', 'admin123'),
+        email=admin_email,
+        password=admin_password,
         first_name='Admin',
         forth_name='User'
     )
@@ -35,10 +50,6 @@ if not Person.objects.filter(email=os.getenv('ADMIN_EMAIL', 'admin@example.com')
 else:
     print('Superuser already exists')
 EOF
-
-# Start nginx
-echo "Starting nginx..."
-service nginx start
 
 # Start gunicorn
 echo "Starting gunicorn..."

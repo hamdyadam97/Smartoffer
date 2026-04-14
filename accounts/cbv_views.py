@@ -179,6 +179,21 @@ class CurrentUserAPIView(APIView):
         return Response(serializer.data)
 
 
+class PersonByBranchAPIView(APIView):
+    """
+    GET /api/persons/by-branch/?branch_id=<id>
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        branch_id = request.query_params.get('branch_id')
+        if branch_id:
+            persons = Person.objects.filter(branch_id=branch_id)
+            serializer = PersonSerializer(persons, many=True)
+            return Response(serializer.data)
+        return Response({'error': 'branch_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ============================================================
 # Team Views
 # ============================================================

@@ -1,255 +1,217 @@
-# دليل النشر - Deployment Guide
+# دليل النشر على Hostinger VPS
 
 <div dir="rtl">
 
-## الطريقة الأولى: النشر باستخدام Docker (موصى بها)
+## المتطلبات
 
-### المتطلبات
-- VPS مع Ubuntu 20.04+ أو Debian 11+
-- Docker و Docker Compose مثبتين
+- VPS من Hostinger (Ubuntu 22.04+)
 - 2GB+ RAM
 - 20GB+ مساحة تخزين
+- دومين متصل بالـ VPS (اختياري لكن مفضل)
 
-### خطوات النشر
+---
 
-#### 1. تجهيز الخادم (VPS)
+## الخطوة 1: تجهيز الخادم
+
+سجّل دخول على الـ VPS عبر SSH:
 
 ```bash
-# تسجيل الدخول للخادم
 ssh root@your-server-ip
+```
 
-# تشغيل سكريبت الإعداد
-wget https://raw.githubusercontent.com/yourusername/smartoffer/main/setup-vps.sh
+ثم نفّذ سكريبت الإعداد:
+
+```bash
+wget https://raw.githubusercontent.com/YOUR_USERNAME/smartoffer/main/setup-vps.sh
 chmod +x setup-vps.sh
 ./setup-vps.sh
 ```
 
-أو يدوياً:
+> **ملاحظة:** بعد تشغيل السكريبت، سجل خروج وعد دخول مرة ثانية حتى يتم تطبيق صلاحيات Docker.
+
+---
+
+## الخطوة 2: نسخ المشروع
 
 ```bash
-# تحديث النظام
-apt update && apt upgrade -y
-
-# تثبيت Docker
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker $USER
-
-# تثبيت Docker Compose
-curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-```
-
-#### 2. نسخ المشروع
-
-```bash
-mkdir -p /opt/smartoffer
 cd /opt/smartoffer
-git clone https://github.com/yourusername/smartoffer.git .
+git clone https://github.com/YOUR_USERNAME/smartoffer.git .
 ```
 
-#### 3. إعداد ملف البيئة
+---
+
+## الخطوة 3: إعداد ملف البيئة (.env)
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-عدل المتغيرات التالية:
+عدّل المتغيرات التالية:
+
 ```env
-SECRET_KEY=your-secure-secret-key-here
+# مفتاح سري قوي (يمكنك توليده من: https://djecrety.ir/)
+SECRET_KEY=your-very-secure-secret-key-here
+
+# الوضع الإنتاجي
 DEBUG=False
-ALLOWED_HOSTS=your-domain.com,www.your-domain.com
+
+# الدومين أو IP الخاص بالسيرفر
+ALLOWED_HOSTS=your-domain.com,www.your-domain.com,123.456.789.012
 CSRF_TRUSTED_ORIGINS=https://your-domain.com
 
-# Database
+# كلمة سر قاعدة البيانات
 DB_PASSWORD=your-secure-db-password
 
-# Admin User
+# بيانات حساب الأدمن
 ADMIN_EMAIL=admin@your-domain.com
 ADMIN_PASSWORD=your-secure-admin-password
 
-# Email (اختياري)
+# CORS (للـ Frontend)
+CORS_ALLOW_ALL_ORIGINS=False
+CORS_ALLOWED_ORIGINS=https://your-domain.com,https://www.your-domain.com
+
+# إعدادات البريد (اختياري)
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=noreply@your-domain.com
 ```
 
-#### 4. تشغيل المشروع
+---
+
+## الخطوة 4: النشر
+
+بعد إعداد ملف `.env`، شغّل سكريبت النشر:
 
 ```bash
-docker-compose up -d
+./deploy.sh
 ```
 
-#### 5. إنشاء مستخدم Admin
+هذا السكريبت سوف:
+1. يبني الـ Frontend تلقائياً باستخدام Docker (بدون تثبيت Node.js على الخادم)
+2. يبني ويشغّل جميع الـ Containers
+3. ينفّذ الـ Migrations
+4. يجمع ملفات الـ Static
+5. ينظّف الصور القديمة
+
+---
+
+## الخطوة 5: إعداد SSL (HTTPS) 🔒
+
+### الطريقة الأولى: باستخدام Certbot + Docker
 
 ```bash
-docker-compose exec backend python manage.py createsuperuser
-```
-
-#### 6. إعداد SSL (HTTPS) باستخدام Let's Encrypt
-
-```bash
-# تثبيت Certbot
 docker run -it --rm \
   -v /opt/smartoffer/certbot/conf:/etc/letsencrypt \
   -v /opt/smartoffer/certbot/www:/var/www/certbot \
   -p 80:80 \
   certbot/certbot certonly --standalone -d your-domain.com -d www.your-domain.com
-
-# تحديث nginx.conf لاستخدام SSL
 ```
 
-### إدارة المشروع
+بعد الحصول على الشهادة، عدّل `nginx.conf` وشغّل `./deploy.sh` مرة ثانية.
+
+### الطريقة الثانية: باستخدام Certbot على النظام
 
 ```bash
-# عرض حالة الخدمات
-docker-compose ps
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d your-domain.com -d www.your-domain.com
+```
 
-# مشاهدة السجلات
+---
+
+## إدارة المشروع
+
+### عرض حالة الخدمات
+```bash
+cd /opt/smartoffer
+docker-compose ps
+```
+
+### مشاهدة السجلات
+```bash
+# سجلات الـ Backend
 docker-compose logs -f backend
+
+# سجلات nginx
 docker-compose logs -f nginx
 
-# إعادة تشغيل الخدمات
+# سجلات قاعدة البيانات
+docker-compose logs -f db
+```
+
+### إعادة تشغيل الخدمات
+```bash
 docker-compose restart
-
-# تحديث المشروع
-docker-compose pull
-docker-compose up -d
-
-# نسخ احتياطي للقاعدة
-./backup.sh
 ```
 
----
-
-## الطريقة الثانية: النشر التلقائي عبر GitHub Actions
-
-### 1. إعداد Secrets في GitHub
-
-اذهب إلى Settings → Secrets and variables → Actions
-
-أضف الـ Secrets التالية:
-
-| Secret | الوصف |
-|--------|-------|
-| `DOCKER_USERNAME` | اسم المستخدم في Docker Hub |
-| `DOCKER_PASSWORD` | كلمة مرور Docker Hub |
-| `VPS_HOST` | عنوان IP الخاص بالخادم |
-| `VPS_USERNAME` | اسم المستخدم للـ SSH |
-| `VPS_SSH_KEY` | مفتاح SSH الخاص (كامل مع BEGIN/END) |
-
-### 2. إعداد مفتاح SSH على الخادم
-
+### تحديث المشروع
 ```bash
-# على الخادم VPS
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-
-# إنشاء مفتاح (اختياري)
-ssh-keygen -t ed25519 -C "github-actions"
-
-# عرض المفتاح العام
- cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
-
-# عرض المفتاح الخاص (انسخه كاملاً)
-cat ~/.ssh/id_ed25519
-```
-
-انسخ المفتاح الخاص كاملاً والصقه في GitHub Secret `VPS_SSH_KEY`
-
-### 3. إعداد Docker Hub
-
-- أنشئ حساب على [hub.docker.com](https://hub.docker.com)
-- أنشئ repository باسم `smartoffer`
-- احصل على Access Token من Account Settings → Security
-
-### 4. النشر التلقائي
-
-الآن كل push على branch `main` سيقوم تلقائياً بـ:
-1. بناء Docker image
-2. رفعه على Docker Hub
-3. نشره على VPS
-
----
-
-## الطريقة الثالثة: النشر اليدوي
-
-```bash
-# على VPS
 cd /opt/smartoffer
-
-# سحب آخر تحديث
 git pull origin main
+./deploy.sh
+```
 
-# بناء Docker image محلياً
-docker build -t smartoffer:latest .
+### الدخول إلى Django Shell
+```bash
+docker-compose exec backend python manage.py shell
+```
 
-# تشغيل
-docker-compose down
-docker-compose up -d
+### إنشاء Superuser يدوياً
+```bash
+docker-compose exec backend python manage.py createsuperuser
+```
+
+### نسخ احتياطي للقاعدة
+```bash
+./backup.sh
 ```
 
 ---
 
 ## استكشاف الأخطاء
 
-### مشكلة: لا يمكن الاتصال بالقاعدة
+### مشكلة: الصفحة البيضاء أو 404
 
 ```bash
-# التحقق من حالة قاعدة البيانات
-docker-compose ps db
-docker-compose logs db
+# تأكد من بناء الـ Frontend
+./deploy.sh
 
-# إعادة تشغيل القاعدة
-docker-compose restart db
-```
-
-### مشكلة: الصفحات لا تعمل (404)
-
-```bash
-# التحقق من nginx
+# تأكد من سجلات nginx
 docker-compose logs nginx
+```
 
-# إعادة بناء static files
+### مشكلة: لا يمكن الاتصال بالـ API
+
+```bash
+# تأكد من حالة الـ Backend
+docker-compose ps backend
+docker-compose logs backend
+```
+
+### مشكلة: خطأ في Migrations
+
+```bash
+docker-compose exec backend python manage.py migrate --noinput
+```
+
+### مشكلة: الصور/الملفات لا تظهر
+
+```bash
+# تأكد من إعدادات Media
 docker-compose exec backend python manage.py collectstatic --noinput
-```
-
-### مشكلة: خطأ في migrations
-
-```bash
-# حذف Migration غير ناجح
-docker-compose exec backend python manage.py migrate --fake-zero
-docker-compose exec backend python manage.py migrate
+docker-compose restart nginx
 ```
 
 ---
 
-## نصائح الأمان
+## هيكل الخدمات (Docker Compose)
 
-1. **لا ترفع ملف `.env` على GitHub**
-2. **استخدم كلمة سر قوية لقاعدة البيانات**
-3. **حدث `SECRET_KEY` في الإنتاج**
-4. **استخدم جدار نار (Firewall)**:
-   ```bash
-   ufw allow 80/tcp
-   ufw allow 443/tcp
-   ufw allow 22/tcp
-   ufw enable
-   ```
-5. **فعّل HTTPS** باستخدام Let's Encrypt
-
----
-
-## تحديث المشروع
-
-### تحديث يدوي:
-```bash
-cd /opt/smartoffer
-git pull
-docker-compose down
-docker-compose up -d --build
-```
-
-### تحديث تلقائي:
-التحديثات على branch `main` سيتم نشرها تلقائياً.
+| الخدمة | الوصف | المنفذ |
+|--------|-------|--------|
+| `db` | PostgreSQL 15 | داخلي فقط |
+| `redis` | Redis 7 | داخلي فقط |
+| `backend` | Django + Gunicorn | داخلي: 8000 |
+| `nginx` | خادم الويب + Static files | 80, 443 |
+| `certbot` | تجديد شهادات SSL | - |
 
 </div>
