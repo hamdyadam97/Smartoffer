@@ -54,7 +54,7 @@ env/
 frontend/node_modules/
 frontend/.cache/
 frontend/.vite/
-!frontend/dist/
+frontend/dist/
 frontend/build/
 
 # Coverage

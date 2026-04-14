@@ -12,6 +12,20 @@ fi
 
 echo "🚀 Starting deployment..."
 
+# Ensure we are in the right directory
+if [ ! -f "docker-compose.yml" ]; then
+    echo "❌ Error: docker-compose.yml not found. Make sure you run this script from the project root."
+    exit 1
+fi
+
+# Build frontend using Docker (no need to install Node on host)
+echo "📦 Building frontend..."
+docker run --rm \
+    -v "$(pwd)/frontend:/app" \
+    -w /app \
+    node:20-alpine \
+    sh -c "npm ci && npm run build"
+
 # Stop existing containers
 echo "🐳 Stopping existing containers..."
 ${COMPOSE_CMD} down

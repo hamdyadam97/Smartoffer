@@ -14,18 +14,12 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           script: |
             cd /docker/smartoffer
             echo "📥 Pulling latest code..."
+            git reset --hard origin/main
             git pull origin main
 
-            echo "📦 Building frontend on VPS..."
-            docker run --rm \
-              -v "$(pwd)/frontend:/app" \
-              -w /app \
-              node:20-alpine \
-              sh -c "npm ci && npm run build"
-
             echo "🚀 Running deploy script..."
+            chmod +x deploy.sh
             ./deploy.sh
