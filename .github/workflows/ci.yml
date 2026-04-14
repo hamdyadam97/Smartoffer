@@ -42,7 +42,7 @@ jobs:
       - name: Run Django tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/smartoffer_test
-          SECRET_KEY: test-secret-key
+          SECRET_KEY: this-is-a-very-long-test-secret-key-for-ci-only-32-bytes
           DEBUG: False
         run: |
           python manage.py migrate

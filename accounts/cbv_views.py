@@ -228,7 +228,7 @@ class RoleListCreateAPIView(generics.ListCreateAPIView):
     GET  /api/roles/
     POST /api/roles/
     """
-    queryset = Role.objects.all()
+    queryset = Role.objects.all().order_by('id')
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
 

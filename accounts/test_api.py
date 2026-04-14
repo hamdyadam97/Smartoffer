@@ -183,7 +183,7 @@ class EmployeeRoleAPITest(APITestCase):
         url = '/api/employee-roles/'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(len(response.data['results']) >= 1)
+        self.assertTrue(len(response.data) >= 1)
 
 
 class EmployeePerformanceAPITest(APITestCase):
@@ -213,7 +213,7 @@ class EmployeePerformanceAPITest(APITestCase):
         url = '/api/employee-performances/'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(len(response.data['results']) >= 1)
+        self.assertTrue(len(response.data) >= 1)
 
     def test_create_performance(self):
         url = '/api/employee-performances/'
