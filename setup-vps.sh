@@ -1,74 +1,56 @@
 #!/bin/bash
-
-# ============================================
-# Setup script for fresh Hostinger VPS
-# ============================================
-# شغل السكريبت ده مرة واحدة على VPS جديد
-
 set -e
 
-echo "🚀 Setting up Hostinger VPS for Smart Offer..."
+echo "========================================"
+echo "  Smart Offer - VPS Setup (One-time)  "
+echo "========================================"
 
-# 1. تحديث النظام
-echo "📦 Updating system packages..."
-sudo apt update && sudo apt upgrade -y
+PROJECT_DIR="/docker/smartoffer"
 
-# 2. تثبيت أدوات أساسية
-echo "📦 Installing essential packages..."
-sudo apt install -y curl wget git ufw
+# 1. Update system
+sudo apt update
 
-# 3. تثبيت Docker
-echo "🐳 Installing Docker..."
-if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker $USER
-    rm -f get-docker.sh
-    echo "✅ Docker installed. Log out and back in for group changes."
+# 2. Install dependencies
+sudo apt install -y python3-pip python3-venv nodejs npm nginx git
+
+# 3. Create project directory
+mkdir -p "$PROJECT_DIR"
+cd "$PROJECT_DIR"
+
+# 4. Clone repo (if not already cloned)
+if [ ! -d ".git" ]; then
+    git clone https://github.com/hamdyadam97/Smartoffer.git .
 fi
 
-# 4. تثبيت Docker Compose Plugin
-echo "🐳 Installing Docker Compose..."
-if ! docker compose version &> /dev/null; then
-    sudo apt install -y docker-compose-plugin
+# 5. Setup Python venv
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
 fi
+source venv/bin/activate
+pip install -r requirements.txt
 
-# 5. إعداد Firewall (UFW)
-echo "🔥 Configuring firewall..."
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
-sudo ufw --force enable
+# 6. Setup environment
+cp .env.production .env
+nano .env  # User edits this
 
-# 6. إنشاء مجلد المشروع
-echo "📁 Creating application directory..."
-sudo mkdir -p /docker/smartoffer
-sudo chown $USER:$USER /docker/smartoffer
+# 7. Build and deploy
+./deploy.sh
+
+# 8. Setup systemd service
+sudo cp gunicorn-smartoffer.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable gunicorn-smartoffer
+sudo systemctl start gunicorn-smartoffer
+
+# 9. Setup nginx
+sudo cp nginx-smartoffer.conf /etc/nginx/sites-available/smartoffer
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/smartoffer /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 
 echo ""
-echo "✅ VPS setup completed!"
-echo ""
-echo "⚠️  IMPORTANT: If this is your first time installing Docker, please log out and log back in"
-echo "   to apply the docker group changes."
-echo ""
-echo "📋 Next steps:"
-echo ""
-echo "1. Clone your repository:"
-echo "   cd /docker/smartoffer"
-echo "   git clone https://github.com/hamdyadam97/Smartoffer.git ."
-echo ""
-echo "2. Create environment file:"
-echo "   cp .env.example .env"
-echo "   nano .env"
-echo ""
-echo "3. Update these variables in .env:"
-echo "   - SECRET_KEY (generate a strong random key)"
-echo "   - ALLOWED_HOSTS (your domain or server IP)"
-echo "   - CSRF_TRUSTED_ORIGINS (https://your-domain.com)"
-echo "   - DB_PASSWORD (strong database password)"
-echo "   - ADMIN_EMAIL and ADMIN_PASSWORD"
-echo ""
-echo "4. Follow the deployment steps in DEPLOYMENT.md"
-echo ""
+echo "========================================"
+echo "  Setup complete!                     "
+echo "  Visit: http://smartoffer.m3had-system.cloud"
+echo "========================================"

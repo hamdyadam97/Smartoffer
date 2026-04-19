@@ -1,0 +1,17 @@
+[Unit]
+Description=Smart Offer Gunicorn Daemon
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/docker/smartoffer
+EnvironmentFile=/docker/smartoffer/.env
+ExecStart=/docker/smartoffer/venv/bin/gunicorn \
+    --access-logfile - \
+    --workers 3 \
+    --bind unix:/docker/smartoffer/gunicorn.sock \
+    smartoffer_django.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
