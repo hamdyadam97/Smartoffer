@@ -5,12 +5,12 @@ After=network.target
 [Service]
 User=root
 Group=root
-WorkingDirectory=/docker/smartoffer
-EnvironmentFile=/docker/smartoffer/.env
+WorkingDirectory=/var/www/smartoffer
+EnvironmentFile=/var/www/smartoffer/.env
 ExecStart=/docker/smartoffer/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
-    --bind unix:/docker/smartoffer/gunicorn.sock \
+    --bind unix:/var/www/smartoffer/gunicorn.sock \
     smartoffer_django.wsgi:application
 
 [Install]

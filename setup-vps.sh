@@ -5,7 +5,7 @@ echo "========================================"
 echo "  Smart Offer - VPS Setup (One-time)  "
 echo "========================================"
 
-PROJECT_DIR="/docker/smartoffer"
+PROJECT_DIR="/var/www/smartoffer"
 
 # 1. Update system
 sudo apt update
@@ -37,13 +37,13 @@ nano .env  # User edits this
 ./deploy.sh
 
 # 8. Setup systemd service
-sudo cp gunicorn-smartoffer.service /etc/systemd/system/
+sudo sed 's|/docker/smartoffer|/var/www/smartoffer|g' gunicorn-smartoffer.service > /etc/systemd/system/gunicorn-smartoffer.service
 sudo systemctl daemon-reload
 sudo systemctl enable gunicorn-smartoffer
 sudo systemctl start gunicorn-smartoffer
 
 # 9. Setup nginx
-sudo cp nginx-smartoffer.conf /etc/nginx/sites-available/smartoffer
+sudo sed 's|/docker/smartoffer|/var/www/smartoffer|g' nginx-smartoffer.conf > /etc/nginx/sites-available/smartoffer
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo ln -sf /etc/nginx/sites-available/smartoffer /etc/nginx/sites-enabled/
 sudo nginx -t
