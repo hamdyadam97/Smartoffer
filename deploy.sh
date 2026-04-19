@@ -7,6 +7,11 @@ echo "========================================"
 
 cd "$(dirname "$0")"
 
+# Activate virtual environment
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+fi
+
 echo "[1/6] Pulling latest code..."
 git pull origin main
 
