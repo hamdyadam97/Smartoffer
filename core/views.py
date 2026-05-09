@@ -211,6 +211,8 @@ class BranchListView(LoginRequiredMixin, ListView):
 
 class BranchDetailView(LoginRequiredMixin, DetailView):
     model = Branch
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/branch_detail.html'
     context_object_name = 'branch'
 
@@ -228,6 +230,8 @@ class BranchCreateView(LoginRequiredMixin, CreateView):
 
 class BranchUpdateView(LoginRequiredMixin, UpdateView):
     model = Branch
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = BranchForm
     template_name = 'core/branch_form.html'
     success_url = reverse_lazy('branch-list')
@@ -239,6 +243,8 @@ class BranchUpdateView(LoginRequiredMixin, UpdateView):
 
 class BranchDeleteView(LoginRequiredMixin, DeleteView):
     model = Branch
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/branch_confirm_delete.html'
     success_url = reverse_lazy('branch-list')
 
@@ -371,6 +377,24 @@ def branch_create_ajax(request):
                 'name': branch.name,
                 'code': branch.code,
             }
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def branch_update_ajax(request, pk):
+    """تحديث فرع عبر AJAX (للـ Modal العائم)"""
+    branch = get_object_or_404(Branch, pk=pk)
+    form = BranchForm(request.POST, instance=branch)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديث الفرع بنجاح',
         })
     return JsonResponse({
         'success': False,

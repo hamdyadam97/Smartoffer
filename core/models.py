@@ -43,6 +43,7 @@ class Company(models.Model):
 
 class Branch(models.Model):
     """الفرع"""
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='branches', verbose_name='الشركة')
     code = models.PositiveIntegerField(unique=True, verbose_name='الكود')
     name = models.CharField(max_length=255, verbose_name='اسم الفرع')
@@ -66,6 +67,17 @@ class Branch(models.Model):
         verbose_name = 'فرع'
         verbose_name_plural = 'الفروع'
         ordering = ['code']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.name, allow_unicode=True)
+            slug = base_slug
+            counter = 1
+            while Branch.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
