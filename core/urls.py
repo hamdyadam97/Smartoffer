@@ -5,14 +5,13 @@ from .views import (
     BranchListView, BranchDetailView, BranchCreateView, BranchUpdateView, BranchDeleteView,
     BankListView, BankDetailView, BankCreateView, BankUpdateView, BankDeleteView,
     MasterCategoryListView, MasterCategoryDetailView, MasterCategoryCreateView, MasterCategoryUpdateView, MasterCategoryDeleteView,
-    branch_create_ajax, companies_list_ajax,
+    branch_create_ajax, companies_list_ajax, company_create_ajax, company_update_ajax,
 )
 
 urlpatterns = [
     # Company URLs
     path('companies/', CompanyListView.as_view(), name='company-list'),
     path('companies/<int:pk>/', CompanyDetailView.as_view(), name='company-detail'),
-    path('companies/create/', CompanyCreateView.as_view(), name='company-create'),
     path('companies/<int:pk>/update/', CompanyUpdateView.as_view(), name='company-update'),
     path('companies/<int:pk>/delete/', CompanyDeleteView.as_view(), name='company-delete'),
 
@@ -32,6 +31,8 @@ urlpatterns = [
 
     # AJAX URLs
     path('ajax/companies/', companies_list_ajax, name='companies-list-ajax'),
+    path('companies/ajax/create/', company_create_ajax, name='company-create-ajax'),
+    path('companies/ajax/<int:pk>/update/', company_update_ajax, name='company-update-ajax'),
     path('branches/ajax/create/', branch_create_ajax, name='branch-create-ajax'),
 
     # MasterCategory URLs

@@ -5,7 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-building"></i> الشركات</h2>
-    <a href="{% url 'company-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة شركة</a>
+    <button type="button" class="btn btn-primary" onclick="openCompanyModal()">
+        <i class="bi bi-plus-lg"></i> إضافة شركة
+    </button>
 </div>
 
 <div class="card">
@@ -31,7 +33,24 @@
                     <td>{{ company.email|default:"-" }}</td>
                     <td>
                         <a href="{% url 'company-detail' company.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        <a href="{% url 'company-update' company.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openCompanyModal({
+                            id: {{ company.id }},
+                            name: '{{ company.name|escapejs }}',
+                            sub_name: '{{ company.sub_name|escapejs }}',
+                            address: '{{ company.address|escapejs }}',
+                            phone1: '{{ company.phone1|escapejs }}',
+                            phone2: '{{ company.phone2|escapejs }}',
+                            postal_code: '{{ company.postal_code|escapejs }}',
+                            mobile: '{{ company.mobile|escapejs }}',
+                            fax: '{{ company.fax|escapejs }}',
+                            email: '{{ company.email|escapejs }}',
+                            website: '{{ company.website|escapejs }}',
+                            commercial_registration: '{{ company.commercial_registration|escapejs }}',
+                            tax_code: '{{ company.tax_code|escapejs }}',
+                            logo: '{{ company.logo|escapejs }}'
+                        })">
+                            <i class="bi bi-pencil"></i>
+                        </button>
                         <a href="{% url 'company-delete' company.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
@@ -46,11 +65,270 @@
 </div>
 
 {% include "includes/pagination.html" %}
-        <li class="page-item active"><span class="page-link">صفحة {{ page_obj.number }} من {{ paginator.num_pages }}</span></li>
-        {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+
+<!-- Company Modal -->
+<div class="modal fade" id="companyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="companyModalTitle"><i class="bi bi-building-add text-primary me-2"></i> إضافة شركة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="companyAlert"></div>
+                <form id="companyForm" class="modal-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="company_id" id="companyId">
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs mb-3" id="companyTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-pane" type="button" role="tab">البيانات الأساسية</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-pane" type="button" role="tab">بيانات التواصل</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="commercial-tab" data-bs-toggle="tab" data-bs-target="#commercial-pane" type="button" role="tab">البيانات التجارية</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="logo-tab" data-bs-toggle="tab" data-bs-target="#logo-pane" type="button" role="tab">الشعار</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="companyTabContent">
+                        <!-- البيانات الأساسية -->
+                        <div class="tab-pane fade show active" id="basic-pane" role="tabpanel" tabindex="0">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">اسم الشركة <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" id="companyName" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الاسم الفرعي</label>
+                                    <input type="text" name="sub_name" id="companySubName" class="form-control">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">العنوان</label>
+                                    <textarea name="address" id="companyAddress" class="form-control" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- بيانات التواصل -->
+                        <div class="tab-pane fade" id="contact-pane" role="tabpanel" tabindex="0">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">التليفون 1</label>
+                                    <input type="text" name="phone1" id="companyPhone1" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">التليفون 2</label>
+                                    <input type="text" name="phone2" id="companyPhone2" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">المحمول</label>
+                                    <input type="text" name="mobile" id="companyMobile" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الفاكس</label>
+                                    <input type="text" name="fax" id="companyFax" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">البريد الإلكتروني</label>
+                                    <input type="email" name="email" id="companyEmail" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الموقع الإلكتروني</label>
+                                    <input type="url" name="website" id="companyWebsite" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- البيانات التجارية -->
+                        <div class="tab-pane fade" id="commercial-pane" role="tabpanel" tabindex="0">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الرقم البريدي</label>
+                                    <input type="text" name="postal_code" id="companyPostalCode" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">السجل التجاري</label>
+                                    <input type="text" name="commercial_registration" id="companyCommercialReg" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الرقم الضريبي</label>
+                                    <input type="text" name="tax_code" id="companyTaxCode" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الشعار -->
+                        <div class="tab-pane fade" id="logo-pane" role="tabpanel" tabindex="0">
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">اختر صورة الشعار</label>
+                                    <input type="file" id="companyLogoFile" class="form-control" accept="image/*">
+                                    <textarea name="logo" id="companyLogo" class="form-control d-none" rows="2"></textarea>
+                                </div>
+                                <div class="col-12 text-center">
+                                    <img id="companyLogoPreview" src="" alt="معاينة الشعار" class="img-thumbnail d-none" style="max-height: 150px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="saveCompanyBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="companySpinner"></span>
+                    <span id="companyBtnText">حفظ الشركة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const companyModal = document.getElementById('companyModal');
+    const companyForm = document.getElementById('companyForm');
+    const companyId = document.getElementById('companyId');
+    const companyName = document.getElementById('companyName');
+    const companySubName = document.getElementById('companySubName');
+    const companyAddress = document.getElementById('companyAddress');
+    const companyPhone1 = document.getElementById('companyPhone1');
+    const companyPhone2 = document.getElementById('companyPhone2');
+    const companyPostalCode = document.getElementById('companyPostalCode');
+    const companyMobile = document.getElementById('companyMobile');
+    const companyFax = document.getElementById('companyFax');
+    const companyEmail = document.getElementById('companyEmail');
+    const companyWebsite = document.getElementById('companyWebsite');
+    const companyCommercialReg = document.getElementById('companyCommercialReg');
+    const companyTaxCode = document.getElementById('companyTaxCode');
+    const companyLogo = document.getElementById('companyLogo');
+    const companyLogoFile = document.getElementById('companyLogoFile');
+    const companyLogoPreview = document.getElementById('companyLogoPreview');
+    const companyModalTitle = document.getElementById('companyModalTitle');
+    const saveBtn = document.getElementById('saveCompanyBtn');
+    const spinner = document.getElementById('companySpinner');
+    const btnText = document.getElementById('companyBtnText');
+    const alertBox = document.getElementById('companyAlert');
+
+    function showAlert(message, type) {
+        alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setLoading(loading) {
+        saveBtn.disabled = loading;
+        spinner.classList.toggle('d-none', !loading);
+        btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ الشركة';
+    }
+
+    // Logo file to Base64
+    companyLogoFile.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                companyLogo.value = evt.target.result;
+                companyLogoPreview.src = evt.target.result;
+                companyLogoPreview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    window.openCompanyModal = function(data) {
+        alertBox.innerHTML = '';
+        companyForm.reset();
+        companyLogoPreview.classList.add('d-none');
+        companyLogoPreview.src = '';
+
+        // Reset tabs to first
+        const basicTab = document.getElementById('basic-tab');
+        const tab = new bootstrap.Tab(basicTab);
+        tab.show();
+
+        if (data && data.id) {
+            companyId.value = data.id;
+            companyName.value = data.name || '';
+            companySubName.value = data.sub_name || '';
+            companyAddress.value = data.address || '';
+            companyPhone1.value = data.phone1 || '';
+            companyPhone2.value = data.phone2 || '';
+            companyPostalCode.value = data.postal_code || '';
+            companyMobile.value = data.mobile || '';
+            companyFax.value = data.fax || '';
+            companyEmail.value = data.email || '';
+            companyWebsite.value = data.website || '';
+            companyCommercialReg.value = data.commercial_registration || '';
+            companyTaxCode.value = data.tax_code || '';
+            companyLogo.value = data.logo || '';
+            if (data.logo) {
+                companyLogoPreview.src = data.logo;
+                companyLogoPreview.classList.remove('d-none');
+            }
+            companyModalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل شركة';
+            btnText.textContent = 'تحديث الشركة';
+        } else {
+            companyId.value = '';
+            companyModalTitle.innerHTML = '<i class="bi bi-building-add text-primary me-2"></i> إضافة شركة جديدة';
+            btnText.textContent = 'حفظ الشركة';
+        }
+        const modal = new bootstrap.Modal(companyModal);
+        modal.show();
+    };
+
+    saveBtn.addEventListener('click', function() {
+        if (!companyForm.checkValidity()) {
+            companyForm.reportValidity();
+            return;
+        }
+        setLoading(true);
+        const formData = new FormData(companyForm);
+        const body = new URLSearchParams(formData);
+
+        const isEdit = companyId.value !== '';
+        const url = isEdit
+            ? '/companies/ajax/' + companyId.value + '/update/'
+            : '{% url "company-create-ajax" %}';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.success) {
+                showAlert(data.message, 'success');
+                companyForm.reset();
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(companyModal).hide();
+                    alertBox.innerHTML = '';
+                    window.location.reload();
+                }, 1200);
+            } else {
+                let errors = '';
+                for (const [field, msgs] of Object.entries(data.errors)) {
+                    errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
+                }
+                showAlert(errors || 'حدث خطأ أثناء الحفظ', 'danger');
+            }
+        })
+        .catch(() => {
+            setLoading(false);
+            showAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
+})();
+</script>
 {% endblock %}

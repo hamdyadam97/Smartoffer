@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -197,6 +197,11 @@ class BranchListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(company_id=company)
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['companies'] = Company.objects.all()
+        return context
+
 
 class BranchDetailView(LoginRequiredMixin, DetailView):
     model = Branch
@@ -360,6 +365,45 @@ def branch_create_ajax(request):
                 'name': branch.name,
                 'code': branch.code,
             }
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def company_create_ajax(request):
+    """إنشاء شركة جديدة عبر AJAX (للـ Modal العائم)"""
+    form = CompanyForm(request.POST)
+    if form.is_valid():
+        company = form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء الشركة بنجاح',
+            'company': {
+                'id': company.id,
+                'name': company.name,
+            }
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def company_update_ajax(request, pk):
+    """تحديث شركة عبر AJAX (للـ Modal العائم)"""
+    company = get_object_or_404(Company, pk=pk)
+    form = CompanyForm(request.POST, instance=company)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديث الشركة بنجاح',
         })
     return JsonResponse({
         'success': False,
