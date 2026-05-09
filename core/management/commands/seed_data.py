@@ -136,26 +136,73 @@ class Command(BaseCommand):
         MasterCategory.objects.all().delete()
 
     def create_core(self):
-        self.company = Company.objects.create(
-            name='شركة التطوير الذكي',
-            sub_name='Smart Development Co.',
-            address='الرياض، المملكة العربية السعودية',
-            phone1='0111234567',
-            email='info@smartdev.example',
-            website='https://smartdev.example'
-        )
+        # ========== الشركات الحقيقية ==========
+        companies_data = [
+            {
+                'name': 'شركة الأهلي',
+                'sub_name': 'Al-Ahli Company',
+                'address': 'المملكة العربية السعودية',
+                'phone1': '0111234567',
+                'email': 'info@alahli.example',
+                'branches': [
+                    'عرعر', 'المنصورة', 'سكاكا', 'الفريات',
+                    'الثقة الدائمة', 'المورد الوافي'
+                ]
+            },
+            {
+                'name': 'شركة الفاو',
+                'sub_name': 'Al-Faw Company',
+                'address': 'المملكة العربية السعودية',
+                'phone1': '0117654321',
+                'email': 'info@alfaw.example',
+                'branches': [
+                    'الرياض - رجال', 'الرياض - سيدات',
+                    'خميس مشيط - رجال', 'خميس مشيط - سيدات',
+                    'آفاق التطور - رجال', 'آفاق التطور - سيدات',
+                    'حفر الباطن - رجال', 'حفر الباطن - سيدات',
+                    'القصيم - رجال', 'القصيم - سيدات'
+                ]
+            },
+            {
+                'name': 'شركة روت',
+                'sub_name': 'Root Company',
+                'address': 'المملكة العربية السعودية',
+                'phone1': '0119998888',
+                'email': 'info@root.example',
+                'branches': [
+                    'Root Exam', 'Root Academy'
+                ]
+            }
+        ]
 
+        self.companies = []
         self.branches = []
-        for i, name in enumerate(['الفرع الرئيسي - الرياض', 'فرع جدة'], start=1):
-            branch = Branch.objects.create(
-                company=self.company,
-                code=i,
-                name=name,
-                address=f'عنوان {name}',
-                phone1=random_phone(),
-                email=f'branch{i}@example.com'
+        code_counter = 1
+
+        for comp_data in companies_data:
+            company = Company.objects.create(
+                name=comp_data['name'],
+                sub_name=comp_data['sub_name'],
+                address=comp_data['address'],
+                phone1=comp_data['phone1'],
+                email=comp_data['email']
             )
-            self.branches.append(branch)
+            self.companies.append(company)
+
+            for branch_name in comp_data['branches']:
+                branch = Branch.objects.create(
+                    company=company,
+                    code=code_counter,
+                    name=branch_name,
+                    address=f'{branch_name} - {comp_data["address"]}',
+                    phone1=random_phone(),
+                    email=f'branch{code_counter}@example.com'
+                )
+                self.branches.append(branch)
+                code_counter += 1
+
+        # default company for relations
+        self.company = self.companies[0]
 
         self.banks = []
         for i, bname in enumerate(['البنك الأهلي', 'بنك الرياض'], start=1):
