@@ -141,6 +141,8 @@ class CompanyListView(LoginRequiredMixin, ListView):
 
 class CompanyDetailView(LoginRequiredMixin, DetailView):
     model = Company
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/company_detail.html'
     context_object_name = 'company'
 
@@ -158,6 +160,8 @@ class CompanyCreateView(LoginRequiredMixin, CreateView):
 
 class CompanyUpdateView(LoginRequiredMixin, UpdateView):
     model = Company
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = CompanyForm
     template_name = 'core/company_form.html'
     success_url = reverse_lazy('company-list')
@@ -169,6 +173,8 @@ class CompanyUpdateView(LoginRequiredMixin, UpdateView):
 
 class CompanyDeleteView(LoginRequiredMixin, DeleteView):
     model = Company
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/company_confirm_delete.html'
     success_url = reverse_lazy('company-list')
 
