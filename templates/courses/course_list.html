@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الدورات{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-book"></i> الدورات</h2>
+    <a href="{% url 'course-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> دورة جديدة</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالمحاضر أو الشركة..." value="{{ request.GET.search|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <select name="target_level" class="form-select">
+                    <option value="">كل المستويات</option>
+                    <option value="مبتدئ" {% if request.GET.target_level == 'مبتدئ' %}selected{% endif %}>مبتدئ</option>
+                    <option value="متوسط" {% if request.GET.target_level == 'متوسط' %}selected{% endif %}>متوسط</option>
+                    <option value="متقدم" {% if request.GET.target_level == 'متقدم' %}selected{% endif %}>متقدم</option>
+                    <option value="الكل" {% if request.GET.target_level == 'الكل' %}selected{% endif %}>جميع المستويات</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="start_after" class="form-control" value="{{ request.GET.start_after|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> بحث</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>الكود</th>
+                <th>التخصص</th>
+                <th>المحاضر</th>
+                <th>الشركة</th>
+                <th>المستوى</th>
+                <th>بداية</th>
+                <th>نهاية</th>
+                <th class="text-start">إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for course in courses %}
+            <tr>
+                <td>{{ course.code }}</td>
+                <td>{{ course.master.name }}</td>
+                <td>{{ course.instructor|default:'-' }}</td>
+                <td>{{ course.company_name|default:'-' }}</td>
+                <td><span class="badge bg-secondary">{{ course.target_level }}</span></td>
+                <td>{{ course.start_date|default:'-' }}</td>
+                <td>{{ course.end_date|default:'-' }}</td>
+                <td class="text-start">
+                    <a href="{% url 'course-detail' course.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'course-update' course.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'course-delete' course.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted">لا توجد دورات</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

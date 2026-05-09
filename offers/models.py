@@ -19,13 +19,13 @@ class StudentOffer(models.Model):
 
     title = models.CharField(max_length=255, verbose_name='عنوان العرض')
     content = models.TextField(verbose_name='محتوى العرض')
-    branch = models.ForeignKey('core.Branch', on_delete=models.CASCADE, related_name='offers', verbose_name='الفرع')
-    course = models.ForeignKey('courses.Course', on_delete=models.SET_NULL, null=True, blank=True, related_name='offers', verbose_name='الدورة')
-    target_level = models.CharField(max_length=20, choices=TARGET_LEVEL_CHOICES, default='الكل', verbose_name='المستوى المستهدف')
-    scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name='موعد الإرسال')
-    sent_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الإرسال الفعلي')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مسودة', verbose_name='الحالة')
-    created_by = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, related_name='created_offers', verbose_name='تم الإنشاء بواسطة')
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, db_index=True, related_name='offers', verbose_name='الفرع')
+    course = models.ForeignKey('courses.Course', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='offers', verbose_name='الدورة')
+    target_level = models.CharField(max_length=20, choices=TARGET_LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
+    scheduled_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='موعد الإرسال')
+    sent_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='تاريخ الإرسال الفعلي')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مسودة', db_index=True, verbose_name='الحالة')
+    created_by = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='created_offers', verbose_name='تم الإنشاء بواسطة')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,10 +58,10 @@ class OfferRecipient(models.Model):
         ('لم_يتفاعل', 'لم يتفاعل'),
     ]
 
-    offer = models.ForeignKey(StudentOffer, on_delete=models.CASCADE, related_name='recipients', verbose_name='العرض')
-    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='offer_recipients', verbose_name='الطالب')
-    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, verbose_name='قناة الإرسال')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مرسل', verbose_name='حالة التفاعل')
+    offer = models.ForeignKey(StudentOffer, on_delete=models.PROTECT, db_index=True, related_name='recipients', verbose_name='العرض')
+    student = models.ForeignKey('students.Student', on_delete=models.PROTECT, db_index=True, related_name='offer_recipients', verbose_name='الطالب')
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, db_index=True, verbose_name='قناة الإرسال')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مرسل', db_index=True, verbose_name='حالة التفاعل')
     sent_at = models.DateTimeField(auto_now_add=True)
     opened_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ الفتح')
     interacted_at = models.DateTimeField(null=True, blank=True, verbose_name='تاريخ التفاعل')

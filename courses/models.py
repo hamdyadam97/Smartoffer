@@ -3,11 +3,11 @@ from django.db import models
 
 class Master(models.Model):
     """التخصص / الدبلوم"""
-    branch = models.ForeignKey('core.Branch', on_delete=models.CASCADE, related_name='masters', verbose_name='الفرع')
-    master_category = models.ForeignKey('core.MasterCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='masters', verbose_name='التصنيف')
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='masters', verbose_name='الفرع')
+    master_category = models.ForeignKey('core.MasterCategory', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='masters', verbose_name='التصنيف')
     
-    code = models.PositiveIntegerField(verbose_name='الكود')
-    name = models.CharField(max_length=255, verbose_name='اسم التخصص')
+    code = models.PositiveIntegerField(db_index=True, verbose_name='الكود')
+    name = models.CharField(max_length=255, db_index=True, verbose_name='اسم التخصص')
     period = models.CharField(max_length=100, blank=True, verbose_name='الفترة')
     
     # Tracking
@@ -33,15 +33,15 @@ class Course(models.Model):
         ('متقدم', 'متقدم'),
         ('الكل', 'جميع المستويات'),
     ]
-    master = models.ForeignKey(Master, on_delete=models.CASCADE, related_name='courses', verbose_name='التخصص')
+    master = models.ForeignKey(Master, on_delete=models.PROTECT, related_name='courses', verbose_name='التخصص')
     
-    code = models.PositiveIntegerField(verbose_name='الكود')
-    instructor = models.CharField(max_length=255, blank=True, verbose_name='المحاضر')
+    code = models.PositiveIntegerField(db_index=True, verbose_name='الكود')
+    instructor = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='المحاضر')
     company_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الشركة')
     max_student_count = models.PositiveIntegerField(default=1, verbose_name='الحد الأقصى للطلاب')
-    target_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='الكل', verbose_name='المستوى المستهدف')
+    target_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
     
-    start_date = models.DateField(null=True, blank=True, verbose_name='تاريخ البداية')
+    start_date = models.DateField(null=True, blank=True, db_index=True, verbose_name='تاريخ البداية')
     end_date = models.DateField(null=True, blank=True, verbose_name='تاريخ النهاية')
     
     # Tracking

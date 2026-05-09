@@ -25,25 +25,25 @@ class Team(models.Model):
 
 class Person(AbstractBaseUser, PermissionsMixin):
     """المستخدم / الموظف"""
-    email = models.EmailField(unique=True, verbose_name='البريد الإلكتروني')
+    email = models.EmailField(unique=True, db_index=True, verbose_name='البريد الإلكتروني')
     
     # Contact Info (OneToOne)
-    first_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الأول')
+    first_name = models.CharField(max_length=100, blank=True, db_index=True, verbose_name='الاسم الأول')
     second_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الثاني')
     third_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الثالث')
-    forth_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الرابع')
-    mobile = models.CharField(max_length=20, blank=True, verbose_name='المحمول')
+    forth_name = models.CharField(max_length=100, blank=True, db_index=True, verbose_name='الاسم الرابع')
+    mobile = models.CharField(max_length=20, blank=True, db_index=True, verbose_name='المحمول')
     phone = models.CharField(max_length=20, blank=True, verbose_name='التليفون')
     address = models.TextField(blank=True, verbose_name='العنوان')
     photo = models.TextField(blank=True, verbose_name='الصورة (Base64)')
     
     # Settings
-    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='members', verbose_name='الفريق')
-    branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='persons', verbose_name='الفرع الرئيسي')
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='members', verbose_name='الفريق')
+    branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='persons', verbose_name='الفرع الرئيسي')
     
     # Status
-    is_staff = models.BooleanField(default=False, verbose_name='موظف')
-    is_active = models.BooleanField(default=True, verbose_name='نشط')
+    is_staff = models.BooleanField(default=False, db_index=True, verbose_name='موظف')
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name='نشط')
     is_superuser = models.BooleanField(default=False, verbose_name='مدير نظام')
     
     # Tracking

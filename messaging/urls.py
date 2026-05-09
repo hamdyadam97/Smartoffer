@@ -1,20 +1,10 @@
-"""
-URLs for Class-Based Views (CBV) - Messaging App
-"""
 from django.urls import path
-
-from .cbv_views import (
-    InternalMessageListCreateAPIView,
-    InternalMessageDetailAPIView,
-    InternalMessageMarkAsReadAPIView,
-    InternalMessageInboxAPIView,
-    InternalMessageSentAPIView,
-)
+from . import views
 
 urlpatterns = [
-    path('internal-messages/', InternalMessageListCreateAPIView.as_view(), name='internalmessage-list'),
-    path('internal-messages/inbox/', InternalMessageInboxAPIView.as_view(), name='internalmessage-inbox'),
-    path('internal-messages/sent/', InternalMessageSentAPIView.as_view(), name='internalmessage-sent'),
-    path('internal-messages/<int:pk>/', InternalMessageDetailAPIView.as_view(), name='internalmessage-detail'),
-    path('internal-messages/<int:pk>/mark-as-read/', InternalMessageMarkAsReadAPIView.as_view(), name='internalmessage-mark-as-read'),
+    path('messages/', views.InternalMessageListView.as_view(), name='internalmessage-list'),
+    path('messages/<int:pk>/', views.InternalMessageDetailView.as_view(), name='internalmessage-detail'),
+    path('messages/create/', views.InternalMessageCreateView.as_view(), name='internalmessage-create'),
+    path('messages/<int:pk>/update/', views.InternalMessageUpdateView.as_view(), name='internalmessage-update'),
+    path('messages/<int:pk>/delete/', views.InternalMessageDeleteView.as_view(), name='internalmessage-delete'),
 ]

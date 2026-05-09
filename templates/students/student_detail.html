@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person"></i> {{ student.get_full_name }}</h2>
+    <div>
+        <a href="{% url 'student-update' student.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
+        <a href="{% url 'student-delete' student.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        <a href="{% url 'student-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white"><i class="bi bi-person-vcard"></i> بيانات جهة الاتصال</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>الاسم الكامل:</strong> {{ student.contact.get_full_name }}</li>
+                <li class="list-group-item"><strong>المحمول:</strong> {{ student.contact.mobile|default:'-' }}</li>
+                <li class="list-group-item"><strong>التليفون:</strong> {{ student.contact.phone|default:'-' }}</li>
+                <li class="list-group-item"><strong>العنوان:</strong> {{ student.contact.address|default:'-' }}</li>
+                <li class="list-group-item"><strong>الجنسية:</strong> {{ student.contact.nationality|default:'-' }}</li>
+                <li class="list-group-item"><strong>رقم الهوية:</strong> {{ student.contact.identity_number|default:'-' }}</li>
+                <li class="list-group-item"><strong>مكان إصدار الهوية:</strong> {{ student.contact.identity_location|default:'-' }}</li>
+                <li class="list-group-item"><strong>تاريخ إصدار الهوية:</strong> {{ student.contact.identity_start_date|default:'-' }}</li>
+                <li class="list-group-item"><strong>تاريخ الميلاد:</strong> {{ student.contact.birth_date|default:'-' }}</li>
+                <li class="list-group-item"><strong>مكان الميلاد:</strong> {{ student.contact.birth_location|default:'-' }}</li>
+                <li class="list-group-item"><strong>المؤهل:</strong> {{ student.contact.qualification|default:'-' }}</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white"><i class="bi bi-mortarboard"></i> بيانات الطالب</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>المستوى:</strong> {{ student.level }}</li>
+                <li class="list-group-item"><strong>طريقة التواصل المفضلة:</strong> {{ student.get_preferred_contact_display }}</li>
+                <li class="list-group-item"><strong>تاريخ الإنشاء:</strong> {{ student.created_at }}</li>
+                <li class="list-group-item"><strong>آخر تحديث:</strong> {{ student.updated_at }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

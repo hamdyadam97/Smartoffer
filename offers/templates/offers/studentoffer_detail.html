@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ offer.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-tag"></i> {{ offer.title }}</h2>
+    <div>
+        <a href="{% url 'studentoffer-update' offer.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
+        <a href="{% url 'studentoffer-delete' offer.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        <a href="{% url 'studentoffer-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل العرض</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>العنوان:</strong> {{ offer.title }}</li>
+                <li class="list-group-item"><strong>المحتوى:</strong> {{ offer.content|linebreaksbr }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ offer.branch }}</li>
+                <li class="list-group-item"><strong>الدورة:</strong> {{ offer.course|default:'-' }}</li>
+                <li class="list-group-item"><strong>المستوى المستهدف:</strong> {{ offer.get_target_level_display }}</li>
+                <li class="list-group-item"><strong>الحالة:</strong> {{ offer.get_status_display }}</li>
+                <li class="list-group-item"><strong>موعد الإرسال:</strong> {{ offer.scheduled_at|default:'-' }}</li>
+                <li class="list-group-item"><strong>تاريخ الإرسال الفعلي:</strong> {{ offer.sent_at|default:'-' }}</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white"><i class="bi bi-clock-history"></i> بيانات إضافية</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>تم الإنشاء بواسطة:</strong> {{ offer.created_by.get_full_name|default:offer.created_by.email }}</li>
+                <li class="list-group-item"><strong>تاريخ الإنشاء:</strong> {{ offer.created_at|date:'Y-m-d H:i' }}</li>
+                <li class="list-group-item"><strong>آخر تحديث:</strong> {{ offer.updated_at|date:'Y-m-d H:i' }}</li>
+            </ul>
+        </div>
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white"><i class="bi bi-people"></i> المستلمون ({{ offer.recipients.count }})</div>
+            <ul class="list-group list-group-flush">
+                {% for recipient in offer.recipients.all|slice:':10' %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ recipient.student }}</span>
+                    <span class="badge bg-secondary">{{ recipient.get_channel_display }} - {{ recipient.get_status_display }}</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">لا يوجد مستلمون</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white"><i class="bi bi-sticky"></i> الملاحظات ({{ offer.notes.count }})</div>
+            <ul class="list-group list-group-flush">
+                {% for note in offer.notes.all|slice:':10' %}
+                <li class="list-group-item">
+                    <strong>{{ note.person.get_short_name|default:note.person.email }}:</strong> {{ note.note_text }}
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">لا توجد ملاحظات</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

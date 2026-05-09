@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}أدوار الموظفين | Smart Offer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> أدوار الموظفين</h2>
+    <a href="{% url 'employeerole-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة دور موظف</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>الموظف</th>
+                    <th>الدور</th>
+                    <th>الفرع</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for er in employee_roles %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ er.person.get_short_name }}</td>
+                    <td>{{ er.role.get_name_display }}</td>
+                    <td>{{ er.branch.name }}</td>
+                    <td>
+                        <a href="{% url 'employeerole-update' er.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'employeerole-delete' er.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">لا توجد أدوار موظفين</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

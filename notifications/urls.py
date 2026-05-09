@@ -1,18 +1,10 @@
-"""
-URLs for Class-Based Views (CBV) - Notifications App
-"""
 from django.urls import path
-
-from .cbv_views import (
-    AppNotificationListCreateAPIView,
-    AppNotificationDetailAPIView,
-    AppNotificationMarkAllReadAPIView,
-    AppNotificationUnreadCountAPIView,
-)
+from . import views
 
 urlpatterns = [
-    path('app-notifications/', AppNotificationListCreateAPIView.as_view(), name='appnotification-list'),
-    path('app-notifications/mark-all-read/', AppNotificationMarkAllReadAPIView.as_view(), name='appnotification-mark-all-read'),
-    path('app-notifications/unread-count/', AppNotificationUnreadCountAPIView.as_view(), name='appnotification-unread-count'),
-    path('app-notifications/<int:pk>/', AppNotificationDetailAPIView.as_view(), name='appnotification-detail'),
+    path('notifications/', views.AppNotificationListView.as_view(), name='appnotification-list'),
+    path('notifications/<int:pk>/', views.AppNotificationDetailView.as_view(), name='appnotification-detail'),
+    path('notifications/create/', views.AppNotificationCreateView.as_view(), name='appnotification-create'),
+    path('notifications/<int:pk>/update/', views.AppNotificationUpdateView.as_view(), name='appnotification-update'),
+    path('notifications/<int:pk>/delete/', views.AppNotificationDeleteView.as_view(), name='appnotification-delete'),
 ]

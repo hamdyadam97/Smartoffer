@@ -10,8 +10,8 @@ class InternalMessage(models.Model):
         ('عام', 'عام'),
     ]
 
-    sender = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, related_name='sent_messages', verbose_name='المرسل')
-    recipient = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, related_name='received_messages', verbose_name='المستلم')
+    sender = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='sent_messages', verbose_name='المرسل')
+    recipient = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='received_messages', verbose_name='المستلم')
     subject = models.CharField(max_length=255, verbose_name='الموضوع')
     body = models.TextField(verbose_name='المحتوى')
     message_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='عام', verbose_name='نوع الرسالة')

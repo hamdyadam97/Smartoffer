@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الموظفين | Smart Offer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-badge"></i> الموظفين</h2>
+    <a href="{% url 'person-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة موظف</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالاسم أو البريد..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="team" class="form-select">
+                    <option value="">جميع الفرق</option>
+                    {% for team in teams %}
+                    <option value="{{ team.id }}" {% if request.GET.team == team.id|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> بحث</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>الاسم</th>
+                    <th>البريد الإلكتروني</th>
+                    <th>الفرع</th>
+                    <th>الفريق</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in persons %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ person.get_full_name }}</td>
+                    <td>{{ person.email }}</td>
+                    <td>{{ person.branch|default:"-" }}</td>
+                    <td>{{ person.team|default:"-" }}</td>
+                    <td>
+                        {% if person.is_active %}
+                        <span class="badge bg-success">نشط</span>
+                        {% else %}
+                        <span class="badge bg-secondary">غير نشط</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'person-detail' person.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                        <a href="{% url 'person-update' person.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'person-delete' person.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">لا يوجد موظفين</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include "includes/pagination.html" %}
+{% endblock %}

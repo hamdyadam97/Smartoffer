@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}حذف تسجيل{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="bi bi-exclamation-triangle"></i> تأكيد الحذف
+            </div>
+            <div class="card-body">
+                <p>هل أنت متأكد من حذف التسجيل <strong>{{ object.get_key }}</strong>؟</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> نعم، حذف</button>
+                    <a href="{% url 'registration-list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i> إلغاء</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ report.get_report_type_display }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-graph-up"></i> {{ report.get_report_type_display }}</h2>
+    <div>
+        <a href="{% url 'reportsnapshot-update' report.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
+        <a href="{% url 'reportsnapshot-delete' report.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        <a href="{% url 'reportsnapshot-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل التقرير</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>نوع التقرير:</strong> {{ report.get_report_type_display }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ report.branch|default:'-' }}</li>
+                <li class="list-group-item"><strong>الفترة:</strong> {{ report.period|default:'-' }}</li>
+                <li class="list-group-item"><strong>تم الإنشاء بواسطة:</strong> {{ report.generated_by.get_short_name|default:report.generated_by.email }}</li>
+                <li class="list-group-item"><strong>التاريخ:</strong> {{ report.created_at|date:'Y-m-d H:i' }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-light"><i class="bi bi-file-earmark-text"></i> بيانات التقرير</div>
+    <div class="card-body">
+        {% if report.data_json %}
+            {% if report.data_json.items %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <tbody>
+                        {% for key, value in report.data_json.items %}
+                        <tr>
+                            <th class="table-light" style="width: 30%;">{{ key }}</th>
+                            <td>
+                                {% if value.items %}
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <tbody>
+                                            {% for k, v in value.items %}
+                                            <tr><th class="table-light">{{ k }}</th><td>{{ v }}</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% elif value|length > 0 and value.0 %}
+                                    <ul class="list-unstyled mb-0">
+                                        {% for item in value %}
+                                        <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif report.data_json|length > 0 and report.data_json.0 %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            {% for key in report.data_json.0.keys %}
+                            <th>{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data_json %}
+                        <tr>
+                            {% for value in row.values %}
+                            <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <pre class="bg-light p-3 rounded mb-0">{{ report.data_json|pprint }}</pre>
+            {% endif %}
+        {% else %}
+        <p class="text-muted mb-0">لا توجد بيانات</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

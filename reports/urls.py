@@ -1,12 +1,10 @@
 from django.urls import path
-from .views import (
-    DashboardStatsView, FinancialReportView,
-    ExportExcelView, ExportPDFView
-)
+from . import views
 
 urlpatterns = [
-    path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard_stats'),
-    path('financial/', FinancialReportView.as_view(), name='financial_report'),
-    path('export/excel/<str:report_type>/', ExportExcelView.as_view(), name='export_excel'),
-    path('export/pdf/<str:report_type>/', ExportPDFView.as_view(), name='export_pdf'),
+    path('reports/', views.ReportSnapshotListView.as_view(), name='reportsnapshot-list'),
+    path('reports/<int:pk>/', views.ReportSnapshotDetailView.as_view(), name='reportsnapshot-detail'),
+    path('reports/create/', views.ReportSnapshotCreateView.as_view(), name='reportsnapshot-create'),
+    path('reports/<int:pk>/update/', views.ReportSnapshotUpdateView.as_view(), name='reportsnapshot-update'),
+    path('reports/<int:pk>/delete/', views.ReportSnapshotDeleteView.as_view(), name='reportsnapshot-delete'),
 ]

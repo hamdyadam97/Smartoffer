@@ -21,16 +21,16 @@ class Payment(models.Model):
         (PAYMENT_TYPE_OTHER, 'إيرادات أخرى'),
     ]
     
-    account = models.ForeignKey('registrations.Account', on_delete=models.CASCADE, related_name='payments', verbose_name='التسجيل')
+    account = models.ForeignKey('registrations.Account', on_delete=models.PROTECT, related_name='payments', verbose_name='التسجيل')
     
-    code = models.PositiveBigIntegerField(verbose_name='الكود')
-    date = models.DateTimeField(default=timezone.now, verbose_name='التاريخ')
+    code = models.PositiveBigIntegerField(db_index=True, verbose_name='الكود')
+    date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='التاريخ')
     
     amount_number = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='المبلغ رقم')
     amount_string = models.CharField(max_length=500, blank=True, verbose_name='المبلغ حروف')
     
-    type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_MAIN, verbose_name='النوع')
-    payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH, verbose_name='طريقة الدفع')
+    type = models.CharField(max_length=50, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_MAIN, db_index=True, verbose_name='النوع')
+    payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH, db_index=True, verbose_name='طريقة الدفع')
     payment_method_code = models.CharField(max_length=100, blank=True, verbose_name='كود الدفع')
     
     note = models.TextField(blank=True, verbose_name='ملاحظات')
@@ -59,8 +59,8 @@ class Payment(models.Model):
 
 class PaymentOut(models.Model):
     """سند صرف"""
-    code = models.PositiveBigIntegerField(verbose_name='الكود')
-    date = models.DateTimeField(default=timezone.now, verbose_name='التاريخ')
+    code = models.PositiveBigIntegerField(db_index=True, verbose_name='الكود')
+    date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='التاريخ')
     
     amount_number = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='المبلغ رقم')
     amount_string = models.CharField(max_length=500, blank=True, verbose_name='المبلغ حروف')
@@ -86,11 +86,11 @@ class PaymentOut(models.Model):
 
 class Deposit(models.Model):
     """إيداع"""
-    code = models.PositiveBigIntegerField(verbose_name='الكود')
-    date = models.DateTimeField(default=timezone.now, verbose_name='التاريخ')
+    code = models.PositiveBigIntegerField(db_index=True, verbose_name='الكود')
+    date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='التاريخ')
     
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='المبلغ')
-    bank = models.ForeignKey('core.Bank', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='البنك')
+    bank = models.ForeignKey('core.Bank', on_delete=models.PROTECT, null=True, blank=True, db_index=True, verbose_name='البنك')
     
     note = models.TextField(blank=True, verbose_name='ملاحظات')
     
@@ -110,11 +110,11 @@ class Deposit(models.Model):
 
 class Withdraw(models.Model):
     """سحب"""
-    code = models.PositiveBigIntegerField(verbose_name='الكود')
-    date = models.DateTimeField(default=timezone.now, verbose_name='التاريخ')
+    code = models.PositiveBigIntegerField(db_index=True, verbose_name='الكود')
+    date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='التاريخ')
     
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='المبلغ')
-    bank = models.ForeignKey('core.Bank', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='البنك')
+    bank = models.ForeignKey('core.Bank', on_delete=models.PROTECT, null=True, blank=True, db_index=True, verbose_name='البنك')
     
     note = models.TextField(blank=True, verbose_name='ملاحظات')
     
@@ -134,8 +134,8 @@ class Withdraw(models.Model):
 
 class BillBuyType(models.Model):
     """نوع فاتورة شراء"""
-    name = models.CharField(max_length=255, verbose_name='الاسم')
-    code = models.CharField(max_length=50, unique=True, verbose_name='الكود')
+    name = models.CharField(max_length=255, db_index=True, verbose_name='الاسم')
+    code = models.CharField(max_length=50, unique=True, db_index=True, verbose_name='الكود')
     description = models.TextField(blank=True, verbose_name='الوصف')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -150,11 +150,11 @@ class BillBuyType(models.Model):
 
 class BillBuy(models.Model):
     """فاتورة شراء"""
-    code = models.PositiveBigIntegerField(verbose_name='الكود')
-    date = models.DateTimeField(default=timezone.now, verbose_name='التاريخ')
+    code = models.PositiveBigIntegerField(db_index=True, verbose_name='الكود')
+    date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='التاريخ')
     
-    bill_buy_type = models.ForeignKey(BillBuyType, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='النوع')
-    supplier = models.CharField(max_length=255, verbose_name='المورد')
+    bill_buy_type = models.ForeignKey(BillBuyType, on_delete=models.PROTECT, null=True, blank=True, db_index=True, verbose_name='النوع')
+    supplier = models.CharField(max_length=255, db_index=True, verbose_name='المورد')
     
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='المبلغ')
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='الضريبة')
@@ -191,19 +191,19 @@ class Offer(models.Model):
         (PAYMENT_TYPE_CREDIT, 'آجل'),
     ]
     
-    master = models.ForeignKey('courses.Master', on_delete=models.CASCADE, related_name='offers', verbose_name='التخصص')
+    master = models.ForeignKey('courses.Master', on_delete=models.PROTECT, related_name='offers', verbose_name='التخصص')
     
-    code = models.PositiveIntegerField(verbose_name='الكود')
+    code = models.PositiveIntegerField(db_index=True, verbose_name='الكود')
     
-    customer_name = models.CharField(max_length=255, verbose_name='اسم العميل')
+    customer_name = models.CharField(max_length=255, db_index=True, verbose_name='اسم العميل')
     customer_identity_number = models.CharField(max_length=50, blank=True, verbose_name='رقم الهوية')
-    customer_mobile = models.CharField(max_length=20, blank=True, verbose_name='جوال العميل')
+    customer_mobile = models.CharField(max_length=20, blank=True, db_index=True, verbose_name='جوال العميل')
     customer_email = models.EmailField(blank=True, verbose_name='بريد العميل')
     
     note = models.TextField(blank=True, verbose_name='ملاحظات')
     message_body = models.TextField(blank=True, verbose_name='نص الرسالة')
     
-    master_payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_CASH, verbose_name='نوع الدفع')
+    master_payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_CASH, db_index=True, verbose_name='نوع الدفع')
     master_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='السعر')
     master_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='نسبة الخصم')
     master_profit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='نسبة الربح')
@@ -214,7 +214,7 @@ class Offer(models.Model):
     sms_body = models.TextField(blank=True, verbose_name='نص SMS')
     message_sid = models.CharField(max_length=255, blank=True, verbose_name='معرف الرسالة')
     
-    registered = models.BooleanField(default=False, verbose_name='مسجل')
+    registered = models.BooleanField(default=False, db_index=True, verbose_name='مسجل')
     
     # Tracking
     last_person = models.ForeignKey('accounts.Person', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='آخر تعديل')
@@ -255,8 +255,8 @@ class Call(models.Model):
         (CALL_TYPE_OUTGOING, 'صادرة'),
     ]
     
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name='calls', verbose_name='العرض')
-    person = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, related_name='calls', verbose_name='المستخدم')
+    offer = models.ForeignKey(Offer, on_delete=models.PROTECT, related_name='calls', verbose_name='العرض')
+    person = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='calls', verbose_name='المستخدم')
     
     call_type = models.CharField(max_length=20, choices=CALL_TYPE_CHOICES, default=CALL_TYPE_OUTGOING, verbose_name='نوع المكالمة')
     duration = models.PositiveIntegerField(default=0, verbose_name='المدة (ثانية)')

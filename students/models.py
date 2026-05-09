@@ -3,13 +3,13 @@ from django.db import models
 
 class Contact(models.Model):
     """بيانات التواصل"""
-    first_name = models.CharField(max_length=100, verbose_name='الاسم الأول')
+    first_name = models.CharField(max_length=100, db_index=True, verbose_name='الاسم الأول')
     second_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الثاني')
     third_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الثالث')
-    forth_name = models.CharField(max_length=100, verbose_name='الاسم الرابع')
+    forth_name = models.CharField(max_length=100, db_index=True, verbose_name='الاسم الرابع')
     
     address = models.TextField(blank=True, verbose_name='العنوان')
-    mobile = models.CharField(max_length=20, blank=True, verbose_name='المحمول')
+    mobile = models.CharField(max_length=20, blank=True, db_index=True, verbose_name='المحمول')
     phone = models.CharField(max_length=20, blank=True, verbose_name='التليفون')
     
     nationality = models.CharField(max_length=100, blank=True, verbose_name='الجنسية')
@@ -55,8 +55,8 @@ class Student(models.Model):
         ('app', 'إشعار التطبيق'),
     ]
     contact = models.OneToOneField(Contact, on_delete=models.CASCADE, related_name='student', verbose_name='جهة الاتصال')
-    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='مبتدئ', verbose_name='المستوى')
-    preferred_contact = models.CharField(max_length=20, choices=CONTACT_CHOICES, default='whatsapp', verbose_name='طريقة التواصل المفضلة')
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='مبتدئ', db_index=True, verbose_name='المستوى')
+    preferred_contact = models.CharField(max_length=20, choices=CONTACT_CHOICES, default='whatsapp', db_index=True, verbose_name='طريقة التواصل المفضلة')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

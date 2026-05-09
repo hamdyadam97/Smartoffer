@@ -30,7 +30,7 @@ class Company(models.Model):
 
 class Branch(models.Model):
     """الفرع"""
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='branches', verbose_name='الشركة')
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='branches', verbose_name='الشركة')
     code = models.PositiveIntegerField(unique=True, verbose_name='الكود')
     name = models.CharField(max_length=255, verbose_name='اسم الفرع')
     sub_name = models.CharField(max_length=255, blank=True, verbose_name='الاسم الفرعي')
@@ -60,7 +60,7 @@ class Branch(models.Model):
 
 class Bank(models.Model):
     """البنك"""
-    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='banks', verbose_name='الفرع')
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='banks', verbose_name='الفرع')
     name = models.CharField(max_length=255, verbose_name='اسم البنك')
     account_number = models.CharField(max_length=100, verbose_name='رقم الحساب')
     iban = models.CharField(max_length=100, blank=True, verbose_name='IBAN')

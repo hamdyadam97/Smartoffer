@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 
@@ -14,13 +16,13 @@ class Account(models.Model):
         (PAYMENT_TYPE_CREDIT, 'آجل'),
     ]
     
-    course = models.ForeignKey('courses.Course', on_delete=models.CASCADE, related_name='accounts', verbose_name='الدورة')
-    student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='accounts', verbose_name='الطالب')
+    course = models.ForeignKey('courses.Course', on_delete=models.PROTECT, related_name='accounts', verbose_name='الدورة')
+    student = models.ForeignKey('students.Student', on_delete=models.PROTECT, related_name='accounts', verbose_name='الطالب')
     
-    code = models.PositiveIntegerField(verbose_name='الكود')
-    register_date = models.DateTimeField(default=timezone.now, verbose_name='تاريخ التسجيل')
+    code = models.PositiveIntegerField(db_index=True, verbose_name='الكود')
+    register_date = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='تاريخ التسجيل')
     
-    course_payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_CASH, verbose_name='نوع الدفع')
+    course_payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES, default=PAYMENT_TYPE_CASH, db_index=True, verbose_name='نوع الدفع')
     course_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='سعر الدورة')
     course_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='قيمة الخصم')
     course_profit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='نسبة الربح')
@@ -55,16 +57,16 @@ class Account(models.Model):
     def get_required_price(self):
         """Calculate required price based on payment type"""
         if self.course_payment_type == self.PAYMENT_TYPE_CASH:
-            return float(self.course_price - (self.course_price * self.course_discount_amount / 100))
+            return self.course_price - (self.course_price * self.course_discount_amount / 100)
         else:
-            return float(self.course_price + (self.course_price * self.course_profit_amount / 100))
+            return self.course_price + (self.course_price * self.course_profit_amount / 100)
 
     def get_paid_price(self):
         """Calculate total paid amount"""
         from finance.models import Payment
         return sum(
-            payment.amount_number 
-            for payment in self.payments.filter(type='ايرادات اساسية')
+            (payment.amount_number for payment in self.payments.filter(type='ايرادات اساسية')),
+            Decimal(0)
         )
 
     def get_remain_price(self):
@@ -74,8 +76,8 @@ class Account(models.Model):
 
 class AttachType(models.Model):
     """نوع المرفق"""
-    name = models.CharField(max_length=255, verbose_name='الاسم')
-    code = models.CharField(max_length=50, unique=True, verbose_name='الكود')
+    name = models.CharField(max_length=255, db_index=True, verbose_name='الاسم')
+    code = models.CharField(max_length=50, unique=True, db_index=True, verbose_name='الكود')
     description = models.TextField(blank=True, verbose_name='الوصف')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -90,8 +92,8 @@ class AttachType(models.Model):
 
 class Attach(models.Model):
     """المرفق"""
-    attach_type = models.ForeignKey(AttachType, on_delete=models.CASCADE, related_name='attaches', verbose_name='نوع المرفق')
-    person = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, related_name='attaches', verbose_name='المستخدم')
+    attach_type = models.ForeignKey(AttachType, on_delete=models.PROTECT, related_name='attaches', verbose_name='نوع المرفق')
+    person = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='attaches', verbose_name='المستخدم')
     
     title = models.CharField(max_length=255, verbose_name='العنوان')
     file_data = models.TextField(verbose_name='بيانات الملف (Base64)')
