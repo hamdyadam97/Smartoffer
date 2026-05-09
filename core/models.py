@@ -28,7 +28,7 @@ class Company(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base_slug = slugify(self.name)
+            base_slug = slugify(self.name, allow_unicode=True)
             slug = base_slug
             counter = 1
             while Company.objects.filter(slug=slug).exclude(pk=self.pk).exists():

@@ -8,7 +8,7 @@ def fill_slugs(apps, schema_editor):
     Company = apps.get_model('core', 'Company')
     for company in Company.objects.all():
         if not company.slug:
-            base_slug = slugify(company.name)
+            base_slug = slugify(company.name, allow_unicode=True)
             slug = base_slug
             counter = 1
             while Company.objects.filter(slug=slug).exclude(pk=company.pk).exists():

@@ -11,9 +11,9 @@ from .views import (
 urlpatterns = [
     # Company URLs
     path('companies/', CompanyListView.as_view(), name='company-list'),
-    path('companies/<slug:slug>/', CompanyDetailView.as_view(), name='company-detail'),
-    path('companies/<slug:slug>/update/', CompanyUpdateView.as_view(), name='company-update'),
-    path('companies/<slug:slug>/delete/', CompanyDeleteView.as_view(), name='company-delete'),
+    path('companies/<str:slug>/', CompanyDetailView.as_view(), name='company-detail'),
+    path('companies/<str:slug>/update/', CompanyUpdateView.as_view(), name='company-update'),
+    path('companies/<str:slug>/delete/', CompanyDeleteView.as_view(), name='company-delete'),
 
     # Branch URLs
     path('branches/', BranchListView.as_view(), name='branch-list'),
