@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import (
@@ -7,6 +7,8 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy
 from django.db import models
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance
 from .forms import (
@@ -106,9 +108,17 @@ class TeamListView(LoginRequiredMixin, ListView):
     context_object_name = 'teams'
     paginate_by = 20
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch
+        context['branches'] = Branch.objects.all()
+        return context
+
 
 class TeamDetailView(LoginRequiredMixin, DetailView):
     model = Team
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/team_detail.html'
     context_object_name = 'team'
 
@@ -126,6 +136,8 @@ class TeamCreateView(LoginRequiredMixin, CreateView):
 
 class TeamUpdateView(LoginRequiredMixin, UpdateView):
     model = Team
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = TeamForm
     template_name = 'accounts/team_form.html'
     success_url = reverse_lazy('team-list')
@@ -137,12 +149,33 @@ class TeamUpdateView(LoginRequiredMixin, UpdateView):
 
 class TeamDeleteView(LoginRequiredMixin, DeleteView):
     model = Team
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/team_confirm_delete.html'
     success_url = reverse_lazy('team-list')
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الفريق بنجاح')
         return super().delete(request, *args, **kwargs)
+
+
+@require_POST
+def team_create_ajax(request):
+    form = TeamForm(request.POST)
+    if form.is_valid():
+        team = form.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء الفريق بنجاح', 'id': team.id, 'slug': team.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def team_update_ajax(request, pk):
+    team = get_object_or_404(Team, pk=pk)
+    form = TeamForm(request.POST, instance=team)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث الفريق بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================

@@ -42,9 +42,9 @@
                 <td>{{ master.master_category|default:'-' }}</td>
                 <td>{{ master.period|default:'-' }}</td>
                 <td class="text-start">
-                    <a href="{% url 'master-detail' master.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    <a href="{% url 'master-update' master.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'master-delete' master.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    <a href="{% url 'master-detail' master.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'master-update' master.slug %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'master-delete' master.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
             </tr>
             {% empty %}
@@ -56,16 +56,5 @@
     </table>
 </div>
 
-{% include "includes/pagination.html" %}">السابق</a>
-        </li>
-        {% endif %}
-        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
-        {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">التالي</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" %}
 {% endblock %}

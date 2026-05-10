@@ -6,8 +6,9 @@ from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerf
 class TeamForm(forms.ModelForm):
     class Meta:
         model = Team
-        fields = ['name', 'code', 'description']
+        fields = ['branch', 'name', 'code', 'description']
         widgets = {
+            'branch': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'code': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

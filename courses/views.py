@@ -29,6 +29,8 @@ class MasterListView(LoginRequiredMixin, ListView):
 
 class MasterDetailView(LoginRequiredMixin, DetailView):
     model = Master
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'courses/master_detail.html'
     context_object_name = 'master'
 
@@ -46,6 +48,8 @@ class MasterCreateView(LoginRequiredMixin, CreateView):
 
 class MasterUpdateView(LoginRequiredMixin, UpdateView):
     model = Master
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = MasterForm
     template_name = 'courses/master_form.html'
     success_url = reverse_lazy('master-list')
@@ -57,6 +61,8 @@ class MasterUpdateView(LoginRequiredMixin, UpdateView):
 
 class MasterDeleteView(LoginRequiredMixin, DeleteView):
     model = Master
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'courses/master_confirm_delete.html'
     success_url = reverse_lazy('master-list')
 

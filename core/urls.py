@@ -5,7 +5,7 @@ from .views import (
     BranchListView, BranchDetailView, BranchCreateView, BranchUpdateView, BranchDeleteView,
     BankListView, BankDetailView, BankCreateView, BankUpdateView, BankDeleteView,
     MasterCategoryListView, MasterCategoryDetailView, MasterCategoryCreateView, MasterCategoryUpdateView, MasterCategoryDeleteView,
-    branch_create_ajax, branch_update_ajax, companies_list_ajax, company_create_ajax, company_update_ajax,
+    branch_create_ajax, branch_update_ajax, companies_list_ajax, company_create_ajax, company_update_ajax, mastercategory_create_ajax, mastercategory_update_ajax,
 )
 
 urlpatterns = [
@@ -35,11 +35,13 @@ urlpatterns = [
     path('companies/ajax/<int:pk>/update/', company_update_ajax, name='company-update-ajax'),
     path('branches/ajax/create/', branch_create_ajax, name='branch-create-ajax'),
     path('branches/ajax/<int:pk>/update/', branch_update_ajax, name='branch-update-ajax'),
+    path('master-categories/ajax/create/', mastercategory_create_ajax, name='mastercategory-create-ajax'),
+    path('master-categories/ajax/<int:pk>/update/', mastercategory_update_ajax, name='mastercategory-update-ajax'),
 
     # MasterCategory URLs
     path('master-categories/', MasterCategoryListView.as_view(), name='mastercategory-list'),
-    path('master-categories/<int:pk>/', MasterCategoryDetailView.as_view(), name='mastercategory-detail'),
+    path('master-categories/<str:slug>/', MasterCategoryDetailView.as_view(), name='mastercategory-detail'),
     path('master-categories/create/', MasterCategoryCreateView.as_view(), name='mastercategory-create'),
-    path('master-categories/<int:pk>/update/', MasterCategoryUpdateView.as_view(), name='mastercategory-update'),
-    path('master-categories/<int:pk>/delete/', MasterCategoryDeleteView.as_view(), name='mastercategory-delete'),
+    path('master-categories/<str:slug>/update/', MasterCategoryUpdateView.as_view(), name='mastercategory-update'),
+    path('master-categories/<str:slug>/delete/', MasterCategoryDeleteView.as_view(), name='mastercategory-delete'),
 ]

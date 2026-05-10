@@ -312,9 +312,16 @@ class MasterCategoryListView(LoginRequiredMixin, ListView):
     context_object_name = 'categories'
     paginate_by = 20
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['branches'] = Branch.objects.all()
+        return context
+
 
 class MasterCategoryDetailView(LoginRequiredMixin, DetailView):
     model = MasterCategory
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/mastercategory_detail.html'
     context_object_name = 'category'
 
@@ -332,6 +339,8 @@ class MasterCategoryCreateView(LoginRequiredMixin, CreateView):
 
 class MasterCategoryUpdateView(LoginRequiredMixin, UpdateView):
     model = MasterCategory
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = MasterCategoryForm
     template_name = 'core/mastercategory_form.html'
     success_url = reverse_lazy('mastercategory-list')
@@ -343,6 +352,8 @@ class MasterCategoryUpdateView(LoginRequiredMixin, UpdateView):
 
 class MasterCategoryDeleteView(LoginRequiredMixin, DeleteView):
     model = MasterCategory
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'core/mastercategory_confirm_delete.html'
     success_url = reverse_lazy('mastercategory-list')
 
@@ -395,6 +406,45 @@ def branch_update_ajax(request, pk):
         return JsonResponse({
             'success': True,
             'message': 'تم تحديث الفرع بنجاح',
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def mastercategory_create_ajax(request):
+    """إنشاء تصنيف جديد عبر AJAX (للـ Modal العائم)"""
+    form = MasterCategoryForm(request.POST)
+    if form.is_valid():
+        category = form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء التصنيف بنجاح',
+            'category': {
+                'id': category.id,
+                'name': category.name,
+            }
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def mastercategory_update_ajax(request, pk):
+    """تحديث تصنيف عبر AJAX (للـ Modal العائم)"""
+    category = get_object_or_404(MasterCategory, pk=pk)
+    form = MasterCategoryForm(request.POST, instance=category)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم تحديث التصنيف بنجاح',
         })
     return JsonResponse({
         'success': False,

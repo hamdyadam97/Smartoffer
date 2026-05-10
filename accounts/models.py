@@ -2,12 +2,15 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 
 from .managers import PersonManager
 
 
 class Team(models.Model):
     """فريق العمل"""
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='teams', verbose_name='الفرع', null=True, blank=True)
     name = models.CharField(max_length=255, verbose_name='اسم الفريق')
     code = models.CharField(max_length=50, unique=True, verbose_name='كود الفريق')
     description = models.TextField(blank=True, verbose_name='الوصف')
@@ -18,6 +21,17 @@ class Team(models.Model):
         verbose_name = 'فريق'
         verbose_name_plural = 'فرق العمل'
         ordering = ['name']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.name, allow_unicode=True)
+            slug = base_slug
+            counter = 1
+            while Team.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

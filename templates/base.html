@@ -748,6 +748,7 @@
                     </li>
 
                     <li class="nav-item"><a class="nav-link {% if '/students/' in request.path %}active{% endif %}" href="{% url 'student-list' %}"><i class="bi bi-mortarboard"></i> الطلاب</a></li>
+                    <li class="nav-item"><a class="nav-link {% if '/masters/' in request.path %}active{% endif %}" href="{% url 'master-list' %}"><i class="bi bi-journal-bookmark"></i> التخصصات</a></li>
                     <li class="nav-item"><a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'course-list' %}"><i class="bi bi-book"></i> الدورات</a></li>
                     <li class="nav-item"><a class="nav-link {% if '/registrations/' in request.path %}active{% endif %}" href="{% url 'registration-list' %}"><i class="bi bi-journal-check"></i> التسجيلات</a></li>
                     <li class="nav-item"><a class="nav-link {% if '/payments/' in request.path %}active{% endif %}" href="{% url 'payment-list' %}"><i class="bi bi-cash-stack"></i> المدفوعات</a></li>

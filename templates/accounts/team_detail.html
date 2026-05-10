@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-people"></i> {{ team.name }}</h2>
     <div>
-        <a href="{% url 'team-update' team.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
+        <a href="{% url 'team-update' team.slug %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
         <a href="{% url 'team-list' %}" class="btn btn-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
     </div>
 </div>
@@ -15,6 +15,7 @@
     <div class="card-body">
         <table class="table table-borderless mb-0">
             <tr><td class="fw-bold" style="width:150px">الكود</td><td>{{ team.code }}</td></tr>
+            <tr><td class="fw-bold">الفرع</td><td>{{ team.branch|default:"-" }}</td></tr>
             <tr><td class="fw-bold">الوصف</td><td>{{ team.description|default:"-"|linebreaksbr }}</td></tr>
         </table>
     </div>

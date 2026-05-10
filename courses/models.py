@@ -1,8 +1,10 @@
 from django.db import models
+from django.utils.text import slugify
 
 
 class Master(models.Model):
     """التخصص / الدبلوم"""
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='masters', verbose_name='الفرع')
     master_category = models.ForeignKey('core.MasterCategory', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='masters', verbose_name='التصنيف')
     
@@ -20,6 +22,17 @@ class Master(models.Model):
         verbose_name_plural = 'التخصصات'
         ordering = ['-created_at']
         unique_together = ['branch', 'code']
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.name, allow_unicode=True)
+            slug = base_slug
+            counter = 1
+            while Master.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.code} - {self.name}"

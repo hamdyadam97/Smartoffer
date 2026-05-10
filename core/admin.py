@@ -24,5 +24,6 @@ class BankAdmin(admin.ModelAdmin):
 
 @admin.register(MasterCategory)
 class MasterCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'created_at']
+    list_display = ['name', 'branch', 'created_at']
+    list_filter = ['branch']
     search_fields = ['name']
