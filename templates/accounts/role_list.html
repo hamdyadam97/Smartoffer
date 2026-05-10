@@ -5,7 +5,22 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-shield-lock"></i> الأدوار</h2>
-    <a href="{% url 'role-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة دور</a>
+    <button type="button" class="btn btn-primary" onclick="openRoleModal()">
+        <i class="bi bi-plus-lg"></i> إضافة دور
+    </button>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-9">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالدور أو الوصف أو الرابط..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> بحث</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="card">
@@ -15,6 +30,7 @@
                 <tr>
                     <th>#</th>
                     <th>الدور</th>
+                    <th>الرابط</th>
                     <th>الوصف</th>
                     <th>الإجراءات</th>
                 </tr>
@@ -24,16 +40,19 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td>{{ role.get_name_display }}</td>
+                    <td><code>{{ role.slug }}</code></td>
                     <td>{{ role.description|truncatewords:10|default:"-" }}</td>
                     <td>
-                        <a href="{% url 'role-detail' role.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        <a href="{% url 'role-update' role.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                        <a href="{% url 'role-delete' role.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                        <a href="{% url 'role-detail' role.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openRoleModal({{ role.id }}, '{{ role.name|escapejs }}', '{{ role.description|escapejs }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <a href="{% url 'role-delete' role.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-muted">لا توجد أدوار</td>
+                    <td colspan="5" class="text-center py-4 text-muted">لا يوجد أدوار</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -42,4 +61,118 @@
 </div>
 
 {% include "includes/pagination.html" %}
+
+<!-- Role Modal -->
+<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roleModalLabel">إضافة دور</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="roleForm" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="role_id" id="roleId" value="">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_name" class="form-label">الدور <span class="text-danger">*</span></label>
+                            <select name="name" id="id_name" class="form-select" required>
+                                <option value="">---------</option>
+                                <option value="مدير_فرع">مدير فرع</option>
+                                <option value="موظف_عروض">موظف عروض</option>
+                                <option value="موظف_متابعة">موظف متابعة</option>
+                                <option value="مدير_نظام">مدير نظام</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_description" class="form-label">الوصف</label>
+                            <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_permissions" class="form-label">الصلاحيات (JSON)</label>
+                        <textarea name="permissions" id="id_permissions" class="form-control" rows="3">[]</textarea>
+                    </div>
+                </form>
+                <div id="roleFormErrors" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="roleSaveBtn" onclick="saveRole()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const roleModal = new bootstrap.Modal(document.getElementById('roleModal'));
+    const roleForm = document.getElementById('roleForm');
+    const roleSaveBtn = document.getElementById('roleSaveBtn');
+    const roleFormErrors = document.getElementById('roleFormErrors');
+
+    function openRoleModal(id, name, description) {
+        roleFormErrors.classList.add('d-none');
+        roleFormErrors.innerHTML = '';
+        roleForm.reset();
+
+        if (id) {
+            document.getElementById('roleModalLabel').textContent = 'تعديل دور';
+            document.getElementById('roleId').value = id;
+            document.getElementById('id_name').value = name || '';
+            document.getElementById('id_description').value = description || '';
+        } else {
+            document.getElementById('roleModalLabel').textContent = 'إضافة دور';
+            document.getElementById('roleId').value = '';
+        }
+        roleModal.show();
+    }
+
+    function saveRole() {
+        const id = document.getElementById('roleId').value;
+        const formData = new FormData(roleForm);
+        const csrfToken = formData.get('csrfmiddlewaretoken');
+
+        const url = id ? '{% url "role-update-ajax" 0 %}'.replace('0', id) : '{% url "role-create-ajax" %}';
+
+        roleSaveBtn.disabled = true;
+        roleSaveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جاري الحفظ...';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(formData)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                roleModal.hide();
+                window.location.reload();
+            } else {
+                roleFormErrors.classList.remove('d-none');
+                let html = '';
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const label = field === '__all__' ? '' : field + ': ';
+                    html += '<div>' + label + errors.join(', ') + '</div>';
+                }
+                roleFormErrors.innerHTML = html;
+            }
+        })
+        .catch(err => {
+            roleFormErrors.classList.remove('d-none');
+            roleFormErrors.textContent = 'حدث خطأ أثناء الحفظ';
+        })
+        .finally(() => {
+            roleSaveBtn.disabled = false;
+            roleSaveBtn.textContent = 'حفظ';
+        });
+    }
+</script>
 {% endblock %}

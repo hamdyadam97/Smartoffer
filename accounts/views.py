@@ -267,9 +267,22 @@ class RoleListView(LoginRequiredMixin, ListView):
     context_object_name = 'roles'
     paginate_by = 20
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(name__icontains=search) |
+                models.Q(description__icontains=search) |
+                models.Q(slug__icontains=search)
+            )
+        return queryset
+
 
 class RoleDetailView(LoginRequiredMixin, DetailView):
     model = Role
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/role_detail.html'
     context_object_name = 'role'
 
@@ -287,6 +300,8 @@ class RoleCreateView(LoginRequiredMixin, CreateView):
 
 class RoleUpdateView(LoginRequiredMixin, UpdateView):
     model = Role
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = RoleForm
     template_name = 'accounts/role_form.html'
     success_url = reverse_lazy('role-list')
@@ -298,12 +313,33 @@ class RoleUpdateView(LoginRequiredMixin, UpdateView):
 
 class RoleDeleteView(LoginRequiredMixin, DeleteView):
     model = Role
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/role_confirm_delete.html'
     success_url = reverse_lazy('role-list')
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الدور بنجاح')
         return super().delete(request, *args, **kwargs)
+
+
+@require_POST
+def role_create_ajax(request):
+    form = RoleForm(request.POST)
+    if form.is_valid():
+        role = form.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء الدور بنجاح', 'id': role.id, 'slug': role.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def role_update_ajax(request, pk):
+    role = get_object_or_404(Role, pk=pk)
+    form = RoleForm(request.POST, instance=role)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث الدور بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================

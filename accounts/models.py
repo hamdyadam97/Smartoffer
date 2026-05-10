@@ -132,6 +132,7 @@ class Role(models.Model):
         ('موظف_متابعة', 'موظف متابعة'),
         ('مدير_نظام', 'مدير نظام'),
     ]
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     name = models.CharField(max_length=50, choices=ROLE_CHOICES, unique=True, verbose_name='الدور')
     description = models.TextField(blank=True, verbose_name='الوصف')
     permissions = models.JSONField(default=list, blank=True, verbose_name='الصلاحيات')
@@ -140,6 +141,17 @@ class Role(models.Model):
     class Meta:
         verbose_name = 'دور'
         verbose_name_plural = 'الأدوار'
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.get_name_display(), allow_unicode=True)
+            slug = base
+            counter = 1
+            while Role.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.get_name_display()

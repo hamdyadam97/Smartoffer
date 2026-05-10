@@ -7,6 +7,7 @@ from .views import (
     team_create_ajax, team_update_ajax,
     BranchAccessListView, BranchAccessCreateView, BranchAccessUpdateView, BranchAccessDeleteView,
     RoleListView, RoleDetailView, RoleCreateView, RoleUpdateView, RoleDeleteView,
+    role_create_ajax, role_update_ajax,
     EmployeeRoleListView, EmployeeRoleCreateView, EmployeeRoleUpdateView, EmployeeRoleDeleteView,
     EmployeePerformanceListView, EmployeePerformanceCreateView, EmployeePerformanceUpdateView, EmployeePerformanceDeleteView,
 )
@@ -38,10 +39,12 @@ urlpatterns = [
 
     # Role URLs
     path('roles/', RoleListView.as_view(), name='role-list'),
-    path('roles/<int:pk>/', RoleDetailView.as_view(), name='role-detail'),
+    path('roles/<str:slug>/', RoleDetailView.as_view(), name='role-detail'),
     path('roles/create/', RoleCreateView.as_view(), name='role-create'),
-    path('roles/<int:pk>/update/', RoleUpdateView.as_view(), name='role-update'),
-    path('roles/<int:pk>/delete/', RoleDeleteView.as_view(), name='role-delete'),
+    path('roles/<str:slug>/update/', RoleUpdateView.as_view(), name='role-update'),
+    path('roles/<str:slug>/delete/', RoleDeleteView.as_view(), name='role-delete'),
+    path('roles/ajax/create/', role_create_ajax, name='role-create-ajax'),
+    path('roles/ajax/<int:pk>/update/', role_update_ajax, name='role-update-ajax'),
 
     # EmployeeRole URLs
     path('employee-roles/', EmployeeRoleListView.as_view(), name='employeerole-list'),
