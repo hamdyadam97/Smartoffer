@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     PersonListView, PersonDetailView, PersonCreateView, PersonUpdateView, PersonDeleteView,
+    person_create_ajax, person_update_ajax,
     TeamListView, TeamDetailView, TeamCreateView, TeamUpdateView, TeamDeleteView,
     team_create_ajax, team_update_ajax,
     BranchAccessListView, BranchAccessCreateView, BranchAccessUpdateView, BranchAccessDeleteView,
@@ -13,10 +14,12 @@ from .views import (
 urlpatterns = [
     # Person URLs
     path('persons/', PersonListView.as_view(), name='person-list'),
-    path('persons/<int:pk>/', PersonDetailView.as_view(), name='person-detail'),
+    path('persons/<str:slug>/', PersonDetailView.as_view(), name='person-detail'),
     path('persons/create/', PersonCreateView.as_view(), name='person-create'),
-    path('persons/<int:pk>/update/', PersonUpdateView.as_view(), name='person-update'),
-    path('persons/<int:pk>/delete/', PersonDeleteView.as_view(), name='person-delete'),
+    path('persons/<str:slug>/update/', PersonUpdateView.as_view(), name='person-update'),
+    path('persons/<str:slug>/delete/', PersonDeleteView.as_view(), name='person-delete'),
+    path('persons/ajax/create/', person_create_ajax, name='person-create-ajax'),
+    path('persons/ajax/<int:pk>/update/', person_update_ajax, name='person-update-ajax'),
 
     # Team URLs
     path('teams/', TeamListView.as_view(), name='team-list'),

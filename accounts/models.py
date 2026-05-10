@@ -39,6 +39,7 @@ class Team(models.Model):
 
 class Person(AbstractBaseUser, PermissionsMixin):
     """المستخدم / الموظف"""
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     email = models.EmailField(unique=True, db_index=True, verbose_name='البريد الإلكتروني')
     
     # Contact Info (OneToOne)
@@ -80,6 +81,17 @@ class Person(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.get_full_name() or self.email.split('@')[0], allow_unicode=True)
+            slug = base
+            counter = 1
+            while Person.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def get_full_name(self):
         return f"{self.first_name} {self.second_name} {self.third_name} {self.forth_name}".strip()

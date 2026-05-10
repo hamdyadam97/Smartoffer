@@ -52,16 +52,29 @@ class PersonListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 models.Q(first_name__icontains=search) |
                 models.Q(email__icontains=search) |
-                models.Q(forth_name__icontains=search)
+                models.Q(forth_name__icontains=search) |
+                models.Q(slug__icontains=search)
             )
         team = self.request.GET.get('team')
         if team:
             queryset = queryset.filter(team_id=team)
+        branch = self.request.GET.get('branch')
+        if branch:
+            queryset = queryset.filter(branch_id=branch)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch
+        context['teams'] = Team.objects.all()
+        context['branches'] = Branch.objects.all()
+        return context
 
 
 class PersonDetailView(LoginRequiredMixin, DetailView):
     model = Person
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/person_detail.html'
     context_object_name = 'person'
 
@@ -79,6 +92,8 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
 
 class PersonUpdateView(LoginRequiredMixin, UpdateView):
     model = Person
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = PersonChangeForm
     template_name = 'accounts/person_form.html'
     success_url = reverse_lazy('person-list')
@@ -90,12 +105,33 @@ class PersonUpdateView(LoginRequiredMixin, UpdateView):
 
 class PersonDeleteView(LoginRequiredMixin, DeleteView):
     model = Person
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'accounts/person_confirm_delete.html'
     success_url = reverse_lazy('person-list')
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف المستخدم بنجاح')
         return super().delete(request, *args, **kwargs)
+
+
+@require_POST
+def person_create_ajax(request):
+    form = PersonCreationForm(request.POST)
+    if form.is_valid():
+        person = form.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء الموظف بنجاح', 'id': person.id, 'slug': person.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def person_update_ajax(request, pk):
+    person = get_object_or_404(Person, pk=pk)
+    form = PersonChangeForm(request.POST, instance=person)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث الموظف بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================
