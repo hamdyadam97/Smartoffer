@@ -8,7 +8,7 @@
         <div class="card border-danger">
             <div class="card-header bg-danger text-white"><i class="bi bi-exclamation-triangle"></i> تأكيد الحذف</div>
             <div class="card-body text-center">
-                <p class="fs-5">هل أنت متأكد من حذف دور <strong>{{ object.role.get_name_display }}</strong> للموظف <strong>{{ object.person.get_short_name }}</strong>؟</p>
+                <p class="fs-5">هل أنت متأكد من حذف دور <strong>{{ object.role.name }}</strong> للموظف <strong>{{ object.person.get_short_name }}</strong>؟</p>
                 <p class="text-muted">لا يمكن التراجع عن هذا الإجراء.</p>
                 <form method="post">
                     {% csrf_token %}

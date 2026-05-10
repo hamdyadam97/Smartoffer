@@ -74,8 +74,7 @@ class RoleModelTest(TestCase):
         )
 
     def test_role_creation(self):
-        self.assertEqual(self.role.name, 'مدير_فرع')
-        self.assertEqual(self.role.get_name_display(), 'مدير فرع')
+        self.assertEqual(self.role.name, 'مدير فرع')
 
 
 class EmployeeRoleModelTest(TestCase):

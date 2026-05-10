@@ -8,7 +8,7 @@
         <div class="card border-danger">
             <div class="card-header bg-danger text-white"><i class="bi bi-exclamation-triangle"></i> تأكيد عملية الحذف</div>
             <div class="card-body text-center">
-                <p class="fs-5">هل أنت متأكد من رغبتك في حذف الدور <strong>{{ object.get_name_display }}</strong>؟</p>
+                <p class="fs-5">هل أنت متأكد من رغبتك في حذف الدور <strong>{{ object.name }}</strong>؟</p>
                 <p class="text-muted">لا يمكن التراجع عن هذه العملية بعد التنفيذ.</p>
                 <form method="post">
                     {% csrf_token %}

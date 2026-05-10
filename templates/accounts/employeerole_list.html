@@ -1,11 +1,19 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}أدوار الموظفين | Smart Offer{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-person-badge"></i> أدوار الموظفين</h2>
-    <a href="{% url 'employeerole-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة دور موظف</a>
+    <h2><i class="bi bi-person-check"></i> أدوار الموظفين</h2>
+    <div class="d-flex gap-2">
+        {% if user|has_perm:'add_employeerole' %}
+        <button type="button" class="btn btn-info" onclick="openBulkModal()">
+            <i class="bi bi-people-fill"></i> تسند لكل الفريق
+        </button>
+        <a href="{% url 'employeerole-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة دور موظف</a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card">
@@ -25,11 +33,15 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <td>{{ er.person.get_short_name }}</td>
-                    <td>{{ er.role.get_name_display }}</td>
+                    <td>{{ er.role.name }}</td>
                     <td>{{ er.branch.name }}</td>
                     <td>
+                        {% if user|has_perm:'change_employeerole' %}
                         <a href="{% url 'employeerole-update' er.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                        {% endif %}
+                        {% if user|has_perm:'delete_employeerole' %}
                         <a href="{% url 'employeerole-delete' er.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -43,4 +55,123 @@
 </div>
 
 {% include "includes/pagination.html" %}
+
+<!-- Bulk Assign Modal -->
+<div class="modal fade" id="bulkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-people-fill text-info me-2"></i> تسند دور لكل الفريق</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bulkAlert"></div>
+                <form id="bulkForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">الفريق <span class="text-danger">*</span></label>
+                        <select name="team" id="bulkTeam" class="form-select" required>
+                            <option value="">اختر الفريق...</option>
+                            {% for team in teams %}
+                            <option value="{{ team.id }}">{{ team.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الدور <span class="text-danger">*</span></label>
+                        <select name="role" id="bulkRole" class="form-select" required>
+                            <option value="">اختر الدور...</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                        <select name="branch" id="bulkBranch" class="form-select" required>
+                            <option value="">اختر الفرع...</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}">{{ branch.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-info" id="bulkSaveBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="bulkSpinner"></span>
+                    <span id="bulkBtnText">تسند للكل</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const bulkModal = document.getElementById('bulkModal');
+    const bulkForm = document.getElementById('bulkForm');
+    const bulkSaveBtn = document.getElementById('bulkSaveBtn');
+    const bulkSpinner = document.getElementById('bulkSpinner');
+    const bulkBtnText = document.getElementById('bulkBtnText');
+    const bulkAlert = document.getElementById('bulkAlert');
+
+    function showAlert(message, type) {
+        bulkAlert.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setLoading(loading) {
+        bulkSaveBtn.disabled = loading;
+        bulkSpinner.classList.toggle('d-none', !loading);
+        bulkBtnText.textContent = loading ? 'جاري الحفظ...' : 'تسند للكل';
+    }
+
+    window.openBulkModal = function() {
+        bulkAlert.innerHTML = '';
+        bulkForm.reset();
+        const modal = new bootstrap.Modal(bulkModal);
+        modal.show();
+    };
+
+    bulkSaveBtn.addEventListener('click', function() {
+        if (!bulkForm.checkValidity()) {
+            bulkForm.reportValidity();
+            return;
+        }
+        setLoading(true);
+        const formData = new FormData(bulkForm);
+        const body = new URLSearchParams(formData);
+
+        fetch('{% url "employeerole-bulk-create" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(bulkModal).hide();
+                    bulkAlert.innerHTML = '';
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert(data.message || 'حدث خطأ', 'danger');
+            }
+        })
+        .catch(() => {
+            setLoading(false);
+            showAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
+})();
+</script>
 {% endblock %}
