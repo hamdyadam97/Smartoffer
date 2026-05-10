@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}قائمة الفرق | Smart Offer{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-people"></i> فرق العمل</h2>
+    {% if user|has_perm:'add_team' %}
     <button type="button" class="btn btn-primary" onclick="openTeamModal()">
         <i class="bi bi-plus-lg"></i> إضافة فريق
     </button>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -19,7 +22,7 @@
                     <th>الاسم</th>
                     <th>الكود</th>
                     <th>الفرع</th>
-                    <th>الوصف</th>
+                    <th>الدور الافتراضي</th>
                     <th>الإجراءات</th>
                 </tr>
             </thead>
@@ -30,13 +33,26 @@
                     <td>{{ team.name }}</td>
                     <td>{{ team.code }}</td>
                     <td>{{ team.branch|default:"-" }}</td>
-                    <td>{{ team.description|truncatewords:10|default:"-" }}</td>
+                    <td>
+                        {% if team.default_role %}
+                        <span class="badge bg-info">{{ team.default_role.name }}</span>
+                        {% if team.default_branch %}
+                        <small class="text-muted">({{ team.default_branch.name }})</small>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{% url 'team-detail' team.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        <button type="button" class="btn btn-sm btn-warning" onclick="openTeamModal({{ team.id }}, '{{ team.name|escapejs }}', '{{ team.code|escapejs }}', '{{ team.description|escapejs }}', {{ team.branch_id|default:'null' }})">
+                        {% if user|has_perm:'change_team' %}
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openTeamModal({{ team.id }}, '{{ team.name|escapejs }}', '{{ team.code|escapejs }}', '{{ team.description|escapejs }}', {{ team.branch_id|default:'null' }}, {{ team.default_role_id|default:'null' }}, {{ team.default_branch_id|default:'null' }})">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        {% endif %}
+                        {% if user|has_perm:'delete_team' %}
                         <a href="{% url 'team-delete' team.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
@@ -90,6 +106,29 @@
                             <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_default_role" class="form-label">الدور الافتراضي</label>
+                            <select name="default_role" id="id_default_role" class="form-select">
+                                <option value="">---------</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">لما تضيف موظف للفريق ده، هياخد الدور ده تلقائياً</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_default_branch" class="form-label">الفرع الافتراضي</label>
+                            <select name="default_branch" id="id_default_branch" class="form-select">
+                                <option value="">---------</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">لما تضيف موظف للفريق ده، هيُسجل في الفرع ده تلقائياً</small>
+                        </div>
+                    </div>
                 </form>
                 <div id="teamFormErrors" class="alert alert-danger d-none"></div>
             </div>
@@ -109,7 +148,7 @@
     const teamSaveBtn = document.getElementById('teamSaveBtn');
     const teamFormErrors = document.getElementById('teamFormErrors');
 
-    function openTeamModal(id, name, code, description, branchId) {
+    function openTeamModal(id, name, code, description, branchId, defaultRoleId, defaultBranchId) {
         teamFormErrors.classList.add('d-none');
         teamFormErrors.innerHTML = '';
         teamForm.reset();
@@ -121,6 +160,8 @@
             document.getElementById('id_code').value = code || '';
             document.getElementById('id_description').value = description || '';
             document.getElementById('id_branch').value = branchId || '';
+            document.getElementById('id_default_role').value = defaultRoleId || '';
+            document.getElementById('id_default_branch').value = defaultBranchId || '';
         } else {
             document.getElementById('teamModalLabel').textContent = 'إضافة فريق';
             document.getElementById('teamId').value = '';

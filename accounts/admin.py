@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Team, Person, BranchAccess
+from .models import Team, Person, BranchAccess, Role, Permission, EmployeeRole, EmployeePerformance
 
 
 @admin.register(Team)
@@ -41,3 +41,43 @@ class PersonAdmin(UserAdmin):
     def get_full_name(self, obj):
         return obj.get_full_name()
     get_full_name.short_description = 'الاسم الكامل'
+
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'codename', 'app_label', 'model_name', 'action']
+    list_filter = ['app_label', 'action']
+    search_fields = ['name', 'codename']
+    ordering = ['app_label', 'model_name', 'action']
+
+
+class RolePermissionsInline(admin.TabularInline):
+    model = Role.permissions.through
+    extra = 0
+    autocomplete_fields = ['permission']
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'description', 'permissions_count']
+    search_fields = ['name', 'description']
+    inlines = [RolePermissionsInline]
+    exclude = ['permissions']
+
+    def permissions_count(self, obj):
+        return obj.permissions.count()
+    permissions_count.short_description = 'عدد الصلاحيات'
+
+
+@admin.register(EmployeeRole)
+class EmployeeRoleAdmin(admin.ModelAdmin):
+    list_display = ['person', 'role', 'branch', 'assigned_at']
+    list_filter = ['role', 'branch']
+    search_fields = ['person__email', 'person__first_name', 'role__name']
+
+
+@admin.register(EmployeePerformance)
+class EmployeePerformanceAdmin(admin.ModelAdmin):
+    list_display = ['person', 'branch', 'period_month', 'period_year', 'offers_sent', 'offers_opened', 'subscriptions']
+    list_filter = ['branch', 'period_year', 'period_month']
+    search_fields = ['person__email', 'person__first_name']

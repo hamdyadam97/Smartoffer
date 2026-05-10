@@ -1,17 +1,19 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance
+from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission, Permission
 
 
 class TeamForm(forms.ModelForm):
     class Meta:
         model = Team
-        fields = ['branch', 'name', 'code', 'description']
+        fields = ['branch', 'name', 'code', 'description', 'default_role', 'default_branch']
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'code': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'default_role': forms.Select(attrs={'class': 'form-select'}),
+            'default_branch': forms.Select(attrs={'class': 'form-select'}),
         }
 
 
@@ -107,10 +109,15 @@ class RoleForm(forms.ModelForm):
         model = Role
         fields = ['name', 'description', 'permissions']
         widgets = {
-            'name': forms.Select(attrs={'class': 'form-select'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: مدير تنفيذي'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'permissions': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'permissions': forms.CheckboxSelectMultiple(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['permissions'].queryset = Permission.objects.all().order_by('app_label', 'model_name', 'action')
+        self.fields['permissions'].required = False
 
 
 class EmployeeRoleForm(forms.ModelForm):
@@ -140,4 +147,17 @@ class EmployeePerformanceForm(forms.ModelForm):
             'offers_opened': forms.NumberInput(attrs={'class': 'form-control'}),
             'offers_interacted': forms.NumberInput(attrs={'class': 'form-control'}),
             'subscriptions': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+
+class PermissionForm(forms.ModelForm):
+    class Meta:
+        model = Permission
+        fields = ['codename', 'name', 'app_label', 'model_name', 'action']
+        widgets = {
+            'codename': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'app_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'model_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'action': forms.Select(attrs={'class': 'form-select'}),
         }

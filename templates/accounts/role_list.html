@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}قائمة الأدوار | Smart Offer{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-shield-lock"></i> الأدوار</h2>
+    {% if user|has_perm:'add_role' %}
     <button type="button" class="btn btn-primary" onclick="openRoleModal()">
         <i class="bi bi-plus-lg"></i> إضافة دور
     </button>
+    {% endif %}
 </div>
 
 <div class="card mb-4">
@@ -32,6 +35,7 @@
                     <th>الدور</th>
                     <th>الرابط</th>
                     <th>الوصف</th>
+                    <th>الصلاحيات</th>
                     <th>الإجراءات</th>
                 </tr>
             </thead>
@@ -39,20 +43,27 @@
                 {% for role in roles %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ role.get_name_display }}</td>
+                    <td>{{ role.name }}</td>
                     <td><code>{{ role.slug }}</code></td>
                     <td>{{ role.description|truncatewords:10|default:"-" }}</td>
                     <td>
+                        <span class="badge bg-info">{{ role.permissions.count }} صلاحية</span>
+                    </td>
+                    <td>
                         <a href="{% url 'role-detail' role.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        <button type="button" class="btn btn-sm btn-warning" onclick="openRoleModal({{ role.id }}, '{{ role.name|escapejs }}', '{{ role.description|escapejs }}')">
+                        {% if user|has_perm:'change_role' %}
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openRoleModal({{ role.id }}, '{{ role.name|escapejs }}', '{{ role.description|escapejs }}', [{% for p in role.permissions.all %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
                             <i class="bi bi-pencil"></i>
                         </button>
+                        {% endif %}
+                        {% if user|has_perm:'delete_role' %}
                         <a href="{% url 'role-delete' role.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center py-4 text-muted">لا يوجد أدوار</td>
+                    <td colspan="6" class="text-center py-4 text-muted">لا يوجد أدوار</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -64,7 +75,7 @@
 
 <!-- Role Modal -->
 <div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="roleModalLabel">إضافة دور</h5>
@@ -77,24 +88,44 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="id_name" class="form-label">الدور <span class="text-danger">*</span></label>
-                            <select name="name" id="id_name" class="form-select" required>
-                                <option value="">---------</option>
-                                <option value="مدير_فرع">مدير فرع</option>
-                                <option value="موظف_عروض">موظف عروض</option>
-                                <option value="موظف_متابعة">موظف متابعة</option>
-                                <option value="مدير_نظام">مدير نظام</option>
-                            </select>
+                            <label for="id_name" class="form-label">اسم الدور <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="id_name" class="form-control" placeholder="مثال: مدير تنفيذي" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="id_description" class="form-label">الوصف</label>
-                            <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
+                            <textarea name="description" id="id_description" class="form-control" rows="2"></textarea>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="id_permissions" class="form-label">الصلاحيات (JSON)</label>
-                        <textarea name="permissions" id="id_permissions" class="form-control" rows="3">[]</textarea>
+                    <hr>
+                    <h6 class="mb-3">الصلاحيات</h6>
+                    <div class="row" id="permissionsContainer">
+                        {% for app_label, models in grouped_permissions.items %}
+                        <div class="col-12 mb-3">
+                            <div class="card">
+                                <div class="card-header bg-light fw-bold">{{ app_label }}</div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        {% for model_name, permissions in models.items %}
+                                        <div class="col-md-4 mb-2">
+                                            <div class="border rounded p-2">
+                                                <small class="fw-bold text-muted">{{ model_name }}</small>
+                                                <div class="mt-1">
+                                                    {% for perm in permissions %}
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="checkbox" name="permissions" value="{{ perm.id }}" id="perm_{{ perm.id }}">
+                                                        <label class="form-check-label small" for="perm_{{ perm.id }}">{{ perm.get_action_display }}</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </form>
                 <div id="roleFormErrors" class="alert alert-danger d-none"></div>
@@ -115,16 +146,25 @@
     const roleSaveBtn = document.getElementById('roleSaveBtn');
     const roleFormErrors = document.getElementById('roleFormErrors');
 
-    function openRoleModal(id, name, description) {
+    function openRoleModal(id, name, description, permIds) {
         roleFormErrors.classList.add('d-none');
         roleFormErrors.innerHTML = '';
         roleForm.reset();
+
+        // Uncheck all permissions
+        document.querySelectorAll('input[name="permissions"]').forEach(cb => cb.checked = false);
 
         if (id) {
             document.getElementById('roleModalLabel').textContent = 'تعديل دور';
             document.getElementById('roleId').value = id;
             document.getElementById('id_name').value = name || '';
             document.getElementById('id_description').value = description || '';
+            if (permIds) {
+                permIds.forEach(pid => {
+                    const cb = document.getElementById('perm_' + pid);
+                    if (cb) cb.checked = true;
+                });
+            }
         } else {
             document.getElementById('roleModalLabel').textContent = 'إضافة دور';
             document.getElementById('roleId').value = '';

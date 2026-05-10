@@ -1,18 +1,21 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
-{% block title %}قائمة التخصصات{% endblock %}
+{% block title %}قائمة التخصصات | Smart Offer{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-journal-bookmark"></i> التخصصات</h2>
-    <a href="{% url 'master-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> تخصص جديد</a>
+    {% if user|has_perm:'add_master' %}
+    <a href="{% url 'master-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة تخصص</a>
+    {% endif %}
 </div>
 
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-6">
-                <input type="text" name="search" class="form-control" placeholder="بحث بالاسم..." value="{{ request.GET.search|default:'' }}">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالاسم أو الكود..." value="{{ request.GET.search|default:'' }}">
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> بحث</button>
@@ -29,8 +32,8 @@
                 <th>الاسم</th>
                 <th>الفرع</th>
                 <th>التصنيف</th>
-                <th>الفترة</th>
-                <th class="text-start">إجراءات</th>
+                <th>المدة</th>
+                <th class="text-start">الإجراءات</th>
             </tr>
         </thead>
         <tbody>
@@ -43,13 +46,17 @@
                 <td>{{ master.period|default:'-' }}</td>
                 <td class="text-start">
                     <a href="{% url 'master-detail' master.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    {% if user|has_perm:'change_master' %}
                     <a href="{% url 'master-update' master.slug %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                    {% endif %}
+                    {% if user|has_perm:'delete_master' %}
                     <a href="{% url 'master-delete' master.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" class="text-center text-muted">لا يوجد تخصصات</td>
+                <td colspan="6" class="text-center text-muted">لا توجد تخصصات</td>
             </tr>
             {% endfor %}
         </tbody>

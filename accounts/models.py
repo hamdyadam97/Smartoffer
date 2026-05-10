@@ -3,8 +3,35 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
+from django.apps import apps
 
 from .managers import PersonManager
+
+
+class Permission(models.Model):
+    """صلاحية ديناميكية"""
+    ACTIONS = [
+        ('view', 'عرض'),
+        ('add', 'إضافة'),
+        ('change', 'تعديل'),
+        ('delete', 'حذف'),
+    ]
+
+    codename = models.CharField(max_length=100, unique=True, verbose_name='الكود')
+    name = models.CharField(max_length=255, verbose_name='الاسم')
+    app_label = models.CharField(max_length=100, verbose_name='التطبيق')
+    model_name = models.CharField(max_length=100, verbose_name='الموديل')
+    action = models.CharField(max_length=20, choices=ACTIONS, verbose_name='الإجراء')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'صلاحية'
+        verbose_name_plural = 'الصلاحيات'
+        unique_together = ['app_label', 'model_name', 'action']
+        ordering = ['app_label', 'model_name', 'action']
+
+    def __str__(self):
+        return self.name
 
 
 class Team(models.Model):
@@ -14,6 +41,8 @@ class Team(models.Model):
     name = models.CharField(max_length=255, verbose_name='اسم الفريق')
     code = models.CharField(max_length=50, unique=True, verbose_name='كود الفريق')
     description = models.TextField(blank=True, verbose_name='الوصف')
+    default_role = models.ForeignKey('accounts.Role', on_delete=models.SET_NULL, null=True, blank=True, related_name='default_teams', verbose_name='الدور الافتراضي')
+    default_branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='default_teams', verbose_name='الفرع الافتراضي')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,7 +70,7 @@ class Person(AbstractBaseUser, PermissionsMixin):
     """المستخدم / الموظف"""
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     email = models.EmailField(unique=True, db_index=True, verbose_name='البريد الإلكتروني')
-    
+
     # Contact Info (OneToOne)
     first_name = models.CharField(max_length=100, blank=True, db_index=True, verbose_name='الاسم الأول')
     second_name = models.CharField(max_length=100, blank=True, verbose_name='الاسم الثاني')
@@ -51,21 +80,21 @@ class Person(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=20, blank=True, verbose_name='التليفون')
     address = models.TextField(blank=True, verbose_name='العنوان')
     photo = models.TextField(blank=True, verbose_name='الصورة (Base64)')
-    
+
     # Settings
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='members', verbose_name='الفريق')
     branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='persons', verbose_name='الفرع الرئيسي')
-    
+
     # Status
     is_staff = models.BooleanField(default=False, db_index=True, verbose_name='موظف')
     is_active = models.BooleanField(default=True, db_index=True, verbose_name='نشط')
     is_superuser = models.BooleanField(default=False, verbose_name='مدير نظام')
-    
+
     # Tracking
     last_login_date = models.DateTimeField(null=True, blank=True, verbose_name='آخر دخول')
     ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='عنوان IP')
     options = models.JSONField(default=dict, blank=True, verbose_name='الإعدادات')
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,6 +121,13 @@ class Person(AbstractBaseUser, PermissionsMixin):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+        # Auto-create EmployeeRole if team has default_role and default_branch
+        if self.team and self.team.default_role and self.team.default_branch:
+            EmployeeRole.objects.get_or_create(
+                person=self,
+                role=self.team.default_role,
+                branch=self.team.default_branch
+            )
 
     def get_full_name(self):
         return f"{self.first_name} {self.second_name} {self.third_name} {self.forth_name}".strip()
@@ -107,6 +143,21 @@ class Person(AbstractBaseUser, PermissionsMixin):
             branches.append(self.branch)
         branches.extend([access.branch for access in self.branch_accesses.all()])
         return list(set(branches))
+
+    def has_perm(self, perm_codename):
+        """Check if user has a specific permission via their roles"""
+        if self.is_superuser:
+            return True
+        return Permission.objects.filter(
+            codename=perm_codename,
+            roles__employees__person=self
+        ).exists()
+
+    def has_perms(self, perm_codenames):
+        """Check if user has all specified permissions"""
+        if self.is_superuser:
+            return True
+        return all(self.has_perm(p) for p in perm_codenames)
 
 
 class BranchAccess(models.Model):
@@ -126,16 +177,10 @@ class BranchAccess(models.Model):
 
 class Role(models.Model):
     """دور/منصب الموظف"""
-    ROLE_CHOICES = [
-        ('مدير_فرع', 'مدير فرع'),
-        ('موظف_عروض', 'موظف عروض'),
-        ('موظف_متابعة', 'موظف متابعة'),
-        ('مدير_نظام', 'مدير نظام'),
-    ]
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
-    name = models.CharField(max_length=50, choices=ROLE_CHOICES, unique=True, verbose_name='الدور')
+    name = models.CharField(max_length=100, unique=True, verbose_name='الدور')
     description = models.TextField(blank=True, verbose_name='الوصف')
-    permissions = models.JSONField(default=list, blank=True, verbose_name='الصلاحيات')
+    permissions = models.ManyToManyField(Permission, blank=True, related_name='roles', verbose_name='الصلاحيات')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -144,7 +189,7 @@ class Role(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base = slugify(self.get_name_display(), allow_unicode=True)
+            base = slugify(self.name, allow_unicode=True)
             slug = base
             counter = 1
             while Role.objects.filter(slug=slug).exclude(pk=self.pk).exists():
@@ -154,12 +199,12 @@ class Role(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.get_name_display()
+        return self.name
 
 
 class EmployeeRole(models.Model):
     """ربط الموظف بدوره"""
-    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='roles', verbose_name='الموظف')
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='employee_roles', verbose_name='الموظف')
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='employees', verbose_name='الدور')
     branch = models.ForeignKey('core.Branch', on_delete=models.CASCADE, related_name='employee_roles', verbose_name='الفرع')
     assigned_at = models.DateTimeField(auto_now_add=True)
@@ -170,7 +215,7 @@ class EmployeeRole(models.Model):
         unique_together = ['person', 'role', 'branch']
 
     def __str__(self):
-        return f"{self.person.get_short_name()} - {self.role.get_name_display()} ({self.branch.name})"
+        return f"{self.person.get_short_name()} - {self.role.name} ({self.branch.name})"
 
 
 class EmployeePerformance(models.Model):

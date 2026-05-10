@@ -10,10 +10,10 @@ from django.db import models
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance
+from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 from .forms import (
     PersonCreationForm, PersonChangeForm, TeamForm,
-    BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm
+    BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm, PermissionForm
 )
 
 
@@ -148,6 +148,7 @@ class TeamListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         from core.models import Branch
         context['branches'] = Branch.objects.all()
+        context['roles'] = Role.objects.all()
         return context
 
 
@@ -278,6 +279,17 @@ class RoleListView(LoginRequiredMixin, ListView):
             )
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import Permission
+        from collections import defaultdict
+        perms = Permission.objects.all().order_by('app_label', 'model_name', 'action')
+        grouped = defaultdict(lambda: defaultdict(list))
+        for p in perms:
+            grouped[p.app_label][p.model_name].append(p)
+        context['grouped_permissions'] = {app: dict(models) for app, models in grouped.items()}
+        return context
+
 
 class RoleDetailView(LoginRequiredMixin, DetailView):
     model = Role
@@ -293,6 +305,18 @@ class RoleCreateView(LoginRequiredMixin, CreateView):
     template_name = 'accounts/role_form.html'
     success_url = reverse_lazy('role-list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import Permission
+        from collections import defaultdict
+        perms = Permission.objects.all().order_by('app_label', 'model_name', 'action')
+        grouped = defaultdict(lambda: defaultdict(list))
+        for p in perms:
+            grouped[p.app_label][p.model_name].append(p)
+        context['grouped_permissions'] = {app: dict(models) for app, models in grouped.items()}
+        context['selected_permissions'] = []
+        return context
+
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء الدور بنجاح')
         return super().form_valid(form)
@@ -305,6 +329,18 @@ class RoleUpdateView(LoginRequiredMixin, UpdateView):
     form_class = RoleForm
     template_name = 'accounts/role_form.html'
     success_url = reverse_lazy('role-list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from .models import Permission
+        from collections import defaultdict
+        perms = Permission.objects.all().order_by('app_label', 'model_name', 'action')
+        grouped = defaultdict(lambda: defaultdict(list))
+        for p in perms:
+            grouped[p.app_label][p.model_name].append(p)
+        context['grouped_permissions'] = {app: dict(models) for app, models in grouped.items()}
+        context['selected_permissions'] = list(self.object.permissions.values_list('id', flat=True))
+        return context
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث الدور بنجاح')
@@ -343,6 +379,69 @@ def role_update_ajax(request, pk):
 
 
 # ============================================================
+# Permission Views
+# ============================================================
+
+class PermissionListView(LoginRequiredMixin, ListView):
+    model = Permission
+    template_name = 'accounts/permission_list.html'
+    context_object_name = 'permissions'
+    paginate_by = 30
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.GET.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(name__icontains=search) |
+                models.Q(codename__icontains=search) |
+                models.Q(app_label__icontains=search) |
+                models.Q(model_name__icontains=search)
+            )
+        app = self.request.GET.get('app')
+        if app:
+            queryset = queryset.filter(app_label=app)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['apps'] = Permission.objects.values_list('app_label', flat=True).distinct().order_by('app_label')
+        return context
+
+
+class PermissionCreateView(LoginRequiredMixin, CreateView):
+    model = Permission
+    form_class = PermissionForm
+    template_name = 'accounts/permission_form.html'
+    success_url = reverse_lazy('permission-list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'تم إنشاء الصلاحية بنجاح')
+        return super().form_valid(form)
+
+
+class PermissionUpdateView(LoginRequiredMixin, UpdateView):
+    model = Permission
+    form_class = PermissionForm
+    template_name = 'accounts/permission_form.html'
+    success_url = reverse_lazy('permission-list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'تم تحديث الصلاحية بنجاح')
+        return super().form_valid(form)
+
+
+class PermissionDeleteView(LoginRequiredMixin, DeleteView):
+    model = Permission
+    template_name = 'accounts/permission_confirm_delete.html'
+    success_url = reverse_lazy('permission-list')
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'تم حذف الصلاحية بنجاح')
+        return super().delete(request, *args, **kwargs)
+
+
+# ============================================================
 # EmployeeRole Views
 # ============================================================
 
@@ -351,6 +450,14 @@ class EmployeeRoleListView(LoginRequiredMixin, ListView):
     template_name = 'accounts/employeerole_list.html'
     context_object_name = 'employee_roles'
     paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['teams'] = Team.objects.all()
+        context['roles'] = Role.objects.all()
+        from core.models import Branch
+        context['branches'] = Branch.objects.all()
+        return context
 
 
 class EmployeeRoleCreateView(LoginRequiredMixin, CreateView):
@@ -383,6 +490,38 @@ class EmployeeRoleDeleteView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف دور الموظف بنجاح')
         return super().delete(request, *args, **kwargs)
+
+
+@require_POST
+def employeerole_bulk_create(request):
+    """Assign a role to all members of a team in a specific branch."""
+    team_id = request.POST.get('team')
+    role_id = request.POST.get('role')
+    branch_id = request.POST.get('branch')
+
+    if not all([team_id, role_id, branch_id]):
+        return JsonResponse({'success': False, 'message': 'جميع الحقول مطلوبة'}, status=400)
+
+    team = get_object_or_404(Team, pk=team_id)
+    role = get_object_or_404(Role, pk=role_id)
+    branch = get_object_or_404('core.Branch', pk=branch_id)
+
+    members = team.members.all()
+    created = 0
+    skipped = 0
+    for person in members:
+        obj, was_created = EmployeeRole.objects.get_or_create(
+            person=person, role=role, branch=branch
+        )
+        if was_created:
+            created += 1
+        else:
+            skipped += 1
+
+    return JsonResponse({
+        'success': True,
+        'message': f'تم تسجيل {created} موظف بنجاح' + (f' (تم تخطي {skipped} مسجل مسبقاً)' if skipped else '')
+    })
 
 
 # ============================================================

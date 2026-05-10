@@ -1,3 +1,4 @@
+{% load permission_tags %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -736,25 +737,27 @@
                         </a>
                         <div class="collapse {% if '/companies/' in request.path or '/branches/' in request.path or '/banks/' in request.path or '/master-categories/' in request.path or '/persons/' in request.path or '/teams/' in request.path or '/roles/' in request.path or '/employee' in request.path %}show{% endif %}" id="adminCollapse">
                             <ul class="nav flex-column sidebar-submenu">
-                                <li class="nav-item"><a class="nav-link {% if '/companies/' in request.path %}active{% endif %}" href="{% url 'company-list' %}"><i class="bi bi-building"></i> الشركات</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/branches/' in request.path and '/branches/create/' not in request.path %}active{% endif %}" href="{% url 'branch-list' %}"><i class="bi bi-diagram-3"></i> الفروع</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/banks/' in request.path %}active{% endif %}" href="{% url 'bank-list' %}"><i class="bi bi-bank"></i> البنوك</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/master-categories/' in request.path %}active{% endif %}" href="{% url 'mastercategory-list' %}"><i class="bi bi-tags"></i> تصنيفات التخصصات</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/persons/' in request.path %}active{% endif %}" href="{% url 'person-list' %}"><i class="bi bi-person-badge"></i> الموظفين</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/teams/' in request.path %}active{% endif %}" href="{% url 'team-list' %}"><i class="bi bi-people-fill"></i> الفرق</a></li>
-                                <li class="nav-item"><a class="nav-link {% if '/roles/' in request.path %}active{% endif %}" href="{% url 'role-list' %}"><i class="bi bi-shield-lock"></i> الأدوار</a></li>
+                                {% if user|has_perm:'view_company' %}<li class="nav-item"><a class="nav-link {% if '/companies/' in request.path %}active{% endif %}" href="{% url 'company-list' %}"><i class="bi bi-building"></i> الشركات</a></li>{% endif %}
+                                {% if user|has_perm:'view_branch' %}<li class="nav-item"><a class="nav-link {% if '/branches/' in request.path and '/branches/create/' not in request.path %}active{% endif %}" href="{% url 'branch-list' %}"><i class="bi bi-diagram-3"></i> الفروع</a></li>{% endif %}
+                                {% if user|has_perm:'view_bank' %}<li class="nav-item"><a class="nav-link {% if '/banks/' in request.path %}active{% endif %}" href="{% url 'bank-list' %}"><i class="bi bi-bank"></i> البنوك</a></li>{% endif %}
+                                {% if user|has_perm:'view_mastercategory' %}<li class="nav-item"><a class="nav-link {% if '/master-categories/' in request.path %}active{% endif %}" href="{% url 'mastercategory-list' %}"><i class="bi bi-tags"></i> تصنيفات التخصصات</a></li>{% endif %}
+                                {% if user|has_perm:'view_person' %}<li class="nav-item"><a class="nav-link {% if '/persons/' in request.path %}active{% endif %}" href="{% url 'person-list' %}"><i class="bi bi-person-badge"></i> الموظفين</a></li>{% endif %}
+                                {% if user|has_perm:'view_team' %}<li class="nav-item"><a class="nav-link {% if '/teams/' in request.path %}active{% endif %}" href="{% url 'team-list' %}"><i class="bi bi-people-fill"></i> الفرق</a></li>{% endif %}
+                                {% if user|has_perm:'view_role' %}<li class="nav-item"><a class="nav-link {% if '/roles/' in request.path %}active{% endif %}" href="{% url 'role-list' %}"><i class="bi bi-shield-lock"></i> الأدوار</a></li>{% endif %}
+                                {% if user|has_perm:'view_permission' %}<li class="nav-item"><a class="nav-link {% if '/permissions/' in request.path %}active{% endif %}" href="{% url 'permission-list' %}"><i class="bi bi-key"></i> الصلاحيات</a></li>{% endif %}
+                                {% if user|has_perm:'view_employeerole' %}<li class="nav-item"><a class="nav-link {% if '/employee-roles/' in request.path %}active{% endif %}" href="{% url 'employeerole-list' %}"><i class="bi bi-person-check"></i> أدوار الموظفين</a></li>{% endif %}
                             </ul>
                         </div>
                     </li>
 
-                    <li class="nav-item"><a class="nav-link {% if '/students/' in request.path %}active{% endif %}" href="{% url 'student-list' %}"><i class="bi bi-mortarboard"></i> الطلاب</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/masters/' in request.path %}active{% endif %}" href="{% url 'master-list' %}"><i class="bi bi-journal-bookmark"></i> التخصصات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'course-list' %}"><i class="bi bi-book"></i> الدورات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/registrations/' in request.path %}active{% endif %}" href="{% url 'registration-list' %}"><i class="bi bi-journal-check"></i> التسجيلات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/payments/' in request.path %}active{% endif %}" href="{% url 'payment-list' %}"><i class="bi bi-cash-stack"></i> المدفوعات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/student-offers/' in request.path %}active{% endif %}" href="{% url 'studentoffer-list' %}"><i class="bi bi-tag"></i> عروض الأسعار</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/calls/' in request.path %}active{% endif %}" href="{% url 'call-list' %}"><i class="bi bi-telephone"></i> المكالمات</a></li>
-                    <li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reportsnapshot-list' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>
+                    {% if user|has_perm:'view_student' %}<li class="nav-item"><a class="nav-link {% if '/students/' in request.path %}active{% endif %}" href="{% url 'student-list' %}"><i class="bi bi-mortarboard"></i> الطلاب</a></li>{% endif %}
+                    {% if user|has_perm:'view_master' %}<li class="nav-item"><a class="nav-link {% if '/masters/' in request.path %}active{% endif %}" href="{% url 'master-list' %}"><i class="bi bi-journal-bookmark"></i> التخصصات</a></li>{% endif %}
+                    {% if user|has_perm:'view_course' %}<li class="nav-item"><a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'course-list' %}"><i class="bi bi-book"></i> الدورات</a></li>{% endif %}
+                    {% if user|has_perm:'view_registration' %}<li class="nav-item"><a class="nav-link {% if '/registrations/' in request.path %}active{% endif %}" href="{% url 'registration-list' %}"><i class="bi bi-journal-check"></i> التسجيلات</a></li>{% endif %}
+                    {% if user|has_perm:'view_payment' %}<li class="nav-item"><a class="nav-link {% if '/payments/' in request.path %}active{% endif %}" href="{% url 'payment-list' %}"><i class="bi bi-cash-stack"></i> المدفوعات</a></li>{% endif %}
+                    {% if user|has_perm:'view_studentoffer' %}<li class="nav-item"><a class="nav-link {% if '/student-offers/' in request.path %}active{% endif %}" href="{% url 'studentoffer-list' %}"><i class="bi bi-tag"></i> عروض الأسعار</a></li>{% endif %}
+                    {% if user|has_perm:'view_call' %}<li class="nav-item"><a class="nav-link {% if '/calls/' in request.path %}active{% endif %}" href="{% url 'call-list' %}"><i class="bi bi-telephone"></i> المكالمات</a></li>{% endif %}
+                    {% if user|has_perm:'view_reportsnapshot' %}<li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reportsnapshot-list' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>{% endif %}
                 </ul>
             </nav>
             <main class="col-md-10 ms-sm-auto">

@@ -10,6 +10,8 @@ from .views import (
     role_create_ajax, role_update_ajax,
     EmployeeRoleListView, EmployeeRoleCreateView, EmployeeRoleUpdateView, EmployeeRoleDeleteView,
     EmployeePerformanceListView, EmployeePerformanceCreateView, EmployeePerformanceUpdateView, EmployeePerformanceDeleteView,
+    PermissionListView, PermissionCreateView, PermissionUpdateView, PermissionDeleteView,
+    employeerole_bulk_create,
 )
 
 urlpatterns = [
@@ -51,10 +53,17 @@ urlpatterns = [
     path('employee-roles/create/', EmployeeRoleCreateView.as_view(), name='employeerole-create'),
     path('employee-roles/<int:pk>/update/', EmployeeRoleUpdateView.as_view(), name='employeerole-update'),
     path('employee-roles/<int:pk>/delete/', EmployeeRoleDeleteView.as_view(), name='employeerole-delete'),
+    path('employee-roles/bulk-create/', employeerole_bulk_create, name='employeerole-bulk-create'),
 
     # EmployeePerformance URLs
     path('employee-performances/', EmployeePerformanceListView.as_view(), name='employeeperformance-list'),
     path('employee-performances/create/', EmployeePerformanceCreateView.as_view(), name='employeeperformance-create'),
     path('employee-performances/<int:pk>/update/', EmployeePerformanceUpdateView.as_view(), name='employeeperformance-update'),
     path('employee-performances/<int:pk>/delete/', EmployeePerformanceDeleteView.as_view(), name='employeeperformance-delete'),
+
+    # Permission URLs
+    path('permissions/', PermissionListView.as_view(), name='permission-list'),
+    path('permissions/create/', PermissionCreateView.as_view(), name='permission-create'),
+    path('permissions/<int:pk>/update/', PermissionUpdateView.as_view(), name='permission-update'),
+    path('permissions/<int:pk>/delete/', PermissionDeleteView.as_view(), name='permission-delete'),
 ]
