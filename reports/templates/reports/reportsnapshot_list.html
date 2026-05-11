@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-graph-up"></i> التقارير</h2>
-    <a href="{% url 'reportsnapshot-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> تقرير جديد</a>
+    <button type="button" class="btn btn-primary" onclick="openReportModal()"><i class="bi bi-plus-lg"></i> تقرير جديد</button>
 </div>
 
 <div class="card mb-4">
@@ -36,15 +36,15 @@
         <tbody>
             {% for report in reports %}
             <tr>
-                <td><a href="{% url 'reportsnapshot-detail' report.pk %}">{{ report.get_report_type_display }}</a></td>
+                <td><a href="{% url 'reportsnapshot-detail' report.slug %}">{{ report.get_report_type_display }}</a></td>
                 <td>{{ report.branch|default:'-' }}</td>
                 <td>{{ report.period|default:'-' }}</td>
                 <td>{{ report.generated_by.get_short_name|default:report.generated_by.email }}</td>
                 <td>{{ report.created_at|date:'Y-m-d H:i' }}</td>
                 <td class="text-start">
-                    <a href="{% url 'reportsnapshot-detail' report.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    <a href="{% url 'reportsnapshot-update' report.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'reportsnapshot-delete' report.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    <a href="{% url 'reportsnapshot-detail' report.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="openReportModal({{ report.id }}, '{{ report.report_type|escapejs }}', '{{ report.branch.id|default:'' }}', '{{ report.period|escapejs }}', '{{ report.start_date|date:'Y-m-d' }}', '{{ report.end_date|date:'Y-m-d' }}')"><i class="bi bi-pencil"></i></button>
+                    <a href="{% url 'reportsnapshot-delete' report.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
             </tr>
             {% empty %}
@@ -57,4 +57,6 @@
 </div>
 
 {% include "includes/pagination.html" %}
+
+{% include "includes/report_modal.html" %}
 {% endblock %}
