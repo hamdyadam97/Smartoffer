@@ -3,7 +3,12 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
 
+from core.models import Branch
+from courses.models import Course
 from .models import StudentOffer, OfferRecipient, OfferNote
 from .forms import StudentOfferForm, OfferRecipientForm, OfferNoteForm
 
@@ -30,11 +35,25 @@ class StudentOfferListView(LoginRequiredMixin, ListView):
             )
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['branches'] = Branch.objects.all()
+        context['courses'] = Course.objects.select_related('master').all()
+        return context
+
 
 class StudentOfferDetailView(LoginRequiredMixin, DetailView):
     model = StudentOffer
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'offers/studentoffer_detail.html'
     context_object_name = 'offer'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['branches'] = Branch.objects.all()
+        context['courses'] = Course.objects.select_related('master').all()
+        return context
 
 
 class StudentOfferCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
@@ -51,6 +70,8 @@ class StudentOfferCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView
 
 class StudentOfferUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = StudentOffer
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = StudentOfferForm
     template_name = 'offers/studentoffer_form.html'
     success_url = reverse_lazy('studentoffer-list')
@@ -59,9 +80,33 @@ class StudentOfferUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView
 
 class StudentOfferDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = StudentOffer
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'offers/studentoffer_confirm_delete.html'
     success_url = reverse_lazy('studentoffer-list')
     success_message = 'تم حذف العرض بنجاح.'
+
+
+@require_POST
+def studentoffer_create_ajax(request):
+    form = StudentOfferForm(request.POST)
+    if form.is_valid():
+        offer = form.save(commit=False)
+        offer.created_by = request.user
+        offer.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء العرض بنجاح', 'id': offer.id, 'slug': offer.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def studentoffer_update_ajax(request, pk):
+    offer = get_object_or_404(StudentOffer, pk=pk)
+    form = StudentOfferForm(request.POST, instance=offer)
+    if form.is_valid():
+        offer = form.save(commit=False)
+        offer.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث العرض بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================

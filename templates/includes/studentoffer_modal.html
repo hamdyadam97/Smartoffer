@@ -1,0 +1,166 @@
+<!-- StudentOffer Modal -->
+<div class="modal fade" id="studentOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="studentOfferModalTitle"><i class="bi bi-tag text-primary me-2"></i> عرض جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentOfferAlert"></div>
+                <form id="studentOfferForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="offer_id" id="offerId">
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">العنوان <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="so_title" class="form-control" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">المحتوى <span class="text-danger">*</span></label>
+                            <textarea name="content" id="so_content" class="form-control" rows="4" required></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                            <select name="branch" id="so_branch" class="form-select" required>
+                                <option value="">اختر الفرع...</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الدورة</label>
+                            <select name="course" id="so_course" class="form-select">
+                                <option value="">اختر الدورة...</option>
+                                {% for course in courses %}
+                                <option value="{{ course.id }}">{{ course.master.name }} - {{ course.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المستوى المستهدف <span class="text-danger">*</span></label>
+                            <select name="target_level" id="so_target_level" class="form-select" required>
+                                <option value="مبتدئ">مبتدئ</option>
+                                <option value="متوسط">متوسط</option>
+                                <option value="متقدم">متقدم</option>
+                                <option value="الكل">جميع المستويات</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الحالة <span class="text-danger">*</span></label>
+                            <select name="status" id="so_status" class="form-select" required>
+                                <option value="مسودة">مسودة</option>
+                                <option value="مجدولة">مجدولة</option>
+                                <option value="مرسلة">مرسلة</option>
+                                <option value="منتهية">منتهية</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">موعد الإرسال</label>
+                            <input type="datetime-local" name="scheduled_at" id="so_scheduled_at" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="saveStudentOfferBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="studentOfferSpinner"></span>
+                    <span id="studentOfferBtnText">حفظ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const studentOfferModal = document.getElementById('studentOfferModal');
+    const studentOfferForm = document.getElementById('studentOfferForm');
+    const offerId = document.getElementById('offerId');
+    const saveBtn = document.getElementById('saveStudentOfferBtn');
+    const spinner = document.getElementById('studentOfferSpinner');
+    const btnText = document.getElementById('studentOfferBtnText');
+    const alertBox = document.getElementById('studentOfferAlert');
+    const modalTitle = document.getElementById('studentOfferModalTitle');
+
+    function showAlert(message, type) {
+        alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setLoading(loading) {
+        saveBtn.disabled = loading;
+        spinner.classList.toggle('d-none', !loading);
+        btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ';
+    }
+
+    window.openStudentOfferModal = function(id, title, content, branchId, courseId, targetLevel, scheduledAt, status) {
+        alertBox.innerHTML = '';
+        studentOfferForm.reset();
+
+        if (id) {
+            offerId.value = id;
+            document.getElementById('so_title').value = title || '';
+            document.getElementById('so_content').value = content || '';
+            document.getElementById('so_branch').value = branchId || '';
+            document.getElementById('so_course').value = courseId || '';
+            document.getElementById('so_target_level').value = targetLevel || 'الكل';
+            document.getElementById('so_status').value = status || 'مسودة';
+            document.getElementById('so_scheduled_at').value = scheduledAt || '';
+            modalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل عرض';
+        } else {
+            offerId.value = '';
+            modalTitle.innerHTML = '<i class="bi bi-tag text-primary me-2"></i> عرض جديد';
+        }
+        new bootstrap.Modal(studentOfferModal).show();
+    };
+
+    saveBtn.addEventListener('click', function() {
+        if (!studentOfferForm.checkValidity()) {
+            studentOfferForm.reportValidity();
+            return;
+        }
+        setLoading(true);
+        const formData = new FormData(studentOfferForm);
+        const body = new URLSearchParams(formData);
+
+        const isEdit = offerId.value !== '';
+        const url = isEdit
+            ? '/student-offers/ajax/' + offerId.value + '/update/'
+            : '{% url "studentoffer-create-ajax" %}';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(studentOfferModal).hide();
+                    alertBox.innerHTML = '';
+                    window.location.reload();
+                }, 1200);
+            } else {
+                let errors = '';
+                for (const [field, msgs] of Object.entries(data.errors)) {
+                    errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
+                }
+                showAlert(errors || 'حدث خطأ أثناء الحفظ', 'danger');
+            }
+        })
+        .catch(() => {
+            setLoading(false);
+            showAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
+})();
+</script>

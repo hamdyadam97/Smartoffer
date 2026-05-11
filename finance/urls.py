@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     PaymentListView, PaymentDetailView, PaymentCreateView, PaymentUpdateView, PaymentDeleteView,
+    payment_create_ajax, payment_update_ajax,
     PaymentOutListView, PaymentOutDetailView, PaymentOutCreateView, PaymentOutUpdateView, PaymentOutDeleteView,
     DepositListView, DepositDetailView, DepositCreateView, DepositUpdateView, DepositDeleteView,
     WithdrawListView, WithdrawDetailView, WithdrawCreateView, WithdrawUpdateView, WithdrawDeleteView,
@@ -8,15 +9,18 @@ from .views import (
     BillBuyListView, BillBuyDetailView, BillBuyCreateView, BillBuyUpdateView, BillBuyDeleteView,
     OfferListView, OfferDetailView, OfferCreateView, OfferUpdateView, OfferDeleteView,
     CallListView, CallDetailView, CallCreateView, CallUpdateView, CallDeleteView,
+    call_create_ajax, call_update_ajax,
 )
 
 urlpatterns = [
     # Payment
     path('payments/', PaymentListView.as_view(), name='payment-list'),
-    path('payments/<int:pk>/', PaymentDetailView.as_view(), name='payment-detail'),
+    path('payments/<str:slug>/', PaymentDetailView.as_view(), name='payment-detail'),
     path('payments/create/', PaymentCreateView.as_view(), name='payment-create'),
-    path('payments/<int:pk>/update/', PaymentUpdateView.as_view(), name='payment-update'),
-    path('payments/<int:pk>/delete/', PaymentDeleteView.as_view(), name='payment-delete'),
+    path('payments/<str:slug>/update/', PaymentUpdateView.as_view(), name='payment-update'),
+    path('payments/<str:slug>/delete/', PaymentDeleteView.as_view(), name='payment-delete'),
+    path('payments/ajax/create/', payment_create_ajax, name='payment-create-ajax'),
+    path('payments/ajax/<int:pk>/update/', payment_update_ajax, name='payment-update-ajax'),
 
     # PaymentOut
     path('payment-outs/', PaymentOutListView.as_view(), name='paymentout-list'),
@@ -62,8 +66,10 @@ urlpatterns = [
 
     # Call
     path('calls/', CallListView.as_view(), name='call-list'),
-    path('calls/<int:pk>/', CallDetailView.as_view(), name='call-detail'),
+    path('calls/<str:slug>/', CallDetailView.as_view(), name='call-detail'),
     path('calls/create/', CallCreateView.as_view(), name='call-create'),
-    path('calls/<int:pk>/update/', CallUpdateView.as_view(), name='call-update'),
-    path('calls/<int:pk>/delete/', CallDeleteView.as_view(), name='call-delete'),
+    path('calls/<str:slug>/update/', CallUpdateView.as_view(), name='call-update'),
+    path('calls/<str:slug>/delete/', CallDeleteView.as_view(), name='call-delete'),
+    path('calls/ajax/create/', call_create_ajax, name='call-create-ajax'),
+    path('calls/ajax/<int:pk>/update/', call_update_ajax, name='call-update-ajax'),
 ]

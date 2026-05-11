@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 
 class StudentOffer(models.Model):
@@ -24,6 +25,7 @@ class StudentOffer(models.Model):
     target_level = models.CharField(max_length=20, choices=TARGET_LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
     scheduled_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='موعد الإرسال')
     sent_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='تاريخ الإرسال الفعلي')
+    slug = models.SlugField(unique=True, blank=True, null=True, db_index=True, verbose_name='الرابط')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مسودة', db_index=True, verbose_name='الحالة')
     created_by = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='created_offers', verbose_name='تم الإنشاء بواسطة')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -33,6 +35,18 @@ class StudentOffer(models.Model):
         verbose_name = 'عرض طالب'
         verbose_name_plural = 'عروض الطلاب'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while StudentOffer.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+            StudentOffer.objects.filter(pk=self.pk).update(slug=self.slug)
 
     def __str__(self):
         return self.title

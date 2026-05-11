@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 
 class PaymentMethod(models.TextChoices):
@@ -33,6 +34,7 @@ class Payment(models.Model):
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.CASH, db_index=True, verbose_name='طريقة الدفع')
     payment_method_code = models.CharField(max_length=100, blank=True, verbose_name='كود الدفع')
     
+    slug = models.SlugField(unique=True, blank=True, null=True, db_index=True, verbose_name='الرابط')
     note = models.TextField(blank=True, verbose_name='ملاحظات')
     
     # Tracking
@@ -44,6 +46,18 @@ class Payment(models.Model):
         verbose_name = 'سند قبض'
         verbose_name_plural = 'سندات القبض'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.slug:
+            base_slug = slugify(f"{self.code}-{self.account.get_key_rtl()}")
+            slug = base_slug
+            counter = 1
+            while Payment.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+            Payment.objects.filter(pk=self.pk).update(slug=self.slug)
 
     def __str__(self):
         return f"{self.code} - {self.account.get_key()}"
@@ -258,6 +272,7 @@ class Call(models.Model):
     offer = models.ForeignKey(Offer, on_delete=models.PROTECT, related_name='calls', verbose_name='العرض')
     person = models.ForeignKey('accounts.Person', on_delete=models.CASCADE, db_index=True, related_name='calls', verbose_name='المستخدم')
     
+    slug = models.SlugField(unique=True, blank=True, null=True, db_index=True, verbose_name='الرابط')
     call_type = models.CharField(max_length=20, choices=CALL_TYPE_CHOICES, default=CALL_TYPE_OUTGOING, verbose_name='نوع المكالمة')
     duration = models.PositiveIntegerField(default=0, verbose_name='المدة (ثانية)')
     notes = models.TextField(blank=True, verbose_name='ملاحظات')
@@ -268,6 +283,18 @@ class Call(models.Model):
         verbose_name = 'مكالمة'
         verbose_name_plural = 'المكالمات'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.slug:
+            base_slug = slugify(f"{self.offer.code}-{self.offer.customer_name}")
+            slug = base_slug
+            counter = 1
+            while Call.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+            Call.objects.filter(pk=self.pk).update(slug=self.slug)
 
     def __str__(self):
         return f"{self.offer.customer_name} - {self.call_type}"

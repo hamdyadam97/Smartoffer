@@ -2,7 +2,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
 
+from courses.models import Course
+from students.models import Student
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
 from .forms import (
     AccountForm, AttachTypeForm, AttachForm,
@@ -39,14 +44,28 @@ class AccountListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(course_payment_type=payment_type)
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['courses'] = Course.objects.select_related('master').all()
+        context['students'] = Student.objects.select_related('contact').all()
+        return context
+
 
 class AccountDetailView(LoginRequiredMixin, DetailView):
     model = Account
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'registrations/account_detail.html'
     context_object_name = 'account'
 
     def get_queryset(self):
         return Account.objects.select_related('student', 'course', 'course__master', 'last_person')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['courses'] = Course.objects.select_related('master').all()
+        context['students'] = Student.objects.select_related('contact').all()
+        return context
 
 
 class AccountCreateView(LoginRequiredMixin, CreateView):
@@ -62,6 +81,8 @@ class AccountCreateView(LoginRequiredMixin, CreateView):
 
 class AccountUpdateView(LoginRequiredMixin, UpdateView):
     model = Account
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = AccountForm
     template_name = 'registrations/account_form.html'
     success_url = reverse_lazy('registration-list')
@@ -73,8 +94,33 @@ class AccountUpdateView(LoginRequiredMixin, UpdateView):
 
 class AccountDeleteView(LoginRequiredMixin, DeleteView):
     model = Account
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'registrations/account_confirm_delete.html'
     success_url = reverse_lazy('registration-list')
+
+
+@require_POST
+def account_create_ajax(request):
+    form = AccountForm(request.POST)
+    if form.is_valid():
+        account = form.save(commit=False)
+        account.last_person = request.user
+        account.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء التسجيل بنجاح', 'id': account.id, 'slug': account.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def account_update_ajax(request, pk):
+    account = get_object_or_404(Account, pk=pk)
+    form = AccountForm(request.POST, instance=account)
+    if form.is_valid():
+        account = form.save(commit=False)
+        account.last_person = request.user
+        account.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث التسجيل بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================

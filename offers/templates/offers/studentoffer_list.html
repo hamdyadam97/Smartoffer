@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tag"></i> عروض الطلاب</h2>
-    <a href="{% url 'studentoffer-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> عرض جديد</a>
+    <button type="button" class="btn btn-primary" onclick="openStudentOfferModal()"><i class="bi bi-plus-lg"></i> عرض جديد</button>
 </div>
 
 <div class="card mb-4">
@@ -37,16 +37,16 @@
         <tbody>
             {% for offer in offers %}
             <tr>
-                <td><a href="{% url 'studentoffer-detail' offer.pk %}">{{ offer.title }}</a></td>
+                <td><a href="{% url 'studentoffer-detail' offer.slug %}">{{ offer.title }}</a></td>
                 <td>{{ offer.branch }}</td>
                 <td>{{ offer.course|default:'-' }}</td>
                 <td>{{ offer.get_target_level_display }}</td>
                 <td><span class="badge bg-secondary">{{ offer.get_status_display }}</span></td>
                 <td>{{ offer.created_at|date:'Y-m-d H:i' }}</td>
                 <td class="text-start">
-                    <a href="{% url 'studentoffer-detail' offer.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    <a href="{% url 'studentoffer-update' offer.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'studentoffer-delete' offer.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    <a href="{% url 'studentoffer-detail' offer.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    <button type="button" class="btn btn-sm btn-warning" onclick="openStudentOfferModal({{ offer.id }}, '{{ offer.title|escapejs }}', '{{ offer.content|escapejs }}', '{{ offer.branch.id }}', '{{ offer.course.id|default:'' }}', '{{ offer.target_level|escapejs }}', '{{ offer.scheduled_at|date:'Y-m-d\\TH:i' }}', '{{ offer.status|escapejs }}')"><i class="bi bi-pencil"></i></button>
+                    <a href="{% url 'studentoffer-delete' offer.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
             </tr>
             {% empty %}
@@ -59,4 +59,6 @@
 </div>
 
 {% include "includes/pagination.html" %}
+
+{% include "includes/studentoffer_modal.html" %}
 {% endblock %}

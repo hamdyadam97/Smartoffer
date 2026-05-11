@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 
 
 class Account(models.Model):
@@ -28,6 +29,7 @@ class Account(models.Model):
     course_profit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='نسبة الربح')
     course_credit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='مبلغ الائتمان')
     
+    slug = models.SlugField(unique=True, blank=True, null=True, db_index=True, verbose_name='الرابط')
     note = models.TextField(blank=True, verbose_name='ملاحظات')
     
     # Tracking
@@ -40,6 +42,18 @@ class Account(models.Model):
         verbose_name_plural = 'التسجيلات'
         ordering = ['-created_at']
         unique_together = ['course', 'code']
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.slug:
+            base_slug = slugify(self.get_key_rtl())
+            slug = base_slug
+            counter = 1
+            while Account.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+            Account.objects.filter(pk=self.pk).update(slug=self.slug)
 
     def __str__(self):
         return f"{self.get_key()} - {self.student.get_full_name()}"

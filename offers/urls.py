@@ -4,10 +4,12 @@ from . import views
 urlpatterns = [
     # StudentOffer
     path('student-offers/', views.StudentOfferListView.as_view(), name='studentoffer-list'),
-    path('student-offers/<int:pk>/', views.StudentOfferDetailView.as_view(), name='studentoffer-detail'),
+    path('student-offers/<str:slug>/', views.StudentOfferDetailView.as_view(), name='studentoffer-detail'),
     path('student-offers/create/', views.StudentOfferCreateView.as_view(), name='studentoffer-create'),
-    path('student-offers/<int:pk>/update/', views.StudentOfferUpdateView.as_view(), name='studentoffer-update'),
-    path('student-offers/<int:pk>/delete/', views.StudentOfferDeleteView.as_view(), name='studentoffer-delete'),
+    path('student-offers/<str:slug>/update/', views.StudentOfferUpdateView.as_view(), name='studentoffer-update'),
+    path('student-offers/<str:slug>/delete/', views.StudentOfferDeleteView.as_view(), name='studentoffer-delete'),
+    path('student-offers/ajax/create/', views.studentoffer_create_ajax, name='studentoffer-create-ajax'),
+    path('student-offers/ajax/<int:pk>/update/', views.studentoffer_update_ajax, name='studentoffer-update-ajax'),
 
     # OfferRecipient
     path('offer-recipients/', views.OfferRecipientListView.as_view(), name='offerrecipient-list'),

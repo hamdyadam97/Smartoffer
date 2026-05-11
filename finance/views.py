@@ -2,7 +2,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
 
+from registrations.models import Account
 from .models import Payment, PaymentOut, Deposit, Withdraw, BillBuyType, BillBuy, Offer, Call
 from .forms import (
     PaymentForm, PaymentOutForm, DepositForm, WithdrawForm,
@@ -33,14 +37,26 @@ class PaymentListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(type=payment_type)
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['accounts'] = Account.objects.select_related('student', 'course', 'course__master').all()
+        return context
+
 
 class PaymentDetailView(LoginRequiredMixin, DetailView):
     model = Payment
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'finance/payment_detail.html'
     context_object_name = 'payment'
 
     def get_queryset(self):
         return Payment.objects.select_related('account', 'last_person')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['accounts'] = Account.objects.select_related('student', 'course', 'course__master').all()
+        return context
 
 
 class PaymentCreateView(LoginRequiredMixin, CreateView):
@@ -56,6 +72,8 @@ class PaymentCreateView(LoginRequiredMixin, CreateView):
 
 class PaymentUpdateView(LoginRequiredMixin, UpdateView):
     model = Payment
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = PaymentForm
     template_name = 'finance/payment_form.html'
     success_url = reverse_lazy('payment-list')
@@ -67,8 +85,33 @@ class PaymentUpdateView(LoginRequiredMixin, UpdateView):
 
 class PaymentDeleteView(LoginRequiredMixin, DeleteView):
     model = Payment
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'finance/payment_confirm_delete.html'
     success_url = reverse_lazy('payment-list')
+
+
+@require_POST
+def payment_create_ajax(request):
+    form = PaymentForm(request.POST)
+    if form.is_valid():
+        payment = form.save(commit=False)
+        payment.last_person = request.user
+        payment.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء السند بنجاح', 'id': payment.id, 'slug': payment.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def payment_update_ajax(request, pk):
+    payment = get_object_or_404(Payment, pk=pk)
+    form = PaymentForm(request.POST, instance=payment)
+    if form.is_valid():
+        payment = form.save(commit=False)
+        payment.last_person = request.user
+        payment.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث السند بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================
@@ -387,14 +430,26 @@ class CallListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(person_id=person)
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['offers'] = Offer.objects.select_related('master').all()
+        return context
+
 
 class CallDetailView(LoginRequiredMixin, DetailView):
     model = Call
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'finance/call_detail.html'
     context_object_name = 'call'
 
     def get_queryset(self):
         return Call.objects.select_related('offer', 'person')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['offers'] = Offer.objects.select_related('master').all()
+        return context
 
 
 class CallCreateView(LoginRequiredMixin, CreateView):
@@ -410,6 +465,8 @@ class CallCreateView(LoginRequiredMixin, CreateView):
 
 class CallUpdateView(LoginRequiredMixin, UpdateView):
     model = Call
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     form_class = CallForm
     template_name = 'finance/call_form.html'
     success_url = reverse_lazy('call-list')
@@ -421,5 +478,29 @@ class CallUpdateView(LoginRequiredMixin, UpdateView):
 
 class CallDeleteView(LoginRequiredMixin, DeleteView):
     model = Call
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
     template_name = 'finance/call_confirm_delete.html'
     success_url = reverse_lazy('call-list')
+
+
+@require_POST
+def call_create_ajax(request):
+    form = CallForm(request.POST)
+    if form.is_valid():
+        call = form.save(commit=False)
+        call.person = request.user
+        call.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء المكالمة بنجاح', 'id': call.id, 'slug': call.slug})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def call_update_ajax(request, pk):
+    call = get_object_or_404(Call, pk=pk)
+    form = CallForm(request.POST, instance=call)
+    if form.is_valid():
+        call = form.save(commit=False)
+        call.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث المكالمة بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)

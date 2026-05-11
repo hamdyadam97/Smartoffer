@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     AccountListView, AccountDetailView, AccountCreateView, AccountUpdateView, AccountDeleteView,
+    account_create_ajax, account_update_ajax,
     AttachTypeListView, AttachTypeDetailView, AttachTypeCreateView, AttachTypeUpdateView, AttachTypeDeleteView,
     AttachListView, AttachDetailView, AttachCreateView, AttachUpdateView, AttachDeleteView,
     AccountAttachListView, AccountAttachDetailView, AccountAttachCreateView, AccountAttachUpdateView, AccountAttachDeleteView,
@@ -11,10 +12,12 @@ from .views import (
 urlpatterns = [
     # Account (Registration)
     path('registrations/', AccountListView.as_view(), name='registration-list'),
-    path('registrations/<int:pk>/', AccountDetailView.as_view(), name='registration-detail'),
+    path('registrations/<str:slug>/', AccountDetailView.as_view(), name='registration-detail'),
     path('registrations/create/', AccountCreateView.as_view(), name='registration-create'),
-    path('registrations/<int:pk>/update/', AccountUpdateView.as_view(), name='registration-update'),
-    path('registrations/<int:pk>/delete/', AccountDeleteView.as_view(), name='registration-delete'),
+    path('registrations/<str:slug>/update/', AccountUpdateView.as_view(), name='registration-update'),
+    path('registrations/<str:slug>/delete/', AccountDeleteView.as_view(), name='registration-delete'),
+    path('registrations/ajax/create/', account_create_ajax, name='registration-create-ajax'),
+    path('registrations/ajax/<int:pk>/update/', account_update_ajax, name='registration-update-ajax'),
 
     # AttachType
     path('attach-types/', AttachTypeListView.as_view(), name='attachtype-list'),
