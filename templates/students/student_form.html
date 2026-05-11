@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if object %}تعديل طالب{% else %}طالب جديد{% endif %}{% endblock %}
+{% block title %}{% if object %}تعديل طالب{% else %}إضافة طالب{% endif %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>{% if object %}<i class="bi bi-pencil"></i> تعديل طالب{% else %}<i class="bi bi-plus-lg"></i> طالب جديد{% endif %}</h2>
-    <a href="{% url 'student-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+    <h2>{% if object %}<i class="bi bi-pencil"></i> تعديل طالب{% else %}<i class="bi bi-plus-lg"></i> إضافة طالب{% endif %}</h2>
+    <a href="{% url 'student-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة</a>
 </div>
 
 <div class="card">

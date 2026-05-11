@@ -6,20 +6,20 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-person"></i> {{ student.get_full_name }}</h2>
     <div>
-        <a href="{% url 'student-update' student.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
-        <a href="{% url 'student-delete' student.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
-        <a href="{% url 'student-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+        <a href="{% url 'student-update' student.slug %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
+        <a href="{% url 'student-delete' student.slug %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        <a href="{% url 'student-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> العودة</a>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header bg-primary text-white"><i class="bi bi-person-vcard"></i> بيانات جهة الاتصال</div>
+            <div class="card-header bg-primary text-white"><i class="bi bi-person-vcard"></i> المعلومات الشخصية</div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item"><strong>الاسم الكامل:</strong> {{ student.contact.get_full_name }}</li>
-                <li class="list-group-item"><strong>المحمول:</strong> {{ student.contact.mobile|default:'-' }}</li>
-                <li class="list-group-item"><strong>التليفون:</strong> {{ student.contact.phone|default:'-' }}</li>
+                <li class="list-group-item"><strong>رقم الجوال:</strong> {{ student.contact.mobile|default:'-' }}</li>
+                <li class="list-group-item"><strong>رقم الهاتف:</strong> {{ student.contact.phone|default:'-' }}</li>
                 <li class="list-group-item"><strong>العنوان:</strong> {{ student.contact.address|default:'-' }}</li>
                 <li class="list-group-item"><strong>الجنسية:</strong> {{ student.contact.nationality|default:'-' }}</li>
                 <li class="list-group-item"><strong>رقم الهوية:</strong> {{ student.contact.identity_number|default:'-' }}</li>
@@ -33,10 +33,11 @@
     </div>
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header bg-secondary text-white"><i class="bi bi-mortarboard"></i> بيانات الطالب</div>
+            <div class="card-header bg-secondary text-white"><i class="bi bi-mortarboard"></i> معلومات الطالب</div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item"><strong>المستوى:</strong> {{ student.level }}</li>
                 <li class="list-group-item"><strong>طريقة التواصل المفضلة:</strong> {{ student.get_preferred_contact_display }}</li>
+                <li class="list-group-item"><strong>الرابط:</strong> <code>{{ student.slug }}</code></li>
                 <li class="list-group-item"><strong>تاريخ الإنشاء:</strong> {{ student.created_at }}</li>
                 <li class="list-group-item"><strong>آخر تحديث:</strong> {{ student.updated_at }}</li>
             </ul>

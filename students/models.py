@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 
 
 class Contact(models.Model):
@@ -54,6 +55,7 @@ class Student(models.Model):
         ('whatsapp', 'واتساب'),
         ('app', 'إشعار التطبيق'),
     ]
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     contact = models.OneToOneField(Contact, on_delete=models.CASCADE, related_name='student', verbose_name='جهة الاتصال')
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='مبتدئ', db_index=True, verbose_name='المستوى')
     preferred_contact = models.CharField(max_length=20, choices=CONTACT_CHOICES, default='whatsapp', db_index=True, verbose_name='طريقة التواصل المفضلة')
@@ -64,6 +66,17 @@ class Student(models.Model):
         verbose_name = 'طالب'
         verbose_name_plural = 'الطلاب'
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.slug and self.contact_id:
+            base = slugify(self.contact.get_full_name(), allow_unicode=True)
+            slug = base
+            counter = 1
+            while Student.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base}-{counter}'
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.contact.get_full_name()
