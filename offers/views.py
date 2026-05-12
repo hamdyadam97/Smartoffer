@@ -42,9 +42,11 @@ def export_studentoffer_pdf(request, slug):
     styles = getSampleStyleSheet()
 
     # Register Cairo font for Arabic support
+    from reportlab.pdfbase.pdfmetrics import registerFontFamily
     font_path = os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
     if os.path.exists(font_path):
         pdfmetrics.registerFont(TTFont('Cairo', font_path))
+        registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
 
     arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=11, leading=16, alignment=2)
     title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=20, leading=28, alignment=1)
