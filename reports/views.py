@@ -280,8 +280,8 @@ def _build_table(data, headers, doc_width, arabic_style):
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Tahoma'),
-        ('FONTNAME', (0, 1), (-1, -1), 'Tahoma'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Cairo'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Cairo'),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('TOPPADDING', (0, 0), (-1, 0), 10),
@@ -325,13 +325,14 @@ def export_report_pdf(request, slug):
     elements = []
     styles = getSampleStyleSheet()
 
-    # Register Tahoma
-    font_path = r'C:\Windows\Fonts\tahoma.ttf'
-    pdfmetrics.registerFont(TTFont('Tahoma', font_path))
+    # Register Cairo font for Arabic support
+    font_path = os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont('Cairo', font_path))
 
-    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Tahoma', fontSize=9, leading=12, alignment=2)
-    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Tahoma', fontSize=18, leading=24, alignment=1)
-    heading_style = ParagraphStyle('ArabicHeading', parent=styles['Heading2'], fontName='Tahoma', fontSize=14, leading=18, alignment=2)
+    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=9, leading=12, alignment=2)
+    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=18, leading=24, alignment=1)
+    heading_style = ParagraphStyle('ArabicHeading', parent=styles['Heading2'], fontName='Cairo', fontSize=14, leading=18, alignment=2)
 
     # Title
     elements.append(Paragraph(_prepare_arabic(report.get_report_type_display()), title_style))
