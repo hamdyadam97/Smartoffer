@@ -46,7 +46,7 @@ class Account(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.slug:
-            base_slug = slugify(self.get_key_rtl())
+            base_slug = slugify(self.get_key_rtl(), allow_unicode=True)
             slug = base_slug
             counter = 1
             while Account.objects.filter(slug=slug).exclude(pk=self.pk).exists():

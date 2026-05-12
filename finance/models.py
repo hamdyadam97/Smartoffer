@@ -50,7 +50,7 @@ class Payment(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.slug:
-            base_slug = slugify(f"{self.code}-{self.account.get_key_rtl()}")
+            base_slug = slugify(f"{self.code}-{self.account.get_key_rtl()}", allow_unicode=True)
             slug = base_slug
             counter = 1
             while Payment.objects.filter(slug=slug).exclude(pk=self.pk).exists():
@@ -287,7 +287,7 @@ class Call(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.slug:
-            base_slug = slugify(f"{self.offer.code}-{self.offer.customer_name}")
+            base_slug = slugify(f"{self.offer.code}-{self.offer.customer_name}", allow_unicode=True)
             slug = base_slug
             counter = 1
             while Call.objects.filter(slug=slug).exclude(pk=self.pk).exists():

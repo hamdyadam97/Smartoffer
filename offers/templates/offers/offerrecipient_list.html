@@ -36,7 +36,7 @@
         <tbody>
             {% for recipient in recipients %}
             <tr>
-                <td><a href="{% url 'studentoffer-detail' recipient.offer.pk %}">{{ recipient.offer.title }}</a></td>
+                <td><a href="{% url 'studentoffer-detail' recipient.offer.slug %}">{{ recipient.offer.title }}</a></td>
                 <td>{{ recipient.student }}</td>
                 <td>{{ recipient.get_channel_display }}</td>
                 <td><span class="badge bg-secondary">{{ recipient.get_status_display }}</span></td>

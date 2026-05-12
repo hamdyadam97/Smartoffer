@@ -405,7 +405,7 @@ class AccountViewTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_detail_get_authenticated(self):
-        response = self.client.get(reverse('registration-detail', kwargs={'pk': self.account.pk}))
+        response = self.client.get(reverse('registration-detail', kwargs={'slug': self.account.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_create_get_authenticated(self):
@@ -430,7 +430,7 @@ class AccountViewTests(BaseTestCase):
         self.assertTrue(Account.objects.filter(code=99).exists())
 
     def test_update_get_authenticated(self):
-        response = self.client.get(reverse('registration-update', kwargs={'pk': self.account.pk}))
+        response = self.client.get(reverse('registration-update', kwargs={'slug': self.account.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_update_post_authenticated(self):
@@ -446,17 +446,17 @@ class AccountViewTests(BaseTestCase):
             'course_credit_amount': '0.00',
             'note': 'updated',
         }
-        response = self.client.post(reverse('registration-update', kwargs={'pk': self.account.pk}), data)
+        response = self.client.post(reverse('registration-update', kwargs={'slug': self.account.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.account.refresh_from_db()
         self.assertEqual(self.account.code, 88)
 
     def test_delete_get_authenticated(self):
-        response = self.client.get(reverse('registration-delete', kwargs={'pk': self.account.pk}))
+        response = self.client.get(reverse('registration-delete', kwargs={'slug': self.account.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_delete_post_authenticated(self):
-        response = self.client.post(reverse('registration-delete', kwargs={'pk': self.account.pk}))
+        response = self.client.post(reverse('registration-delete', kwargs={'slug': self.account.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Account.objects.filter(pk=self.account.pk).exists())
 
@@ -464,10 +464,10 @@ class AccountViewTests(BaseTestCase):
         self.client.logout()
         urls = [
             reverse('registration-list'),
-            reverse('registration-detail', kwargs={'pk': self.account.pk}),
+            reverse('registration-detail', kwargs={'slug': self.account.slug}),
             reverse('registration-create'),
-            reverse('registration-update', kwargs={'pk': self.account.pk}),
-            reverse('registration-delete', kwargs={'pk': self.account.pk}),
+            reverse('registration-update', kwargs={'slug': self.account.slug}),
+            reverse('registration-delete', kwargs={'slug': self.account.slug}),
         ]
         for url in urls:
             response = self.client.get(url)

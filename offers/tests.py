@@ -262,7 +262,7 @@ class StudentOfferViewTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_detail_get_authenticated(self):
-        response = self.client.get(reverse('studentoffer-detail', kwargs={'pk': self.offer.pk}))
+        response = self.client.get(reverse('studentoffer-detail', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_create_get_authenticated(self):
@@ -283,7 +283,7 @@ class StudentOfferViewTests(BaseTestCase):
         self.assertTrue(StudentOffer.objects.filter(title='Winter Offer').exists())
 
     def test_update_get_authenticated(self):
-        response = self.client.get(reverse('studentoffer-update', kwargs={'pk': self.offer.pk}))
+        response = self.client.get(reverse('studentoffer-update', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_update_post_authenticated(self):
@@ -296,17 +296,17 @@ class StudentOfferViewTests(BaseTestCase):
             'status': 'مجدولة',
             'scheduled_at': '2024-12-01T10:00',
         }
-        response = self.client.post(reverse('studentoffer-update', kwargs={'pk': self.offer.pk}), data)
+        response = self.client.post(reverse('studentoffer-update', kwargs={'slug': self.offer.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.offer.refresh_from_db()
         self.assertEqual(self.offer.title, 'Updated Offer')
 
     def test_delete_get_authenticated(self):
-        response = self.client.get(reverse('studentoffer-delete', kwargs={'pk': self.offer.pk}))
+        response = self.client.get(reverse('studentoffer-delete', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_delete_post_authenticated(self):
-        response = self.client.post(reverse('studentoffer-delete', kwargs={'pk': self.offer.pk}))
+        response = self.client.post(reverse('studentoffer-delete', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(StudentOffer.objects.filter(pk=self.offer.pk).exists())
 
@@ -314,10 +314,10 @@ class StudentOfferViewTests(BaseTestCase):
         self.client.logout()
         urls = [
             reverse('studentoffer-list'),
-            reverse('studentoffer-detail', kwargs={'pk': self.offer.pk}),
+            reverse('studentoffer-detail', kwargs={'slug': self.offer.slug}),
             reverse('studentoffer-create'),
-            reverse('studentoffer-update', kwargs={'pk': self.offer.pk}),
-            reverse('studentoffer-delete', kwargs={'pk': self.offer.pk}),
+            reverse('studentoffer-update', kwargs={'slug': self.offer.slug}),
+            reverse('studentoffer-delete', kwargs={'slug': self.offer.slug}),
         ]
         for url in urls:
             response = self.client.get(url)

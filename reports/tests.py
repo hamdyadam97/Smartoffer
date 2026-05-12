@@ -103,7 +103,7 @@ class ReportSnapshotViewTests(TestCase):
     def test_detail_view_authenticated(self):
         self.client.login(username='t@t.com', password='123')
         response = self.client.get(
-            reverse('reportsnapshot-detail', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-detail', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn('report', response.context)
@@ -132,7 +132,7 @@ class ReportSnapshotViewTests(TestCase):
     def test_update_view_get_authenticated(self):
         self.client.login(username='t@t.com', password='123')
         response = self.client.get(
-            reverse('reportsnapshot-update', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-update', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 200)
 
@@ -144,7 +144,7 @@ class ReportSnapshotViewTests(TestCase):
             'period': '2024-Updated',
         }
         response = self.client.post(
-            reverse('reportsnapshot-update', kwargs={'pk': self.report.pk}), data
+            reverse('reportsnapshot-update', kwargs={'slug': self.report.slug}), data
         )
         self.assertEqual(response.status_code, 302)
         self.report.refresh_from_db()
@@ -154,14 +154,14 @@ class ReportSnapshotViewTests(TestCase):
     def test_delete_view_get_authenticated(self):
         self.client.login(username='t@t.com', password='123')
         response = self.client.get(
-            reverse('reportsnapshot-delete', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-delete', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 200)
 
     def test_delete_view_post_authenticated(self):
         self.client.login(username='t@t.com', password='123')
         response = self.client.post(
-            reverse('reportsnapshot-delete', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-delete', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
@@ -174,7 +174,7 @@ class ReportSnapshotViewTests(TestCase):
 
     def test_detail_view_redirects_anonymous(self):
         response = self.client.get(
-            reverse('reportsnapshot-detail', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-detail', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 302)
 
@@ -184,12 +184,12 @@ class ReportSnapshotViewTests(TestCase):
 
     def test_update_view_redirects_anonymous(self):
         response = self.client.get(
-            reverse('reportsnapshot-update', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-update', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 302)
 
     def test_delete_view_redirects_anonymous(self):
         response = self.client.get(
-            reverse('reportsnapshot-delete', kwargs={'pk': self.report.pk})
+            reverse('reportsnapshot-delete', kwargs={'slug': self.report.slug})
         )
         self.assertEqual(response.status_code, 302)

@@ -791,7 +791,7 @@ class PaymentViewTest(FinanceBaseTest):
         self.assertContains(response, str(self.payment.code))
 
     def test_payment_detail_get(self):
-        response = self.client.get(reverse('payment-detail', kwargs={'pk': self.payment.pk}))
+        response = self.client.get(reverse('payment-detail', kwargs={'slug': self.payment.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_payment_create_get(self):
@@ -815,7 +815,7 @@ class PaymentViewTest(FinanceBaseTest):
         self.assertTrue(Payment.objects.filter(code=1002).exists())
 
     def test_payment_update_get(self):
-        response = self.client.get(reverse('payment-update', kwargs={'pk': self.payment.pk}))
+        response = self.client.get(reverse('payment-update', kwargs={'slug': self.payment.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_payment_update_post(self):
@@ -830,17 +830,17 @@ class PaymentViewTest(FinanceBaseTest):
             'payment_method_code': '',
             'note': 'محدث',
         }
-        response = self.client.post(reverse('payment-update', kwargs={'pk': self.payment.pk}), data)
+        response = self.client.post(reverse('payment-update', kwargs={'slug': self.payment.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.payment.refresh_from_db()
         self.assertEqual(self.payment.amount_number, Decimal('600.00'))
 
     def test_payment_delete_get(self):
-        response = self.client.get(reverse('payment-delete', kwargs={'pk': self.payment.pk}))
+        response = self.client.get(reverse('payment-delete', kwargs={'slug': self.payment.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_payment_delete_post(self):
-        response = self.client.post(reverse('payment-delete', kwargs={'pk': self.payment.pk}))
+        response = self.client.post(reverse('payment-delete', kwargs={'slug': self.payment.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Payment.objects.filter(pk=self.payment.pk).exists())
 
@@ -848,10 +848,10 @@ class PaymentViewTest(FinanceBaseTest):
         self.client.logout()
         urls = [
             reverse('payment-list'),
-            reverse('payment-detail', kwargs={'pk': self.payment.pk}),
+            reverse('payment-detail', kwargs={'slug': self.payment.slug}),
             reverse('payment-create'),
-            reverse('payment-update', kwargs={'pk': self.payment.pk}),
-            reverse('payment-delete', kwargs={'pk': self.payment.pk}),
+            reverse('payment-update', kwargs={'slug': self.payment.slug}),
+            reverse('payment-delete', kwargs={'slug': self.payment.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -914,7 +914,7 @@ class PaymentViewEdgeCaseTest(FinanceBaseTest):
             'payment_method_code': '',
             'note': '',
         }
-        self.client.post(reverse('payment-update', kwargs={'pk': self.payment.pk}), data)
+        self.client.post(reverse('payment-update', kwargs={'slug': self.payment.slug}), data)
         self.payment.refresh_from_db()
         self.assertEqual(self.payment.last_person, self.user)
 
@@ -933,15 +933,15 @@ class PaymentViewEdgeCaseTest(FinanceBaseTest):
         self.assertRedirects(response, reverse('payment-list'))
 
     def test_payment_redirect_after_delete(self):
-        response = self.client.post(reverse('payment-delete', kwargs={'pk': self.payment.pk}))
+        response = self.client.post(reverse('payment-delete', kwargs={'slug': self.payment.slug}))
         self.assertRedirects(response, reverse('payment-list'))
 
     def test_payment_update_404(self):
-        response = self.client.get(reverse('payment-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('payment-update', kwargs={'slug': 'nonexistent-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_payment_delete_404(self):
-        response = self.client.get(reverse('payment-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('payment-delete', kwargs={'slug': 'nonexistent-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_payment_anonymous_post_create(self):
@@ -1946,7 +1946,7 @@ class CallViewTest(FinanceBaseTest):
         self.assertContains(response, 'عميل آخر')
 
     def test_call_detail_get(self):
-        response = self.client.get(reverse('call-detail', kwargs={'pk': self.call.pk}))
+        response = self.client.get(reverse('call-detail', kwargs={'slug': self.call.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_call_create_get(self):
@@ -1965,7 +1965,7 @@ class CallViewTest(FinanceBaseTest):
         self.assertTrue(Call.objects.filter(duration=90).exists())
 
     def test_call_update_get(self):
-        response = self.client.get(reverse('call-update', kwargs={'pk': self.call.pk}))
+        response = self.client.get(reverse('call-update', kwargs={'slug': self.call.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_call_update_post(self):
@@ -1975,18 +1975,18 @@ class CallViewTest(FinanceBaseTest):
             'duration': 180,
             'notes': 'مكالمة محدثة',
         }
-        response = self.client.post(reverse('call-update', kwargs={'pk': self.call.pk}), data)
+        response = self.client.post(reverse('call-update', kwargs={'slug': self.call.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.call.refresh_from_db()
         self.assertEqual(self.call.duration, 180)
         self.assertEqual(self.call.call_type, 'INCOMING')
 
     def test_call_delete_get(self):
-        response = self.client.get(reverse('call-delete', kwargs={'pk': self.call.pk}))
+        response = self.client.get(reverse('call-delete', kwargs={'slug': self.call.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_call_delete_post(self):
-        response = self.client.post(reverse('call-delete', kwargs={'pk': self.call.pk}))
+        response = self.client.post(reverse('call-delete', kwargs={'slug': self.call.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Call.objects.filter(pk=self.call.pk).exists())
 
@@ -1994,10 +1994,10 @@ class CallViewTest(FinanceBaseTest):
         self.client.logout()
         urls = [
             reverse('call-list'),
-            reverse('call-detail', kwargs={'pk': self.call.pk}),
+            reverse('call-detail', kwargs={'slug': self.call.slug}),
             reverse('call-create'),
-            reverse('call-update', kwargs={'pk': self.call.pk}),
-            reverse('call-delete', kwargs={'pk': self.call.pk}),
+            reverse('call-update', kwargs={'slug': self.call.slug}),
+            reverse('call-delete', kwargs={'slug': self.call.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -2061,7 +2061,7 @@ class CallViewEdgeCaseTest(FinanceBaseTest):
             'duration': 180,
             'notes': 'مكالمة محدثة',
         }
-        self.client.post(reverse('call-update', kwargs={'pk': self.call.pk}), data)
+        self.client.post(reverse('call-update', kwargs={'slug': self.call.slug}), data)
         self.call.refresh_from_db()
         self.assertEqual(self.call.person, self.user)
 
@@ -2076,15 +2076,15 @@ class CallViewEdgeCaseTest(FinanceBaseTest):
         self.assertRedirects(response, reverse('call-list'))
 
     def test_call_redirect_after_delete(self):
-        response = self.client.post(reverse('call-delete', kwargs={'pk': self.call.pk}))
+        response = self.client.post(reverse('call-delete', kwargs={'slug': self.call.slug}))
         self.assertRedirects(response, reverse('call-list'))
 
     def test_call_update_404(self):
-        response = self.client.get(reverse('call-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('call-update', kwargs={'slug': 'nonexistent-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_call_delete_404(self):
-        response = self.client.get(reverse('call-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('call-delete', kwargs={'slug': 'nonexistent-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_call_anonymous_post_create(self):

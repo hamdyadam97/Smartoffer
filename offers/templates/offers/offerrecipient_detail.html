@@ -17,7 +17,7 @@
         <div class="card mb-3">
             <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل المستلم</div>
             <ul class="list-group list-group-flush">
-                <li class="list-group-item"><strong>العرض:</strong> <a href="{% url 'studentoffer-detail' recipient.offer.pk %}">{{ recipient.offer.title }}</a></li>
+                <li class="list-group-item"><strong>العرض:</strong> <a href="{% url 'studentoffer-detail' recipient.offer.slug %}">{{ recipient.offer.title }}</a></li>
                 <li class="list-group-item"><strong>الطالب:</strong> {{ recipient.student }}</li>
                 <li class="list-group-item"><strong>قناة الإرسال:</strong> {{ recipient.get_channel_display }}</li>
                 <li class="list-group-item"><strong>الحالة:</strong> {{ recipient.get_status_display }}</li>

@@ -39,7 +39,7 @@ class StudentOffer(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.slug:
-            base_slug = slugify(self.title)
+            base_slug = slugify(self.title, allow_unicode=True)
             slug = base_slug
             counter = 1
             while StudentOffer.objects.filter(slug=slug).exclude(pk=self.pk).exists():
