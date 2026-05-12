@@ -160,3 +160,18 @@ LOGGING = {
         'level': os.environ.get('LOG_LEVEL', 'WARNING'),
     },
 }
+
+# Sentry
+SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.0')),
+        send_default_pii=True,
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'production' if not DEBUG else 'development'),
+    )
