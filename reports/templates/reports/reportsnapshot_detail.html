@@ -6,6 +6,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-graph-up"></i> {{ report.get_report_type_display }}</h2>
     <div>
+        <a href="{% url 'reportsnapshot-export-excel' report.slug %}" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        <a href="{% url 'reportsnapshot-export-pdf' report.slug %}" class="btn btn-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
         <button type="button" class="btn btn-warning" onclick="openReportModal({{ report.id }}, '{{ report.report_type|escapejs }}', '{{ report.branch.id|default:'' }}', '{{ report.period|escapejs }}', '{{ report.start_date|date:'Y-m-d' }}', '{{ report.end_date|date:'Y-m-d' }}')"><i class="bi bi-pencil"></i> تعديل</button>
         <a href="{% url 'reportsnapshot-delete' report.slug %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
         <a href="{% url 'reportsnapshot-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>

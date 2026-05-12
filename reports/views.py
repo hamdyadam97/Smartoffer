@@ -2,15 +2,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.http import JsonResponse
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
 
 from core.models import Branch
 from .models import ReportSnapshot
 from .forms import ReportSnapshotForm
-from .utils import generate_report_data
+from .utils import generate_report_data, get_dashboard_data
 
 
 class ReportSnapshotListView(LoginRequiredMixin, ListView):
@@ -125,3 +125,239 @@ def reportsnapshot_update_ajax(request, pk):
         report.save(update_fields=['data_json'])
         return JsonResponse({'success': True, 'message': 'تم تحديث التقرير بنجاح'})
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+# ============================================================
+# Dashboard
+# ============================================================
+
+class ReportDashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'reports/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        branch_id = self.request.GET.get('branch')
+        branch = Branch.objects.filter(pk=branch_id).first() if branch_id else None
+        context['dashboard'] = get_dashboard_data(branch=branch)
+        context['branches'] = Branch.objects.all()
+        context['selected_branch'] = branch
+        return context
+
+
+# ============================================================
+# Export to Excel
+# ============================================================
+
+def export_report_excel(request, slug):
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+    report = get_object_or_404(ReportSnapshot, slug=slug)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = report.get_report_type_display()
+
+    # Header
+    ws.merge_cells('A1:D1')
+    ws['A1'] = report.get_report_type_display()
+    ws['A1'].font = Font(size=16, bold=True, color='FFFFFF')
+    ws['A1'].fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 30
+
+    ws['A2'] = 'الفترة:'
+    ws['B2'] = report.period or '-'
+    ws['A3'] = 'الفرع:'
+    ws['B3'] = str(report.branch) if report.branch else 'الكل'
+    ws['A4'] = 'تاريخ الإنشاء:'
+    ws['B4'] = report.created_at.strftime('%Y-%m-%d')
+
+    row = 6
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    if report.data_json:
+        for key, value in report.data_json.items():
+            ws.merge_cells(f'A{row}:D{row}')
+            cell = ws.cell(row=row, column=1, value=key)
+            cell.font = Font(bold=True, size=12)
+            cell.fill = PatternFill(start_color='E2E8F0', end_color='E2E8F0', fill_type='solid')
+            row += 1
+
+            if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                # Table headers
+                headers = list(value[0].keys())
+                for col, header in enumerate(headers, 1):
+                    cell = ws.cell(row=row, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill(start_color='F1F5F9', end_color='F1F5F9', fill_type='solid')
+                    cell.border = thin_border
+                row += 1
+
+                for item in value:
+                    for col, header in enumerate(headers, 1):
+                        cell = ws.cell(row=row, column=col, value=item.get(header, ''))
+                        cell.border = thin_border
+                    row += 1
+            else:
+                ws.cell(row=row, column=1, value=str(value))
+                row += 1
+            row += 1
+
+    # Adjust column widths
+    from openpyxl.cell.cell import MergedCell
+    for col in ws.columns:
+        if isinstance(col[0], MergedCell):
+            continue
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{report.slug}.xlsx"'
+    wb.save(response)
+    return response
+
+
+# ============================================================
+# Export to PDF
+# ============================================================
+
+def _prepare_arabic(text):
+    """Reshape and reverse Arabic text for ReportLab LTR rendering."""
+    if not text:
+        return ''
+    import arabic_reshaper
+    reshaped = arabic_reshaper.reshape(str(text))
+    return reshaped[::-1]
+
+
+def _build_table(data, headers, doc_width, arabic_style):
+    """Build a well-formatted ReportLab table with wrapping."""
+    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.lib import colors
+
+    # Wrap all cell values in Paragraph for text wrapping
+    table_data = []
+    # Header row
+    header_row = [Paragraph(f'<b>{_prepare_arabic(str(h))}</b>', arabic_style) for h in headers]
+    table_data.append(header_row)
+
+    for row in data:
+        table_row = []
+        for h in headers:
+            val = row.get(h, '')
+            table_row.append(Paragraph(_prepare_arabic(str(val)), arabic_style))
+        table_data.append(table_row)
+
+    # Calculate column widths proportionally based on content length
+    num_cols = len(headers)
+    base_width = doc_width / num_cols
+    col_widths = []
+    for i, h in enumerate(headers):
+        max_len = len(str(h))
+        for row in data:
+            max_len = max(max_len, len(str(row.get(h, ''))))
+        # Scale width between 0.7x and 1.5x of base width
+        factor = min(max(max_len / 15, 0.7), 1.8)
+        col_widths.append(base_width * factor)
+
+    # Normalize to fit doc_width
+    total = sum(col_widths)
+    col_widths = [w / total * doc_width for w in col_widths]
+
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563EB')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Tahoma'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Tahoma'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('TOPPADDING', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F8FAFC')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+        ('WORDWRAP', (0, 0), (-1, -1), True),
+    ]))
+    return table
+
+
+def export_report_pdf(request, slug):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.units import cm
+
+    report = get_object_or_404(ReportSnapshot, slug=slug)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{report.slug}.pdf"'
+
+    # Detect if report has wide tables -> use landscape
+    has_wide_table = False
+    if report.data_json:
+        for value in report.data_json.values():
+            if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                if len(value[0].keys()) > 5:
+                    has_wide_table = True
+                    break
+
+    if has_wide_table:
+        doc = SimpleDocTemplate(response, pagesize=landscape(A4), rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    else:
+        doc = SimpleDocTemplate(response, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Register Tahoma
+    font_path = r'C:\Windows\Fonts\tahoma.ttf'
+    pdfmetrics.registerFont(TTFont('Tahoma', font_path))
+
+    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Tahoma', fontSize=9, leading=12, alignment=2)
+    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Tahoma', fontSize=18, leading=24, alignment=1)
+    heading_style = ParagraphStyle('ArabicHeading', parent=styles['Heading2'], fontName='Tahoma', fontSize=14, leading=18, alignment=2)
+
+    # Title
+    elements.append(Paragraph(_prepare_arabic(report.get_report_type_display()), title_style))
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Info
+    info_text = f"الفترة: {report.period or '-'} | الفرع: {str(report.branch) if report.branch else 'الكل'} | تاريخ الإنشاء: {report.created_at.strftime('%Y-%m-%d')}"
+    elements.append(Paragraph(_prepare_arabic(info_text), arabic_style))
+    elements.append(Spacer(1, 0.5*cm))
+
+    if report.data_json:
+        for key, value in report.data_json.items():
+            elements.append(Paragraph(f"<b>{_prepare_arabic(key)}</b>", heading_style))
+            elements.append(Spacer(1, 0.3*cm))
+
+            if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                headers = list(value[0].keys())
+                table = _build_table(value, headers, doc.width, arabic_style)
+                elements.append(table)
+            elif isinstance(value, list) and len(value) > 0:
+                # Simple list
+                for item in value:
+                    elements.append(Paragraph(f"• {_prepare_arabic(str(item))}", arabic_style))
+            else:
+                elements.append(Paragraph(_prepare_arabic(str(value)), arabic_style))
+            elements.append(Spacer(1, 0.5*cm))
+
+    doc.build(elements)
+    return response
