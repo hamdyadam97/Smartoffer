@@ -30,6 +30,7 @@ def export_studentoffer_pdf(request, slug):
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
     import os
 
     offer = get_object_or_404(StudentOffer, slug=slug)
@@ -48,34 +49,97 @@ def export_studentoffer_pdf(request, slug):
         pdfmetrics.registerFont(TTFont('Cairo', font_path))
         registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
 
-    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=11, leading=16, alignment=2)
-    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=20, leading=28, alignment=1)
-    label_style = ParagraphStyle('ArabicLabel', parent=styles['Normal'], fontName='Cairo', fontSize=10, leading=14, alignment=2, textColor=colors.HexColor('#64748B'))
-    signature_style = ParagraphStyle('ArabicSig', parent=styles['Normal'], fontName='Cairo', fontSize=12, leading=18, alignment=1)
+    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=11, leading=16, alignment=TA_RIGHT)
+    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=20, leading=28, alignment=TA_CENTER)
+    label_style = ParagraphStyle('ArabicLabel', parent=styles['Normal'], fontName='Cairo', fontSize=10, leading=14, alignment=TA_RIGHT, textColor=colors.HexColor('#64748B'))
+    signature_style = ParagraphStyle('ArabicSig', parent=styles['Normal'], fontName='Cairo', fontSize=12, leading=18, alignment=TA_CENTER)
+    header_style = ParagraphStyle('ArabicHeader', parent=styles['Normal'], fontName='Cairo', fontSize=14, leading=20, alignment=TA_CENTER)
+    header_small_style = ParagraphStyle('ArabicHeaderSmall', parent=styles['Normal'], fontName='Cairo', fontSize=10, leading=14, alignment=TA_CENTER, textColor=colors.HexColor('#64748B'))
+
+    # Branch Header
+    branch = offer.branch
+    if branch:
+        elements.append(Paragraph(_prepare_arabic(branch.name), header_style))
+        if branch.sub_name:
+            elements.append(Paragraph(_prepare_arabic(branch.sub_name), header_small_style))
+        if branch.address:
+            elements.append(Paragraph(_prepare_arabic(branch.address), header_small_style))
+        contact_parts = []
+        if branch.phone1:
+            contact_parts.append(branch.phone1)
+        if branch.phone2:
+            contact_parts.append(branch.phone2)
+        if branch.mobile:
+            contact_parts.append(branch.mobile)
+        if contact_parts:
+            elements.append(Paragraph(_prepare_arabic(' - '.join(contact_parts)), header_small_style))
+        if branch.email:
+            elements.append(Paragraph(_prepare_arabic(branch.email), header_small_style))
+        elements.append(Spacer(1, 0.6*cm))
 
     # Title
     elements.append(Paragraph(_prepare_arabic('عرض طالب'), title_style))
     elements.append(Spacer(1, 0.8*cm))
 
-    # Offer details table
+    # Student recipient info (single student)
+    recipient = None
+    recipient_pk = request.GET.get('recipient')
+    if recipient_pk:
+        try:
+            recipient = offer.recipients.select_related('student__contact').get(pk=recipient_pk)
+        except OfferRecipient.DoesNotExist:
+            pass
+    if not recipient:
+        recipient = offer.recipients.select_related('student__contact').first()
+
+    if recipient:
+        student = recipient.student
+        contact = student.contact
+        name = contact.get_full_name() if contact else student.get_full_name()
+        phone = contact.mobile if contact else ''
+        elements.append(Paragraph(_prepare_arabic('بيانات الطالب:'), label_style))
+        elements.append(Spacer(1, 0.3*cm))
+        student_rows = [
+            [Paragraph(_prepare_arabic(phone), arabic_style), Paragraph(_prepare_arabic('رقم الهاتف'), label_style)],
+            [Paragraph(_prepare_arabic(name), arabic_style), Paragraph(_prepare_arabic('الاسم'), label_style)],
+        ]
+        student_table = Table(student_rows, colWidths=[doc.width*0.65, doc.width*0.35])
+        student_table.setStyle(TableStyle([
+            ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#F1F5F9')),
+            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#334155')),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Cairo'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ]))
+        elements.append(student_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+    # Offer details table - REVERSED columns for RTL feel in LTR document
     data = [
-        [Paragraph(_prepare_arabic('عنوان العرض'), label_style), Paragraph(_prepare_arabic(offer.title), arabic_style)],
-        [Paragraph(_prepare_arabic('الفرع'), label_style), Paragraph(_prepare_arabic(str(offer.branch)), arabic_style)],
-        [Paragraph(_prepare_arabic('الدورة / الدبلوم'), label_style), Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), arabic_style)],
-        [Paragraph(_prepare_arabic('المستوى المستهدف'), label_style), Paragraph(_prepare_arabic(offer.get_target_level_display()), arabic_style)],
-        [Paragraph(_prepare_arabic('الحالة'), label_style), Paragraph(_prepare_arabic(offer.get_status_display()), arabic_style)],
-        [Paragraph(_prepare_arabic('تاريخ الإنشاء'), label_style), Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), arabic_style)],
+        [Paragraph(_prepare_arabic(offer.title), arabic_style), Paragraph(_prepare_arabic('عنوان العرض'), label_style)],
+        [Paragraph(_prepare_arabic(str(offer.branch)), arabic_style), Paragraph(_prepare_arabic('الفرع'), label_style)],
+        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), arabic_style), Paragraph(_prepare_arabic('الدورة / الدبلوم'), label_style)],
+        [Paragraph(_prepare_arabic(offer.get_target_level_display()), arabic_style), Paragraph(_prepare_arabic('المستوى المستهدف'), label_style)],
+        [Paragraph(_prepare_arabic(offer.get_status_display()), arabic_style), Paragraph(_prepare_arabic('الحالة'), label_style)],
+        [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ الإنشاء'), label_style)],
     ]
 
     if offer.scheduled_at:
-        data.append([Paragraph(_prepare_arabic('موعد الإرسال المجدول'), label_style), Paragraph(_prepare_arabic(offer.scheduled_at.strftime('%Y-%m-%d %H:%M')), arabic_style)])
+        data.append([Paragraph(_prepare_arabic(offer.scheduled_at.strftime('%Y-%m-%d %H:%M')), arabic_style), Paragraph(_prepare_arabic('موعد الإرسال المجدول'), label_style)])
     if offer.sent_at:
-        data.append([Paragraph(_prepare_arabic('تاريخ الإرسال الفعلي'), label_style), Paragraph(_prepare_arabic(offer.sent_at.strftime('%Y-%m-%d %H:%M')), arabic_style)])
+        data.append([Paragraph(_prepare_arabic(offer.sent_at.strftime('%Y-%m-%d %H:%M')), arabic_style), Paragraph(_prepare_arabic('تاريخ الإرسال الفعلي'), label_style)])
 
-    table = Table(data, colWidths=[doc.width*0.35, doc.width*0.65])
+    # Reversed: value column (0) wider on the LEFT, label column (1) narrower on the RIGHT
+    table = Table(data, colWidths=[doc.width*0.65, doc.width*0.35])
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F1F5F9')),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#334155')),
+        ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#F1F5F9')),
+        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#334155')),
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, -1), 'Cairo'),
