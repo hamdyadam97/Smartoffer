@@ -8,6 +8,7 @@ urlpatterns = [
     path('student-offers/create/', views.StudentOfferCreateView.as_view(), name='studentoffer-create'),
     path('student-offers/<str:slug>/update/', views.StudentOfferUpdateView.as_view(), name='studentoffer-update'),
     path('student-offers/<str:slug>/delete/', views.StudentOfferDeleteView.as_view(), name='studentoffer-delete'),
+    path('student-offers/<str:slug>/send/<int:recipient_pk>/', views.send_offer_to_recipient, name='studentoffer-send-recipient'),
     path('student-offers/<str:slug>/export/pdf/', views.export_studentoffer_pdf, name='studentoffer-export-pdf'),
     path('student-offers/ajax/create/', views.studentoffer_create_ajax, name='studentoffer-create-ajax'),
     path('student-offers/ajax/<int:pk>/update/', views.studentoffer_update_ajax, name='studentoffer-update-ajax'),

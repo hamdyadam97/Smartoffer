@@ -1,25 +1,29 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404
 
 from core.models import Branch
 from courses.models import Course
 from .models import StudentOffer, OfferRecipient, OfferNote
 from .forms import StudentOfferForm, OfferRecipientForm, OfferNoteForm
+from .whatsapp import send_whatsapp_message
 
 
 def _prepare_arabic(text):
-    """Reshape and reverse Arabic text for ReportLab LTR rendering."""
+    """Reshape and apply BiDi algorithm for Arabic text in ReportLab PDF."""
     if not text:
         return ''
     import arabic_reshaper
+    from bidi.algorithm import get_display
     reshaped = arabic_reshaper.reshape(str(text))
-    return reshaped[::-1]
+    return get_display(reshaped)
 
 
 def export_studentoffer_pdf(request, slug):
@@ -178,6 +182,43 @@ def export_studentoffer_pdf(request, slug):
 
     doc.build(elements)
     return response
+
+
+# ============================================================
+# Send Offer to Single Recipient
+# ============================================================
+
+@login_required
+def send_offer_to_recipient(request, slug, recipient_pk):
+    """Send an offer to a single recipient via their preferred channel."""
+    offer = get_object_or_404(StudentOffer, slug=slug)
+    recipient = get_object_or_404(OfferRecipient, pk=recipient_pk, offer=offer)
+
+    channel = recipient.channel
+    student = recipient.student
+    contact = getattr(student, 'contact', None)
+    body = f"{offer.title}\n\n{offer.content}"
+
+    if channel == 'whatsapp':
+        phone = contact.mobile if contact else ''
+        if not phone:
+            messages.error(request, 'لا يوجد رقم محمول مسجل لهذا الطالب.')
+            return redirect('studentoffer-detail', slug=slug)
+        result = send_whatsapp_message(phone, body)
+        if result.get('success'):
+            messages.success(request, f'تم إرسال العرض عبر واتساب إلى {student.get_full_name()}.')
+            recipient.status = 'مرسل'
+            recipient.save()
+        else:
+            messages.error(request, f'فشل إرسال واتساب: {result.get("error", "خطأ غير معروف")}')
+    elif channel == 'email':
+        messages.warning(request, 'قناة البريد الإلكتروني غير مفعلة حالياً (لا يوجد إيميل مسجل للطالب).')
+    elif channel == 'app':
+        messages.warning(request, 'قناة إشعار التطبيق غير مفعلة حالياً.')
+    else:
+        messages.error(request, 'قناة إرسال غير معروفة.')
+
+    return redirect('studentoffer-detail', slug=slug)
 
 
 # ============================================================
