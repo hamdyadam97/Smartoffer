@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
@@ -11,18 +13,14 @@ class StudentOffer(models.Model):
         ('مرسلة', 'مرسلة'),
         ('منتهية', 'منتهية'),
     ]
-    TARGET_LEVEL_CHOICES = [
-        ('مبتدئ', 'مبتدئ'),
-        ('متوسط', 'متوسط'),
-        ('متقدم', 'متقدم'),
-        ('الكل', 'جميع المستويات'),
-    ]
-
     title = models.CharField(max_length=255, verbose_name='عنوان العرض')
     content = models.TextField(verbose_name='محتوى العرض')
     branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, db_index=True, related_name='offers', verbose_name='الفرع')
     course = models.ForeignKey('courses.Course', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='offers', verbose_name='الدورة')
-    target_level = models.CharField(max_length=20, choices=TARGET_LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name='السعر')
+    price_description = models.CharField(max_length=255, blank=True, verbose_name='وصف السعر')
+    start_date = models.DateField(null=True, blank=True, verbose_name='تاريخ بداية العرض')
+    end_date = models.DateField(null=True, blank=True, verbose_name='تاريخ نهاية العرض')
     scheduled_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='موعد الإرسال')
     sent_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name='تاريخ الإرسال الفعلي')
     slug = models.SlugField(unique=True, blank=True, null=True, db_index=True, verbose_name='الرابط')
@@ -72,7 +70,7 @@ class OfferRecipient(models.Model):
         ('لم_يتفاعل', 'لم يتفاعل'),
     ]
 
-    offer = models.ForeignKey(StudentOffer, on_delete=models.PROTECT, db_index=True, related_name='recipients', verbose_name='العرض')
+    offer = models.ForeignKey(StudentOffer, on_delete=models.CASCADE, db_index=True, related_name='recipients', verbose_name='العرض')
     student = models.ForeignKey('students.Student', on_delete=models.PROTECT, db_index=True, related_name='offer_recipients', verbose_name='الطالب')
     channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, db_index=True, verbose_name='قناة الإرسال')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مرسل', db_index=True, verbose_name='حالة التفاعل')

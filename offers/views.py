@@ -3,16 +3,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 
 from core.models import Branch
 from courses.models import Course
+from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
-from .forms import StudentOfferForm, OfferRecipientForm, OfferNoteForm
+from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm
 from .whatsapp import send_whatsapp_message
 
 
@@ -129,11 +130,16 @@ def export_studentoffer_pdf(request, slug):
         [Paragraph(_prepare_arabic(offer.title), arabic_style), Paragraph(_prepare_arabic('عنوان العرض'), label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), arabic_style), Paragraph(_prepare_arabic('الفرع'), label_style)],
         [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), arabic_style), Paragraph(_prepare_arabic('الدورة / الدبلوم'), label_style)],
-        [Paragraph(_prepare_arabic(offer.get_target_level_display()), arabic_style), Paragraph(_prepare_arabic('المستوى المستهدف'), label_style)],
+        [Paragraph(_prepare_arabic(f'{offer.price} ريال'), arabic_style), Paragraph(_prepare_arabic('السعر'), label_style)],
+        [Paragraph(_prepare_arabic(offer.price_description or '-'), arabic_style), Paragraph(_prepare_arabic('وصف السعر'), label_style)],
         [Paragraph(_prepare_arabic(offer.get_status_display()), arabic_style), Paragraph(_prepare_arabic('الحالة'), label_style)],
         [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ الإنشاء'), label_style)],
     ]
 
+    if offer.start_date:
+        data.append([Paragraph(_prepare_arabic(offer.start_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ بداية العرض'), label_style)])
+    if offer.end_date:
+        data.append([Paragraph(_prepare_arabic(offer.end_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ نهاية العرض'), label_style)])
     if offer.scheduled_at:
         data.append([Paragraph(_prepare_arabic(offer.scheduled_at.strftime('%Y-%m-%d %H:%M')), arabic_style), Paragraph(_prepare_arabic('موعد الإرسال المجدول'), label_style)])
     if offer.sent_at:
@@ -221,6 +227,102 @@ def send_offer_to_recipient(request, slug, recipient_pk):
     return redirect('studentoffer-detail', slug=slug)
 
 
+@login_required
+def add_recipient_to_offer(request, slug):
+    """Add a recipient directly to a specific offer (HTML form fallback)."""
+    offer = get_object_or_404(StudentOffer, slug=slug)
+    if request.method == 'POST':
+        form = OfferRecipientAddForm(request.POST)
+        if form.is_valid():
+            recipient = form.save(commit=False)
+            recipient.offer = offer
+            try:
+                recipient.save()
+                messages.success(request, f'تم إضافة المستلم {recipient.student} بنجاح.')
+                return redirect('studentoffer-detail', slug=slug)
+            except Exception as e:
+                messages.error(request, f'خطأ أثناء الحفظ: {str(e)}')
+    else:
+        form = OfferRecipientAddForm()
+    return render(request, 'offers/add_recipient_form.html', {'form': form, 'offer': offer})
+
+
+@require_POST
+@login_required
+def studentoffer_add_recipient_ajax(request, slug):
+    """AJAX endpoint to add a recipient to an offer from a modal."""
+    offer = get_object_or_404(StudentOffer, slug=slug)
+    form = OfferRecipientAddForm(request.POST)
+    if form.is_valid():
+        recipient = form.save(commit=False)
+        recipient.offer = offer
+        try:
+            recipient.save()
+            return JsonResponse({
+                'success': True,
+                'message': f'تم إضافة المستلم {recipient.student} بنجاح.',
+                'id': recipient.id,
+                'student_name': str(recipient.student),
+                'channel': recipient.get_channel_display(),
+                'status': recipient.get_status_display(),
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@login_required
+def send_offer_to_all(request, slug):
+    """Send the offer to all recipients via their preferred channels."""
+    offer = get_object_or_404(StudentOffer, slug=slug)
+    recipients = offer.recipients.select_related('student__contact').all()
+    if not recipients:
+        messages.warning(request, 'لا يوجد مستلمون لهذا العرض. أضف مستلمين أولاً.')
+        return redirect('studentoffer-detail', slug=slug)
+
+    sent_count = 0
+    failed_count = 0
+    body = f"{offer.title}\n\n{offer.content}"
+
+    for recipient in recipients:
+        channel = recipient.channel
+        student = recipient.student
+        contact = getattr(student, 'contact', None)
+
+        if channel == 'whatsapp':
+            phone = contact.mobile if contact else ''
+            if phone:
+                result = send_whatsapp_message(phone, body)
+                if result.get('success'):
+                    recipient.status = 'مرسل'
+                    recipient.save()
+                    sent_count += 1
+                else:
+                    failed_count += 1
+            else:
+                failed_count += 1
+        elif channel == 'email':
+            failed_count += 1
+        elif channel == 'app':
+            failed_count += 1
+        else:
+            failed_count += 1
+
+    if sent_count:
+        messages.success(request, f'تم الإرسال بنجاح إلى {sent_count} مستلم.')
+        offer.status = 'مرسلة'
+        offer.sent_at = timezone.now()
+        offer.save()
+    if failed_count:
+        messages.warning(
+            request,
+            f'فشل الإرسال إلى {failed_count} مستلم. '
+            f'تأكد من وجود أرقام واتساب مسجلة أو تفعيل قنوات الإيميل/التطبيق.'
+        )
+
+    return redirect('studentoffer-detail', slug=slug)
+
+
 # ============================================================
 # StudentOffer
 # ============================================================
@@ -261,6 +363,8 @@ class StudentOfferDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['branches'] = Branch.objects.all()
         context['courses'] = Course.objects.select_related('master').all()
+        context['all_students'] = Student.objects.select_related('contact').all()
+        context['all_offers'] = StudentOffer.objects.select_related('branch', 'course__master').all()
         return context
 
 

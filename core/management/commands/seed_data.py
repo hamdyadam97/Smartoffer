@@ -355,7 +355,10 @@ class Command(BaseCommand):
                 content='محتوى العرض الخاص بالطلاب للتسجيل المبكر...',
                 branch=random.choice(self.branches),
                 course=random.choice(self.courses),
-                target_level=random.choice(['مبتدئ', 'متوسط', 'متقدم', 'الكل']),
+                price=Decimal(random.randint(500, 5000)),
+                price_description=random.choice(['خصم مبكر', 'عرض محدود', 'تسجيل جماعي', '']),
+                start_date=(timezone.now() + timedelta(days=random.randint(1, 5))).date(),
+                end_date=(timezone.now() + timedelta(days=random.randint(10, 30))).date(),
                 scheduled_at=timezone.now() + timedelta(days=random.randint(1, 10)),
                 status=random.choice(['مسودة', 'مجدولة', 'مرسلة', 'منتهية']),
                 created_by=random.choice(self.persons)
