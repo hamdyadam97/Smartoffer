@@ -42,7 +42,6 @@ class StudentOfferModelTests(BaseTestCase):
             content='Great discount',
             branch=self.branch,
             course=self.course,
-            target_level='الكل',
             status='مسودة',
             created_by=self.user,
         )
@@ -97,9 +96,11 @@ class OfferRecipientModelTests(BaseTestCase):
                 channel='email',
             )
 
-    def test_offer_protect(self):
-        with self.assertRaises(ProtectedError):
-            self.offer.delete()
+    def test_offer_cascade(self):
+        # After changing on_delete to CASCADE, deleting offer deletes recipients
+        recipient_pk = self.recipient.pk
+        self.offer.delete()
+        self.assertFalse(OfferRecipient.objects.filter(pk=recipient_pk).exists())
 
     def test_student_protect(self):
         with self.assertRaises(ProtectedError):
@@ -133,7 +134,6 @@ class StudentOfferFormTests(BaseTestCase):
             'content': 'Offer content',
             'branch': self.branch.id,
             'course': self.course.id,
-            'target_level': 'الكل',
             'status': 'مسودة',
         }
         form = StudentOfferForm(data=data)
@@ -145,7 +145,6 @@ class StudentOfferFormTests(BaseTestCase):
             'content': 'Offer content',
             'branch': self.branch.id,
             'course': '',
-            'target_level': 'مبتدئ',
             'status': 'مجدولة',
             'scheduled_at': '2024-12-01T10:00',
         }
@@ -275,7 +274,6 @@ class StudentOfferViewTests(BaseTestCase):
             'content': 'Winter discount',
             'branch': self.branch.id,
             'course': self.course.id,
-            'target_level': 'الكل',
             'status': 'مسودة',
         }
         response = self.client.post(reverse('studentoffer-create'), data)
@@ -292,7 +290,6 @@ class StudentOfferViewTests(BaseTestCase):
             'content': 'Updated discount',
             'branch': self.branch.id,
             'course': self.course.id,
-            'target_level': 'متوسط',
             'status': 'مجدولة',
             'scheduled_at': '2024-12-01T10:00',
         }

@@ -40,13 +40,20 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">المستوى المستهدف <span class="text-danger">*</span></label>
-                            <select name="target_level" id="so_target_level" class="form-select" required>
-                                <option value="مبتدئ">مبتدئ</option>
-                                <option value="متوسط">متوسط</option>
-                                <option value="متقدم">متقدم</option>
-                                <option value="الكل">جميع المستويات</option>
-                            </select>
+                            <label class="form-label">السعر</label>
+                            <input type="number" name="price" id="so_price" class="form-control" step="0.01" value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">وصف السعر</label>
+                            <input type="text" name="price_description" id="so_price_description" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ بداية العرض</label>
+                            <input type="date" name="start_date" id="so_start_date" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ نهاية العرض</label>
+                            <input type="date" name="end_date" id="so_end_date" class="form-control">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الحالة <span class="text-danger">*</span></label>
@@ -96,7 +103,7 @@
         btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ';
     }
 
-    window.openStudentOfferModal = function(id, title, content, branchId, courseId, targetLevel, scheduledAt, status) {
+    window.openStudentOfferModal = function(id, title, content, branchId, courseId, price, priceDesc, startDate, endDate, scheduledAt, status) {
         alertBox.innerHTML = '';
         studentOfferForm.reset();
 
@@ -106,12 +113,16 @@
             document.getElementById('so_content').value = content || '';
             document.getElementById('so_branch').value = branchId || '';
             document.getElementById('so_course').value = courseId || '';
-            document.getElementById('so_target_level').value = targetLevel || 'الكل';
+            document.getElementById('so_price').value = price || '0';
+            document.getElementById('so_price_description').value = priceDesc || '';
+            document.getElementById('so_start_date').value = startDate || '';
+            document.getElementById('so_end_date').value = endDate || '';
             document.getElementById('so_status').value = status || 'مسودة';
             document.getElementById('so_scheduled_at').value = scheduledAt || '';
             modalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل عرض';
         } else {
             offerId.value = '';
+            document.getElementById('so_price').value = '0';
             modalTitle.innerHTML = '<i class="bi bi-tag text-primary me-2"></i> عرض جديد';
         }
         new bootstrap.Modal(studentOfferModal).show();
