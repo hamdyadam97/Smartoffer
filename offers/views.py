@@ -18,13 +18,20 @@ from .whatsapp import send_whatsapp_message
 
 
 def _prepare_arabic(text):
-    """Reshape and apply BiDi algorithm for Arabic text in ReportLab PDF."""
+    """Prepare Arabic text for ReportLab PDF.
+    Uses BiDi only (no reshaper) to avoid missing glyphs in some fonts.
+    Also escapes XML special chars so ReportLab Paragraph doesn't break."""
     if not text:
         return ''
-    import arabic_reshaper
-    from bidi.algorithm import get_display
-    reshaped = arabic_reshaper.reshape(str(text))
-    return get_display(reshaped)
+    try:
+        from bidi.algorithm import get_display
+        bidi_text = get_display(str(text))
+        # Escape XML special chars for ReportLab Paragraph safety
+        bidi_text = bidi_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return bidi_text
+    except Exception:
+        # Fallback: just escape XML chars and return as-is
+        return str(text).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 def export_studentoffer_pdf(request, slug):
@@ -48,11 +55,20 @@ def export_studentoffer_pdf(request, slug):
     styles = getSampleStyleSheet()
 
     # Register Cairo font for Arabic support
+    from django.contrib.staticfiles.finders import find
     from reportlab.pdfbase.pdfmetrics import registerFontFamily
-    font_path = os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
-    if os.path.exists(font_path):
+    font_path = find('fonts/Cairo-Regular.ttf')
+    if font_path and os.path.exists(font_path):
         pdfmetrics.registerFont(TTFont('Cairo', font_path))
         registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
+    else:
+        # Fallback to direct path
+        font_path = os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('Cairo', font_path))
+            registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
+        else:
+            print('[PDF Warning] Cairo font not found. Arabic text may not render correctly.')
 
     arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=11, leading=16, alignment=TA_RIGHT)
     title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=20, leading=28, alignment=TA_CENTER)
