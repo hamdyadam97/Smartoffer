@@ -5,7 +5,10 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tag"></i> عروض الطلاب</h2>
-    <button type="button" class="btn btn-primary" onclick="openStudentOfferModal()"><i class="bi bi-plus-lg"></i> عرض جديد</button>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-success" onclick="openQuickOfferModal()"><i class="bi bi-lightning"></i> عرض سريع</button>
+        <button type="button" class="btn btn-primary" onclick="openStudentOfferModal()"><i class="bi bi-plus-lg"></i> عرض جديد</button>
+    </div>
 </div>
 
 <div class="card mb-4">
@@ -61,4 +64,175 @@
 {% include "includes/pagination.html" %}
 
 {% include "includes/studentoffer_modal.html" %}
+
+<!-- Quick Offer Modal -->
+<div class="modal fade" id="quickOfferModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-lightning-charge"></i> عرض سريع</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="quickOfferAlert"></div>
+                <form id="quickOfferForm">
+                    {% csrf_token %}
+                    <ul class="nav nav-tabs mb-3" id="quickOfferTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="q-offer-tab" data-bs-toggle="tab" data-bs-target="#q-offer-pane" type="button" role="tab">بيانات العرض</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="q-recipient-tab" data-bs-toggle="tab" data-bs-target="#q-recipient-pane" type="button" role="tab">بيانات المستلم</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="quickOfferTabContent">
+                        <div class="tab-pane fade show active" id="q-offer-pane" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">عنوان العرض <span class="text-danger">*</span></label>
+                                    <input type="text" name="title" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                                    <select name="branch" class="form-select" required>
+                                        <option value="">اختر الفرع...</option>
+                                        {% for b in branches %}
+                                        <option value="{{ b.id }}">{{ b.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">الدورة</label>
+                                    <select name="course" class="form-select">
+                                        <option value="">---------</option>
+                                        {% for c in courses %}
+                                        <option value="{{ c.id }}">{{ c.master.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">السعر</label>
+                                    <input type="number" name="price" class="form-control" step="0.01" value="0">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">وصف السعر</label>
+                                <input type="text" name="price_description" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">محتوى العرض <span class="text-danger">*</span></label>
+                                <textarea name="content" class="form-control" rows="3" required></textarea>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="q-recipient-pane" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                    <input type="text" name="contact_name" class="form-control" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">الجوال <span class="text-danger">*</span></label>
+                                    <input type="text" name="contact_phone" class="form-control" placeholder="مثال: 966501234567" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">البريد الإلكتروني</label>
+                                    <input type="email" name="contact_email" class="form-control">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">قناة الإرسال <span class="text-danger">*</span></label>
+                                <select name="channel" class="form-select" required>
+                                    <option value="whatsapp">واتساب</option>
+                                    <option value="email">البريد الإلكتروني</option>
+                                    <option value="app">إشعار التطبيق</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-success" id="saveQuickOfferBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="saveQuickOfferSpinner"></span>
+                    <span id="saveQuickOfferBtnText">إنشاء العرض والمستلم</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const modal = document.getElementById('quickOfferModal');
+    const form = document.getElementById('quickOfferForm');
+    const alertBox = document.getElementById('quickOfferAlert');
+    const saveBtn = document.getElementById('saveQuickOfferBtn');
+    const spinner = document.getElementById('saveQuickOfferSpinner');
+    const btnText = document.getElementById('saveQuickOfferBtnText');
+
+    function showAlert(message, type) {
+        alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setLoading(loading) {
+        saveBtn.disabled = loading;
+        spinner.classList.toggle('d-none', !loading);
+        btnText.textContent = loading ? 'جاري الإنشاء...' : 'إنشاء العرض والمستلم';
+    }
+
+    window.openQuickOfferModal = function() {
+        alertBox.innerHTML = '';
+        form.reset();
+        const offerTab = document.getElementById('q-offer-tab');
+        new bootstrap.Tab(offerTab).show();
+        new bootstrap.Modal(modal).show();
+    };
+
+    saveBtn.addEventListener('click', function() {
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        setLoading(true);
+        const formData = new FormData(form);
+
+        fetch('{% url "quick-offer-ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                    alertBox.innerHTML = '';
+                    window.location.href = '/student-offers/' + data.slug + '/';
+                }, 1200);
+            } else {
+                let errors = '';
+                if (data.errors) {
+                    for (const [field, msgs] of Object.entries(data.errors)) {
+                        errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
+                    }
+                } else {
+                    errors = data.error || 'حدث خطأ أثناء الإنشاء';
+                }
+                showAlert(errors, 'danger');
+            }
+        })
+        .catch(() => {
+            setLoading(false);
+            showAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
+})();
+</script>
 {% endblock %}

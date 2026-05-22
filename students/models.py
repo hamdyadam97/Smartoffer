@@ -22,7 +22,7 @@ class Contact(models.Model):
     birth_location = models.CharField(max_length=255, blank=True, verbose_name='مكان الميلاد')
     qualification = models.CharField(max_length=255, blank=True, verbose_name='المؤهل')
     
-    photo = models.TextField(blank=True, verbose_name='الصورة (Base64)')
+    photo = models.ImageField(upload_to='contact_photos/', blank=True, verbose_name='الصورة')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

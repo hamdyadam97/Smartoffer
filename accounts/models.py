@@ -79,7 +79,7 @@ class Person(AbstractBaseUser, PermissionsMixin):
     mobile = models.CharField(max_length=20, blank=True, db_index=True, verbose_name='المحمول')
     phone = models.CharField(max_length=20, blank=True, verbose_name='التليفون')
     address = models.TextField(blank=True, verbose_name='العنوان')
-    photo = models.TextField(blank=True, verbose_name='الصورة (Base64)')
+    photo = models.ImageField(upload_to='person_photos/', blank=True, verbose_name='الصورة')
 
     # Settings
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='members', verbose_name='الفريق')

@@ -20,7 +20,7 @@
             website: '{{ company.website|escapejs }}',
             commercial_registration: '{{ company.commercial_registration|escapejs }}',
             tax_code: '{{ company.tax_code|escapejs }}',
-            logo: '{{ company.logo|escapejs }}'
+            logo_url: '{% if company.logo %}{{ company.logo.url|escapejs }}{% endif %}'
         })">
             <i class="bi bi-pencil"></i> تعديل
         </button>
@@ -34,7 +34,7 @@
         <div class="card mb-3 text-center">
             <div class="card-body">
                 {% if company.logo %}
-                <img src="{{ company.logo }}" alt="{{ company.name }}" class="img-fluid mb-3" style="max-height: 150px;">
+                <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="img-fluid mb-3" style="max-height: 150px;">
                 {% else %}
                 <div class="display-1 text-muted mb-3"><i class="bi bi-building"></i></div>
                 {% endif %}

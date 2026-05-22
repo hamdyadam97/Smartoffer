@@ -13,19 +13,20 @@ from core.models import Branch
 from courses.models import Course
 from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
-from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm
+from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm
 from .whatsapp import send_whatsapp_message
 
 
 def _prepare_arabic(text):
-    """Prepare Arabic text for ReportLab PDF.
-    Uses BiDi only (no reshaper) to avoid missing glyphs in some fonts.
+    """Reshape and apply BiDi algorithm for Arabic text in ReportLab PDF.
     Also escapes XML special chars so ReportLab Paragraph doesn't break."""
     if not text:
         return ''
     try:
+        import arabic_reshaper
         from bidi.algorithm import get_display
-        bidi_text = get_display(str(text))
+        reshaped = arabic_reshaper.reshape(str(text))
+        bidi_text = get_display(reshaped)
         # Escape XML special chars for ReportLab Paragraph safety
         bidi_text = bidi_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         return bidi_text
@@ -35,74 +36,139 @@ def _prepare_arabic(text):
 
 
 def export_studentoffer_pdf(request, slug):
+    """Export offer as a professional one-page PDF with logo and modern design."""
+    from io import BytesIO
+    import base64
+    import os
+
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.units import cm
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT
-    import os
 
     offer = get_object_or_404(StudentOffer, slug=slug)
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="offer-{offer.slug}.pdf"'
 
-    doc = SimpleDocTemplate(response, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    # Compact margins to fit everything on one page
+    doc = SimpleDocTemplate(
+        response, pagesize=A4,
+        rightMargin=1.5*cm, leftMargin=1.5*cm,
+        topMargin=1.2*cm, bottomMargin=1.2*cm
+    )
     elements = []
     styles = getSampleStyleSheet()
 
-    # Register Cairo font for Arabic support
-    from django.contrib.staticfiles.finders import find
+    # Register Arabic font
     from reportlab.pdfbase.pdfmetrics import registerFontFamily
-    font_path = find('fonts/Cairo-Regular.ttf')
-    if font_path and os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont('Cairo', font_path))
-        registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
+    arial_path = r'C:\Windows\Fonts\arial.ttf'
+    font_name = 'ArialArabic'
+    if os.path.exists(arial_path):
+        pdfmetrics.registerFont(TTFont(font_name, arial_path))
+        registerFontFamily(font_name, normal=font_name, bold=font_name, italic=font_name, boldItalic=font_name)
     else:
-        # Fallback to direct path
-        font_path = os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont('Cairo', font_path))
-            registerFontFamily('Cairo', normal='Cairo', bold='Cairo', italic='Cairo', boldItalic='Cairo')
+        from django.contrib.staticfiles.finders import find
+        font_path = find('fonts/Cairo-Regular.ttf') or os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
+        if font_path and os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+            registerFontFamily(font_name, normal=font_name, bold=font_name, italic=font_name, boldItalic=font_name)
         else:
-            print('[PDF Warning] Cairo font not found. Arabic text may not render correctly.')
+            font_name = 'Helvetica'
 
-    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName='Cairo', fontSize=11, leading=16, alignment=TA_RIGHT)
-    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName='Cairo', fontSize=20, leading=28, alignment=TA_CENTER)
-    label_style = ParagraphStyle('ArabicLabel', parent=styles['Normal'], fontName='Cairo', fontSize=10, leading=14, alignment=TA_RIGHT, textColor=colors.HexColor('#64748B'))
-    signature_style = ParagraphStyle('ArabicSig', parent=styles['Normal'], fontName='Cairo', fontSize=12, leading=18, alignment=TA_CENTER)
-    header_style = ParagraphStyle('ArabicHeader', parent=styles['Normal'], fontName='Cairo', fontSize=14, leading=20, alignment=TA_CENTER)
-    header_small_style = ParagraphStyle('ArabicHeaderSmall', parent=styles['Normal'], fontName='Cairo', fontSize=10, leading=14, alignment=TA_CENTER, textColor=colors.HexColor('#64748B'))
+    # Accent color
+    PRIMARY = colors.HexColor('#1e40af')
+    SECONDARY = colors.HexColor('#64748B')
+    LIGHT_BG = colors.HexColor('#f8fafc')
+    BORDER = colors.HexColor('#e2e8f0')
 
-    # Branch Header
+    # Styles
+    arabic_style = ParagraphStyle('Arabic', parent=styles['Normal'], fontName=font_name, fontSize=10, leading=14, alignment=TA_RIGHT)
+    title_style = ParagraphStyle('ArabicTitle', parent=styles['Title'], fontName=font_name, fontSize=18, leading=24, alignment=TA_CENTER, textColor=PRIMARY)
+    label_style = ParagraphStyle('ArabicLabel', parent=styles['Normal'], fontName=font_name, fontSize=9, leading=12, alignment=TA_RIGHT, textColor=SECONDARY)
+    price_style = ParagraphStyle('ArabicPrice', parent=styles['Normal'], fontName=font_name, fontSize=14, leading=20, alignment=TA_CENTER, textColor=PRIMARY)
+    sig_style = ParagraphStyle('ArabicSig', parent=styles['Normal'], fontName=font_name, fontSize=10, leading=14, alignment=TA_CENTER)
+    small_style = ParagraphStyle('ArabicSmall', parent=styles['Normal'], fontName=font_name, fontSize=8, leading=11, alignment=TA_CENTER, textColor=SECONDARY)
+    content_style = ParagraphStyle('ArabicContent', parent=styles['Normal'], fontName=font_name, fontSize=10, leading=15, alignment=TA_RIGHT)
+
     branch = offer.branch
+    company = branch.company if branch else None
+
+    # ========== HEADER WITH LOGO ==========
+    header_parts = []
+    logo_img = None
+
+    # Try branch logo first, then company logo
+    logo_path = None
+    if branch and branch.logo:
+        logo_path = branch.logo.path
+    elif company and company.logo:
+        logo_path = company.logo.path
+    if logo_path:
+        try:
+            logo_img = Image(logo_path, width=2.2*cm, height=2.2*cm)
+        except Exception:
+            logo_img = None
+
+    # Header text lines
+    header_text_lines = []
+    if company:
+        header_text_lines.append(_prepare_arabic(company.name))
     if branch:
-        elements.append(Paragraph(_prepare_arabic(branch.name), header_style))
-        if branch.sub_name:
-            elements.append(Paragraph(_prepare_arabic(branch.sub_name), header_small_style))
+        header_text_lines.append(_prepare_arabic(branch.name))
         if branch.address:
-            elements.append(Paragraph(_prepare_arabic(branch.address), header_small_style))
-        contact_parts = []
-        if branch.phone1:
-            contact_parts.append(branch.phone1)
-        if branch.phone2:
-            contact_parts.append(branch.phone2)
+            header_text_lines.append(_prepare_arabic(branch.address))
+        contacts = []
         if branch.mobile:
-            contact_parts.append(branch.mobile)
-        if contact_parts:
-            elements.append(Paragraph(_prepare_arabic(' - '.join(contact_parts)), header_small_style))
+            contacts.append(branch.mobile)
+        if branch.phone1:
+            contacts.append(branch.phone1)
+        if contacts:
+            header_text_lines.append(_prepare_arabic(' / '.join(contacts)))
         if branch.email:
-            elements.append(Paragraph(_prepare_arabic(branch.email), header_small_style))
-        elements.append(Spacer(1, 0.6*cm))
+            header_text_lines.append(_prepare_arabic(branch.email))
 
-    # Title
-    elements.append(Paragraph(_prepare_arabic('عرض طالب'), title_style))
-    elements.append(Spacer(1, 0.8*cm))
+    header_text = '<br/>'.join(header_text_lines) if header_text_lines else ''
 
-    # Student recipient info (single student)
+    if logo_img and header_text:
+        header_table = Table(
+            [[logo_img, Paragraph(header_text, small_style)]],
+            colWidths=[doc.width*0.18, doc.width*0.82]
+        )
+    elif logo_img:
+        header_table = Table([[logo_img]], colWidths=[doc.width])
+    elif header_text:
+        header_table = Table([[Paragraph(header_text, small_style)]], colWidths=[doc.width])
+    else:
+        header_table = None
+
+    if header_table:
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 0.2*cm))
+
+    # Decorative line
+    elements.append(Table([['']], colWidths=[doc.width], rowHeights=[2], style=TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), PRIMARY),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ])))
+    elements.append(Spacer(1, 0.3*cm))
+
+    # ========== TITLE ==========
+    elements.append(Paragraph(_prepare_arabic('عرض سعر'), title_style))
+    elements.append(Spacer(1, 0.3*cm))
+
+    # ========== RECIPIENT INFO ==========
     recipient = None
     recipient_pk = request.GET.get('recipient')
     if recipient_pk:
@@ -115,92 +181,142 @@ def export_studentoffer_pdf(request, slug):
 
     if recipient:
         student = recipient.student
-        contact = student.contact
-        name = contact.get_full_name() if contact else student.get_full_name()
-        phone = contact.mobile if contact else ''
-        elements.append(Paragraph(_prepare_arabic('بيانات الطالب:'), label_style))
-        elements.append(Spacer(1, 0.3*cm))
-        student_rows = [
-            [Paragraph(_prepare_arabic(phone), arabic_style), Paragraph(_prepare_arabic('رقم الهاتف'), label_style)],
-            [Paragraph(_prepare_arabic(name), arabic_style), Paragraph(_prepare_arabic('الاسم'), label_style)],
+        contact = getattr(student, 'contact', None)
+        if student:
+            r_name = contact.get_full_name() if contact else student.get_full_name()
+            r_phone = contact.mobile if contact else ''
+            r_email = contact.email if contact else ''
+        else:
+            r_name = recipient.contact_name or 'مستلم سريع'
+            r_phone = recipient.contact_phone
+            r_email = recipient.contact_email
+
+        recipient_data = [
+            [Paragraph(_prepare_arabic(r_name), arabic_style), Paragraph(_prepare_arabic('المستلم'), label_style)],
+            [Paragraph(_prepare_arabic(r_phone or '-'), arabic_style), Paragraph(_prepare_arabic('الجوال'), label_style)],
         ]
-        student_table = Table(student_rows, colWidths=[doc.width*0.65, doc.width*0.35])
-        student_table.setStyle(TableStyle([
-            ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#F1F5F9')),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#334155')),
+        if r_email:
+            recipient_data.append([Paragraph(_prepare_arabic(r_email), arabic_style), Paragraph(_prepare_arabic('البريد'), label_style)])
+        st = Table(recipient_data, colWidths=[doc.width*0.72, doc.width*0.28])
+        st.setStyle(TableStyle([
+            ('BACKGROUND', (1, 0), (1, -1), LIGHT_BG),
             ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Cairo'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ]))
-        elements.append(student_table)
-        elements.append(Spacer(1, 0.8*cm))
+        elements.append(st)
+        elements.append(Spacer(1, 0.3*cm))
 
-    # Offer details table - REVERSED columns for RTL feel in LTR document
-    data = [
+    # ========== OFFER DETAILS ==========
+    detail_rows = [
         [Paragraph(_prepare_arabic(offer.title), arabic_style), Paragraph(_prepare_arabic('عنوان العرض'), label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), arabic_style), Paragraph(_prepare_arabic('الفرع'), label_style)],
-        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), arabic_style), Paragraph(_prepare_arabic('الدورة / الدبلوم'), label_style)],
-        [Paragraph(_prepare_arabic(f'{offer.price} ريال'), arabic_style), Paragraph(_prepare_arabic('السعر'), label_style)],
-        [Paragraph(_prepare_arabic(offer.price_description or '-'), arabic_style), Paragraph(_prepare_arabic('وصف السعر'), label_style)],
+        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), arabic_style), Paragraph(_prepare_arabic('الدورة'), label_style)],
+        [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ العرض'), label_style)],
         [Paragraph(_prepare_arabic(offer.get_status_display()), arabic_style), Paragraph(_prepare_arabic('الحالة'), label_style)],
-        [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ الإنشاء'), label_style)],
     ]
 
     if offer.start_date:
-        data.append([Paragraph(_prepare_arabic(offer.start_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ بداية العرض'), label_style)])
+        detail_rows.append([Paragraph(_prepare_arabic(offer.start_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ البداية'), label_style)])
     if offer.end_date:
-        data.append([Paragraph(_prepare_arabic(offer.end_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ نهاية العرض'), label_style)])
-    if offer.scheduled_at:
-        data.append([Paragraph(_prepare_arabic(offer.scheduled_at.strftime('%Y-%m-%d %H:%M')), arabic_style), Paragraph(_prepare_arabic('موعد الإرسال المجدول'), label_style)])
-    if offer.sent_at:
-        data.append([Paragraph(_prepare_arabic(offer.sent_at.strftime('%Y-%m-%d %H:%M')), arabic_style), Paragraph(_prepare_arabic('تاريخ الإرسال الفعلي'), label_style)])
+        detail_rows.append([Paragraph(_prepare_arabic(offer.end_date.strftime('%Y-%m-%d')), arabic_style), Paragraph(_prepare_arabic('تاريخ النهاية'), label_style)])
 
-    # Reversed: value column (0) wider on the LEFT, label column (1) narrower on the RIGHT
-    table = Table(data, colWidths=[doc.width*0.65, doc.width*0.35])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (1, 0), (1, -1), colors.HexColor('#F1F5F9')),
-        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#334155')),
+    dt = Table(detail_rows, colWidths=[doc.width*0.72, doc.width*0.28])
+    dt.setStyle(TableStyle([
+        ('BACKGROUND', (1, 0), (1, -1), LIGHT_BG),
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Cairo'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(dt)
+    elements.append(Spacer(1, 0.3*cm))
+
+    # ========== PRICE HIGHLIGHT ==========
+    price_text = f'{offer.price} ريال'
+    if offer.price_description:
+        price_text += f'<br/><font size="9" color="#64748B">{offer.price_description}</font>'
+
+    price_box = Table(
+        [[Paragraph(_prepare_arabic(price_text), price_style)]],
+        colWidths=[doc.width]
+    )
+    price_box.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#eff6ff')),
+        ('BOX', (0, 0), (-1, -1), 1, PRIMARY),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(price_box)
+    elements.append(Spacer(1, 0.3*cm))
+
+    # ========== CONTENT BOX ==========
+    elements.append(Paragraph(_prepare_arabic('وصف العرض'), label_style))
+    content_box = Table(
+        [[Paragraph(_prepare_arabic(offer.content or '-'), content_style)]],
+        colWidths=[doc.width]
+    )
+    content_box.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fffbeb')),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#f59e0b')),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
         ('TOPPADDING', (0, 0), (-1, -1), 10),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
         ('RIGHTPADDING', (0, 0), (-1, -1), 12),
         ('LEFTPADDING', (0, 0), (-1, -1), 12),
     ]))
-    elements.append(table)
-    elements.append(Spacer(1, 0.8*cm))
+    elements.append(content_box)
+    elements.append(Spacer(1, 0.4*cm))
 
-    # Content
-    elements.append(Paragraph(_prepare_arabic('تفاصيل العرض / المحتوى:'), label_style))
-    elements.append(Spacer(1, 0.3*cm))
-    elements.append(Paragraph(_prepare_arabic(offer.content), arabic_style))
-    elements.append(Spacer(1, 1.2*cm))
+    # ========== FOOTER / SIGNATURE ==========
+    sig_elements = []
 
-    # Signature section
-    sig_data = [
-        [Paragraph(_prepare_arabic('التوقيع'), label_style)],
-        [Paragraph(_prepare_arabic('___________________________'), signature_style)],
-        [Paragraph(_prepare_arabic(f"{offer.created_by.get_full_name() or offer.created_by.email}"), signature_style)],
-        [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), signature_style)],
+    # Branch signature image if available
+    sig_path = branch.signature.path if branch and branch.signature else None
+    sig_img = None
+    if sig_path:
+        try:
+            sig_img = Image(sig_path, width=3*cm, height=1.5*cm)
+        except Exception:
+            sig_img = None
+
+    if sig_img:
+        sig_elements.append(sig_img)
+        elements.append(sig_img)
+        elements.append(Spacer(1, 0.1*cm))
+
+    sig_row = [
+        Paragraph(_prepare_arabic(f"التاريخ: {offer.created_at.strftime('%Y-%m-%d')}"), sig_style),
+        Paragraph(_prepare_arabic('التوقيع: _________________'), sig_style),
     ]
-    sig_table = Table(sig_data, colWidths=[doc.width])
+    sig_table = Table([sig_row], colWidths=[doc.width*0.5, doc.width*0.5])
     sig_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, -1), 'Cairo'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
     ]))
     elements.append(sig_table)
+    elements.append(Spacer(1, 0.2*cm))
+
+    # Created by
+    elements.append(Paragraph(_prepare_arabic(f"تم إعداد العرض بواسطة: {offer.created_by.get_full_name() or offer.created_by.email}"), small_style))
 
     doc.build(elements)
     return response
@@ -221,20 +337,32 @@ def send_offer_to_recipient(request, slug, recipient_pk):
     contact = getattr(student, 'contact', None)
     body = f"{offer.title}\n\n{offer.content}"
 
+    # Determine recipient display name
+    if student:
+        recipient_name = student.get_full_name()
+    else:
+        recipient_name = recipient.contact_name or recipient.contact_phone or 'مستلم سريع'
+
     if channel == 'whatsapp':
-        phone = contact.mobile if contact else ''
+        phone = contact.mobile if contact else recipient.contact_phone
         if not phone:
-            messages.error(request, 'لا يوجد رقم محمول مسجل لهذا الطالب.')
+            messages.error(request, 'لا يوجد رقم محمول مسجل لهذا المستلم.')
             return redirect('studentoffer-detail', slug=slug)
         result = send_whatsapp_message(phone, body)
         if result.get('success'):
-            messages.success(request, f'تم إرسال العرض عبر واتساب إلى {student.get_full_name()}.')
+            messages.success(request, f'تم إرسال العرض عبر واتساب إلى {recipient_name}.')
             recipient.status = 'مرسل'
             recipient.save()
         else:
             messages.error(request, f'فشل إرسال واتساب: {result.get("error", "خطأ غير معروف")}')
     elif channel == 'email':
-        messages.warning(request, 'قناة البريد الإلكتروني غير مفعلة حالياً (لا يوجد إيميل مسجل للطالب).')
+        email = contact.email if contact else recipient.contact_email
+        if not email:
+            messages.warning(request, 'لا يوجد بريد إلكتروني مسجل لهذا المستلم.')
+        else:
+            messages.info(request, f'تمت محاكاة إرسال الإيميل إلى {email} (قيد التطوير).')
+            recipient.status = 'مرسل'
+            recipient.save()
     elif channel == 'app':
         messages.warning(request, 'قناة إشعار التطبيق غير مفعلة حالياً.')
     else:
@@ -274,11 +402,12 @@ def studentoffer_add_recipient_ajax(request, slug):
         recipient.offer = offer
         try:
             recipient.save()
+            name = str(recipient.student) if recipient.student else (recipient.contact_name or recipient.contact_phone or 'مستلم سريع')
             return JsonResponse({
                 'success': True,
-                'message': f'تم إضافة المستلم {recipient.student} بنجاح.',
+                'message': f'تم إضافة المستلم {name} بنجاح.',
                 'id': recipient.id,
-                'student_name': str(recipient.student),
+                'student_name': name,
                 'channel': recipient.get_channel_display(),
                 'status': recipient.get_status_display(),
             })
@@ -306,7 +435,7 @@ def send_offer_to_all(request, slug):
         contact = getattr(student, 'contact', None)
 
         if channel == 'whatsapp':
-            phone = contact.mobile if contact else ''
+            phone = contact.mobile if contact else recipient.contact_phone
             if phone:
                 result = send_whatsapp_message(phone, body)
                 if result.get('success'):
@@ -318,7 +447,14 @@ def send_offer_to_all(request, slug):
             else:
                 failed_count += 1
         elif channel == 'email':
-            failed_count += 1
+            email = contact.email if contact else recipient.contact_email
+            if email:
+                # TODO: integrate real email backend
+                recipient.status = 'مرسل'
+                recipient.save()
+                sent_count += 1
+            else:
+                failed_count += 1
         elif channel == 'app':
             failed_count += 1
         else:
@@ -333,10 +469,44 @@ def send_offer_to_all(request, slug):
         messages.warning(
             request,
             f'فشل الإرسال إلى {failed_count} مستلم. '
-            f'تأكد من وجود أرقام واتساب مسجلة أو تفعيل قنوات الإيميل/التطبيق.'
+            f'تأكد من وجود أرقام واتساب أو بريد إلكتروني مسجل للمستلمين.'
         )
 
     return redirect('studentoffer-detail', slug=slug)
+
+
+@require_POST
+@login_required
+def quick_offer_ajax(request):
+    """AJAX endpoint to create a quick offer with a manual recipient in one step."""
+    form = QuickOfferForm(request.POST)
+    if form.is_valid():
+        cd = form.cleaned_data
+        offer = StudentOffer.objects.create(
+            title=cd['title'],
+            content=cd['content'],
+            branch=cd['branch'],
+            course=cd['course'],
+            price=cd['price'],
+            price_description=cd['price_description'],
+            created_by=request.user,
+            status='مسودة',
+        )
+        OfferRecipient.objects.create(
+            offer=offer,
+            student=None,
+            contact_name=cd['contact_name'],
+            contact_phone=cd['contact_phone'],
+            contact_email=cd['contact_email'],
+            channel=cd['channel'],
+            status='مرسل',
+        )
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء العرض السريع وإضافة المستلم بنجاح.',
+            'slug': offer.slug,
+        })
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 # ============================================================
@@ -454,7 +624,9 @@ class OfferRecipientListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(
                 Q(offer__title__icontains=q) |
                 Q(student__contact__first_name__icontains=q) |
-                Q(student__contact__forth_name__icontains=q)
+                Q(student__contact__forth_name__icontains=q) |
+                Q(contact_name__icontains=q) |
+                Q(contact_phone__icontains=q)
             )
         return queryset
 

@@ -111,7 +111,7 @@ class StudentDeleteView(LoginRequiredMixin, DeleteView):
 
 @require_POST
 def student_create_ajax(request):
-    form = StudentForm(request.POST)
+    form = StudentForm(request.POST, request.FILES)
     if form.is_valid():
         contact_data = {
             'first_name': form.cleaned_data['first_name'],
@@ -143,7 +143,7 @@ def student_create_ajax(request):
 @require_POST
 def student_update_ajax(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    form = StudentForm(request.POST, instance=student)
+    form = StudentForm(request.POST, request.FILES, instance=student)
     if form.is_valid():
         contact = student.contact
         contact.first_name = form.cleaned_data['first_name']

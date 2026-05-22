@@ -23,7 +23,6 @@ class CompanyForm(forms.ModelForm):
             'website': forms.URLInput(attrs={'class': 'form-control'}),
             'commercial_registration': forms.TextInput(attrs={'class': 'form-control'}),
             'tax_code': forms.TextInput(attrs={'class': 'form-control'}),
-            'logo': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
 
@@ -34,7 +33,7 @@ class BranchForm(forms.ModelForm):
             'company', 'code', 'name', 'sub_name', 'address',
             'phone1', 'phone2', 'postal_code', 'mobile', 'fax',
             'email', 'website', 'commercial_registration',
-            'licence_code', 'tax_code', 'logo'
+            'licence_code', 'tax_code', 'logo', 'signature'
         ]
         widgets = {
             'company': forms.Select(attrs={'class': 'form-select'}),
@@ -52,7 +51,6 @@ class BranchForm(forms.ModelForm):
             'commercial_registration': forms.TextInput(attrs={'class': 'form-control'}),
             'licence_code': forms.TextInput(attrs={'class': 'form-control'}),
             'tax_code': forms.TextInput(attrs={'class': 'form-control'}),
-            'logo': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
 

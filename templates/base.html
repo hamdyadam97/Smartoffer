@@ -890,8 +890,8 @@
                                 <input type="text" name="tax_code" class="form-control">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">الشعار (Base64)</label>
-                                <textarea name="logo" class="form-control" rows="2"></textarea>
+                                <label class="form-label">الشعار</label>
+                                <input type="file" name="logo" class="form-control" accept="image/*">
                             </div>
                         </div>
                     </form>
@@ -954,15 +954,13 @@
             }
             setLoading(true);
             const formData = new FormData(branchForm);
-            const body = new URLSearchParams(formData);
 
             fetch('{% url "branch-create-ajax" %}', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: body
+                body: formData
             })
             .then(r => r.json())
             .then(data => {

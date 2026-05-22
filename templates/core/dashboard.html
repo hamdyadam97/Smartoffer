@@ -373,42 +373,46 @@
             <div class="card-header"><i class="bi bi-activity text-danger me-2"></i> آخر النشاطات</div>
             <div class="card-body">
                 <div class="mt-2">
-                    {% for s in recent_students %}
-                    <div class="activity-item success">
-                        <div class="activity-title">طالب جديد: {{ s.get_full_name }}</div>
-                        <div class="activity-desc">{{ s.contact.mobile|default:'' }}</div>
-                        <div class="activity-time">{{ s.created_at|timesince }}</div>
+                    {% for act in recent_activities %}
+                    <div class="activity-item {{ act.css_class }}">
+                        <div class="activity-title">{{ act.title }}</div>
+                        <div class="activity-desc">{{ act.desc }}</div>
+                        <div class="activity-time">{{ act.time|timesince }}</div>
                     </div>
-                    {% endfor %}
-                    {% for p in recent_payments %}
-                    <div class="activity-item warning">
-                        <div class="activity-title">سند قبض: {{ p.amount_number }}</div>
-                        <div class="activity-desc">{{ p.account.get_key }}</div>
-                        <div class="activity-time">{{ p.created_at|timesince }}</div>
-                    </div>
-                    {% endfor %}
-                    {% for o in recent_offers %}
-                    <div class="activity-item info">
-                        <div class="activity-title">عرض سعر: {{ o.customer_name }}</div>
-                        <div class="activity-desc">{{ o.master.name }}</div>
-                        <div class="activity-time">{{ o.created_at|timesince }}</div>
-                    </div>
-                    {% endfor %}
-                    {% for r in recent_registrations %}
-                    <div class="activity-item purple">
-                        <div class="activity-title">تسجيل جديد: {{ r.student.get_full_name }}</div>
-                        <div class="activity-desc">{{ r.course.master.name }}</div>
-                        <div class="activity-time">{{ r.created_at|timesince }}</div>
-                    </div>
-                    {% endfor %}
-                    {% for c in recent_calls %}
-                    <div class="activity-item danger">
-                        <div class="activity-title">مكالمة {{ c.get_call_type_display }}: {{ c.offer.customer_name }}</div>
-                        <div class="activity-desc">بواسطة {{ c.person.get_short_name }}</div>
-                        <div class="activity-time">{{ c.created_at|timesince }}</div>
-                    </div>
+                    {% empty %}
+                    <div class="text-muted text-center py-4">لا توجد نشاطات حديثة</div>
                     {% endfor %}
                 </div>
+
+                {% if recent_activities.paginator.num_pages > 1 %}
+                <nav aria-label="Activity pagination" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if recent_activities.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?activity_page={{ recent_activities.previous_page_number }}">السابق</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">السابق</span></li>
+                        {% endif %}
+
+                        {% for num in recent_activities.paginator.page_range %}
+                            {% if num == recent_activities.number %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                            {% else %}
+                            <li class="page-item"><a class="page-link" href="?activity_page={{ num }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if recent_activities.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?activity_page={{ recent_activities.next_page_number }}">التالي</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">التالي</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
             </div>
         </div>
     </div>

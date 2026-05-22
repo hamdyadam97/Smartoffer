@@ -260,7 +260,6 @@
         }
         setLoading(true);
         const formData = new FormData(branchForm);
-        const body = new URLSearchParams(formData);
 
         const isEdit = branchId.value !== '';
         const url = isEdit
@@ -271,9 +270,8 @@
             method: 'POST',
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: body
+            body: formData
         })
         .then(r => r.json())
         .then(data => {

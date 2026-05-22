@@ -251,7 +251,7 @@
                 'X-CSRFToken': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: new URLSearchParams(formData)
+            body: formData
         })
         .then(r => r.json())
         .then(data => {

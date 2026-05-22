@@ -60,9 +60,9 @@ class StudentForm(forms.ModelForm):
         max_length=255, required=False, label='المؤهل',
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
-    photo = forms.CharField(
-        required=False, label='الصورة (Base64)',
-        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2})
+    photo = forms.ImageField(
+        required=False, label='الصورة',
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
     )
 
     class Meta:

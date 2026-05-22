@@ -117,7 +117,7 @@ class PersonDeleteView(LoginRequiredMixin, DeleteView):
 
 @require_POST
 def person_create_ajax(request):
-    form = PersonCreationForm(request.POST)
+    form = PersonCreationForm(request.POST, request.FILES)
     if form.is_valid():
         person = form.save()
         return JsonResponse({'success': True, 'message': 'تم إنشاء الموظف بنجاح', 'id': person.id, 'slug': person.slug})
@@ -127,7 +127,7 @@ def person_create_ajax(request):
 @require_POST
 def person_update_ajax(request, pk):
     person = get_object_or_404(Person, pk=pk)
-    form = PersonChangeForm(request.POST, instance=person)
+    form = PersonChangeForm(request.POST, request.FILES, instance=person)
     if form.is_valid():
         form.save()
         return JsonResponse({'success': True, 'message': 'تم تحديث الموظف بنجاح'})

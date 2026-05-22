@@ -17,7 +17,7 @@ class Company(models.Model):
     website = models.URLField(blank=True, verbose_name='الموقع الإلكتروني')
     commercial_registration = models.CharField(max_length=50, blank=True, verbose_name='السجل التجاري')
     tax_code = models.CharField(max_length=50, blank=True, verbose_name='الرقم الضريبي')
-    logo = models.TextField(blank=True, verbose_name='الشعار (Base64)')
+    logo = models.ImageField(upload_to='company_logos/', blank=True, verbose_name='الشعار')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -59,7 +59,8 @@ class Branch(models.Model):
     commercial_registration = models.CharField(max_length=50, blank=True, verbose_name='السجل التجاري')
     licence_code = models.CharField(max_length=50, blank=True, verbose_name='رقم الترخيص')
     tax_code = models.CharField(max_length=50, blank=True, verbose_name='الرقم الضريبي')
-    logo = models.TextField(blank=True, verbose_name='الشعار (Base64)')
+    logo = models.ImageField(upload_to='branch_logos/', blank=True, verbose_name='الشعار')
+    signature = models.ImageField(upload_to='branch_signatures/', blank=True, verbose_name='التوقيع')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

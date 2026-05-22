@@ -52,7 +52,7 @@
                             website: '{{ company.website|escapejs }}',
                             commercial_registration: '{{ company.commercial_registration|escapejs }}',
                             tax_code: '{{ company.tax_code|escapejs }}',
-                            logo: '{{ company.logo|escapejs }}'
+                            logo_url: '{% if company.logo %}{{ company.logo.url|escapejs }}{% endif %}'
                         })">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -176,8 +176,7 @@
                             <div class="row">
                                 <div class="col-12 mb-3">
                                     <label class="form-label">اختر صورة الشعار</label>
-                                    <input type="file" id="companyLogoFile" class="form-control" accept="image/*">
-                                    <textarea name="logo" id="companyLogo" class="form-control d-none" rows="2"></textarea>
+                                    <input type="file" name="logo" id="companyLogoFile" class="form-control" accept="image/*">
                                 </div>
                                 <div class="col-12 text-center">
                                     <img id="companyLogoPreview" src="" alt="معاينة الشعار" class="img-thumbnail d-none" style="max-height: 150px;">
@@ -236,20 +235,6 @@
         btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ الشركة';
     }
 
-    // Logo file to Base64
-    companyLogoFile.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                companyLogo.value = evt.target.result;
-                companyLogoPreview.src = evt.target.result;
-                companyLogoPreview.classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
     window.openCompanyModal = function(data) {
         alertBox.innerHTML = '';
         companyForm.reset();
@@ -275,9 +260,8 @@
             companyWebsite.value = data.website || '';
             companyCommercialReg.value = data.commercial_registration || '';
             companyTaxCode.value = data.tax_code || '';
-            companyLogo.value = data.logo || '';
-            if (data.logo) {
-                companyLogoPreview.src = data.logo;
+            if (data.logo_url) {
+                companyLogoPreview.src = data.logo_url;
                 companyLogoPreview.classList.remove('d-none');
             }
             companyModalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل شركة';
@@ -298,7 +282,6 @@
         }
         setLoading(true);
         const formData = new FormData(companyForm);
-        const body = new URLSearchParams(formData);
 
         const isEdit = companyId.value !== '';
         const url = isEdit
@@ -309,9 +292,8 @@
             method: 'POST',
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: body
+            body: formData
         })
         .then(r => r.json())
         .then(data => {

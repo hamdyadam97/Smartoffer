@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 
 from accounts.models import Person
 from students.models import Student
@@ -88,13 +89,63 @@ def dashboard(request):
     payment_method_labels = [pm['payment_method'] for pm in payment_methods]
     payment_method_data = [pm['count'] for pm in payment_methods]
 
-    # Recent everything (activity feed)
-    recent_students = Student.objects.select_related('contact').order_by('-created_at')[:5]
-    recent_payments = Payment.objects.select_related('account').order_by('-created_at')[:5]
-    recent_offers = Offer.objects.select_related('master').order_by('-created_at')[:5]
-    recent_registrations = Account.objects.select_related('student', 'course').order_by('-created_at')[:5]
-    recent_calls = Call.objects.select_related('offer', 'person').order_by('-created_at')[:5]
-    recent_student_offers = StudentOffer.objects.select_related('branch', 'course').order_by('-created_at')[:5]
+    # Recent everything (activity feed) — merged + paginated
+    activities = []
+
+    for s in Student.objects.select_related('contact').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'student',
+            'title': f'طالب جديد: {s.get_full_name()}',
+            'desc': s.contact.mobile or '',
+            'time': s.created_at,
+            'css_class': 'success',
+        })
+
+    for p in Payment.objects.select_related('account').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'payment',
+            'title': f'سند قبض: {p.amount_number}',
+            'desc': p.account.get_key(),
+            'time': p.created_at,
+            'css_class': 'warning',
+        })
+
+    for o in Offer.objects.select_related('master').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'offer',
+            'title': f'عرض سعر: {o.customer_name}',
+            'desc': o.master.name,
+            'time': o.created_at,
+            'css_class': 'info',
+        })
+
+    for r in Account.objects.select_related('student', 'course').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'registration',
+            'title': f'تسجيل جديد: {r.student.get_full_name()}',
+            'desc': r.course.master.name,
+            'time': r.created_at,
+            'css_class': 'purple',
+        })
+
+    for c in Call.objects.select_related('offer', 'person').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'call',
+            'title': f'مكالمة {c.get_call_type_display()}: {c.offer.customer_name}',
+            'desc': f'بواسطة {c.person.get_short_name()}',
+            'time': c.created_at,
+            'css_class': 'danger',
+        })
+
+    activities.sort(key=lambda x: x['time'], reverse=True)
+
+    paginator = Paginator(activities, 10)
+    activity_page = request.GET.get('activity_page', 1)
+    recent_activities = paginator.get_page(activity_page)
+
+    # Keep separate small lists for other dashboard sections
+    recent_offers = Offer.objects.select_related('master').order_by('-created_at')[:6]
+    recent_student_offers = StudentOffer.objects.select_related('branch', 'course').order_by('-created_at')[:6]
 
     # Top 5 branches by revenue
     top_branches = sorted(branch_stats, key=lambda x: x['payments_total'], reverse=True)[:5]
@@ -109,11 +160,8 @@ def dashboard(request):
         'student_offers_count': student_offers_count,
         'calls_count': calls_count,
         'branch_stats': branch_stats,
-        'recent_students': recent_students,
-        'recent_payments': recent_payments,
+        'recent_activities': recent_activities,
         'recent_offers': recent_offers,
-        'recent_registrations': recent_registrations,
-        'recent_calls': recent_calls,
         'recent_student_offers': recent_student_offers,
         'months_labels': months_labels,
         'months_data': months_data,
@@ -377,7 +425,7 @@ def companies_list_ajax(request):
 @require_POST
 def branch_create_ajax(request):
     """إنشاء فرع جديد عبر AJAX (للـ Modal العائم)"""
-    form = BranchForm(request.POST)
+    form = BranchForm(request.POST, request.FILES)
     if form.is_valid():
         branch = form.save()
         return JsonResponse({
@@ -400,7 +448,7 @@ def branch_create_ajax(request):
 def branch_update_ajax(request, pk):
     """تحديث فرع عبر AJAX (للـ Modal العائم)"""
     branch = get_object_or_404(Branch, pk=pk)
-    form = BranchForm(request.POST, instance=branch)
+    form = BranchForm(request.POST, request.FILES, instance=branch)
     if form.is_valid():
         form.save()
         return JsonResponse({
@@ -456,7 +504,7 @@ def mastercategory_update_ajax(request, pk):
 @require_POST
 def company_create_ajax(request):
     """إنشاء شركة جديدة عبر AJAX (للـ Modal العائم)"""
-    form = CompanyForm(request.POST)
+    form = CompanyForm(request.POST, request.FILES)
     if form.is_valid():
         company = form.save()
         return JsonResponse({
@@ -478,7 +526,7 @@ def company_create_ajax(request):
 def company_update_ajax(request, pk):
     """تحديث شركة عبر AJAX (للـ Modal العائم)"""
     company = get_object_or_404(Company, pk=pk)
-    form = CompanyForm(request.POST, instance=company)
+    form = CompanyForm(request.POST, request.FILES, instance=company)
     if form.is_valid():
         form.save()
         return JsonResponse({

@@ -71,7 +71,10 @@ class OfferRecipient(models.Model):
     ]
 
     offer = models.ForeignKey(StudentOffer, on_delete=models.CASCADE, db_index=True, related_name='recipients', verbose_name='العرض')
-    student = models.ForeignKey('students.Student', on_delete=models.PROTECT, db_index=True, related_name='offer_recipients', verbose_name='الطالب')
+    student = models.ForeignKey('students.Student', on_delete=models.PROTECT, null=True, blank=True, db_index=True, related_name='offer_recipients', verbose_name='الطالب')
+    contact_name = models.CharField(max_length=255, blank=True, verbose_name='اسم المستلم')
+    contact_phone = models.CharField(max_length=20, blank=True, verbose_name='جوال المستلم')
+    contact_email = models.EmailField(blank=True, verbose_name='بريد المستلم')
     channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, db_index=True, verbose_name='قناة الإرسال')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='مرسل', db_index=True, verbose_name='حالة التفاعل')
     sent_at = models.DateTimeField(auto_now_add=True)
@@ -81,11 +84,12 @@ class OfferRecipient(models.Model):
     class Meta:
         verbose_name = 'مستلم عرض'
         verbose_name_plural = 'مستلمو العروض'
-        unique_together = ['offer', 'student', 'channel']
         ordering = ['-sent_at']
 
     def __str__(self):
-        return f"{self.student.get_full_name()} - {self.offer.title}"
+        if self.student:
+            return f"{self.student.get_full_name()} - {self.offer.title}"
+        return f"{self.contact_name or self.contact_phone or 'مستلم سريع'} - {self.offer.title}"
 
 
 class OfferNote(models.Model):

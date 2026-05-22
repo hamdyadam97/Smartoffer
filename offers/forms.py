@@ -39,9 +39,44 @@ class OfferRecipientAddForm(forms.ModelForm):
         exclude = ['offer', 'sent_at', 'opened_at', 'interacted_at']
         widgets = {
             'student': forms.Select(attrs={'class': 'form-select'}),
+            'contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم المستلم'}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}),
+            'contact_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
             'channel': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        student = cleaned_data.get('student')
+        contact_phone = cleaned_data.get('contact_phone')
+        contact_name = cleaned_data.get('contact_name')
+        if not student and not contact_phone and not contact_name:
+            raise forms.ValidationError('يجب اختيار طالب مسجل أو إدخال بيانات المستلم (اسم + جوال).')
+        return cleaned_data
+
+
+class QuickOfferForm(forms.Form):
+    """Form to quickly create an offer + recipient in one step."""
+    # Offer fields
+    title = forms.CharField(max_length=255, label='عنوان العرض', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    content = forms.CharField(label='محتوى العرض', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
+    course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
+    price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    # Recipient fields
+    contact_name = forms.CharField(max_length=255, label='اسم المستلم', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    contact_phone = forms.CharField(max_length=20, label='جوال المستلم', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
+    contact_email = forms.EmailField(required=False, label='بريد المستلم', widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    channel = forms.ChoiceField(choices=OfferRecipient.CHANNEL_CHOICES, initial='whatsapp', label='قناة الإرسال', widget=forms.Select(attrs={'class': 'form-select'}))
+
+    def __init__(self, *args, **kwargs):
+        from core.models import Branch
+        from courses.models import Course
+        super().__init__(*args, **kwargs)
+        self.fields['branch'].queryset = Branch.objects.all()
+        self.fields['course'].queryset = Course.objects.select_related('master').all()
 
 
 class OfferNoteForm(forms.ModelForm):

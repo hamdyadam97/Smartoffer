@@ -249,7 +249,7 @@ class StudentFormTest(TestCase):
         self.assertEqual(form.fields['birth_date'].initial, '1990-01-01')
         self.assertEqual(form.fields['birth_location'].initial, 'جدة')
         self.assertEqual(form.fields['qualification'].initial, 'بكالوريوس')
-        self.assertEqual(form.fields['photo'].initial, 'data:image/png;base64,abc')
+        self.assertEqual(form.fields['photo'].initial.name if hasattr(form.fields['photo'].initial, 'name') else form.fields['photo'].initial, 'data:image/png;base64,abc')
 
 
 # ============================================================

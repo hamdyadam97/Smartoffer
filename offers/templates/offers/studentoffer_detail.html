@@ -83,7 +83,14 @@
                     <ul class="list-group list-group-flush">
                         {% for recipient in offer.recipients.all|slice:':10' %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ recipient.student|default:"طالب غير معروف" }}</span>
+                            <span>
+                                {% if recipient.student %}
+                                    {{ recipient.student }}
+                                {% else %}
+                                    {{ recipient.contact_name|default:"مستلم سريع" }}
+                                    {% if recipient.contact_phone %}<small class="text-muted">({{ recipient.contact_phone }})</small>{% endif %}
+                                {% endif %}
+                            </span>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-secondary">{{ recipient.get_channel_display }} - {{ recipient.get_status_display }}</span>
                                 <a href="{% url 'studentoffer-send-recipient' offer.slug recipient.pk %}" class="btn btn-sm btn-success" title="إرسال العرض"><i class="bi bi-send"></i></a>
@@ -126,19 +133,42 @@
                 <div id="addRecipientAlert"></div>
                 <form id="addRecipientForm">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">الطالب <span class="text-danger">*</span></label>
-                        <select name="student" id="ar_student" class="form-select" required>
-                            <option value="">اختر الطالب...</option>
-                            {% for s in all_students %}
-                            <option value="{{ s.id }}">{{ s }}{% if s.get_mobile %} ({{ s.get_mobile }}){% endif %}</option>
-                            {% empty %}
-                            <option value="" disabled>لا يوجد طلاب مسجلون في النظام</option>
-                            {% endfor %}
-                        </select>
-                        {% if not all_students %}
-                        <div class="form-text text-danger">لا يوجد طلاب مسجلون. أضف طلاب أولاً من قائمة الطلاب.</div>
-                        {% endif %}
+                    <ul class="nav nav-tabs mb-3" id="recipientTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="registered-tab" data-bs-toggle="tab" data-bs-target="#registered-pane" type="button" role="tab">طالب مسجل</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="quick-tab" data-bs-toggle="tab" data-bs-target="#quick-pane" type="button" role="tab">مستلم سريع</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="recipientTabContent">
+                        <div class="tab-pane fade show active" id="registered-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">الطالب</label>
+                                <select name="student" id="ar_student" class="form-select">
+                                    <option value="">اختر الطالب...</option>
+                                    {% for s in all_students %}
+                                    <option value="{{ s.id }}">{{ s }}{% if s.get_mobile %} ({{ s.get_mobile }}){% endif %}</option>
+                                    {% empty %}
+                                    <option value="" disabled>لا يوجد طلاب مسجلون في النظام</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="quick-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">الاسم</label>
+                                <input type="text" name="contact_name" id="ar_contact_name" class="form-control" placeholder="اسم المستلم">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الجوال</label>
+                                <input type="text" name="contact_phone" id="ar_contact_phone" class="form-control" placeholder="مثال: 966501234567">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">البريد الإلكتروني</label>
+                                <input type="email" name="contact_email" id="ar_contact_email" class="form-control" placeholder="email@example.com">
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">قناة الإرسال <span class="text-danger">*</span></label>
