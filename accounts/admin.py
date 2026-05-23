@@ -25,7 +25,7 @@ class PersonAdmin(UserAdmin):
         ('المعلومات الشخصية', {'fields': ('first_name', 'second_name', 'third_name', 'forth_name', 'mobile', 'phone', 'address', 'photo')}),
         ('الإعدادات', {'fields': ('team', 'branch', 'options')}),
         ('الصلاحيات', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('تواريخ', {'fields': ('last_login_date', 'ip_address', 'last_login', 'date_joined')}),
+        ('تواريخ', {'fields': ('last_login_date', 'ip_address', 'last_login')}),
     )
     
     add_fieldsets = (
