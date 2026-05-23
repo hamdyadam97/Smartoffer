@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -29,15 +30,41 @@ def custom_page_not_found_view(request, exception):
 
 @login_required
 def dashboard(request):
+    # Optional branch filter from URL ?branch=<id>
+    selected_branch_id = request.GET.get('branch')
+    selected_branch = None
+    if selected_branch_id:
+        selected_branch = get_object_or_404(Branch, pk=selected_branch_id)
+
+    # Base querysets (filtered by branch if selected)
+    student_qs = Student.objects.all()
+    course_qs = Course.objects.all()
+    account_qs = Account.objects.all()
+    payment_qs = Payment.objects.all()
+    offer_qs = Offer.objects.all()
+    studentoffer_qs = StudentOffer.objects.all()
+    call_qs = Call.objects.all()
+
+    if selected_branch:
+        student_qs = Student.objects.filter(
+            accounts__course__master__branch=selected_branch
+        ).distinct()
+        course_qs = Course.objects.filter(master__branch=selected_branch)
+        account_qs = Account.objects.filter(course__master__branch=selected_branch)
+        payment_qs = Payment.objects.filter(account__course__master__branch=selected_branch)
+        offer_qs = Offer.objects.filter(master__branch=selected_branch)
+        studentoffer_qs = StudentOffer.objects.filter(branch=selected_branch)
+        call_qs = Call.objects.filter(offer__master__branch=selected_branch)
+
     # Base stats
-    students_count = Student.objects.count()
-    courses_count = Course.objects.count()
-    registrations_count = Account.objects.count()
-    payments_total = Payment.objects.aggregate(total=Sum('amount_number'))['total'] or 0
-    offers_count = Offer.objects.count()
+    students_count = student_qs.count()
+    courses_count = course_qs.count()
+    registrations_count = account_qs.count()
+    payments_total = payment_qs.aggregate(total=Sum('amount_number'))['total'] or 0
+    offers_count = offer_qs.count()
     branches_count = Branch.objects.count()
-    student_offers_count = StudentOffer.objects.count()
-    calls_count = Call.objects.count()
+    student_offers_count = studentoffer_qs.count()
+    calls_count = call_qs.count()
 
     # Branch stats with annotations
     branches = Branch.objects.select_related('company').all()
@@ -56,7 +83,7 @@ def dashboard(request):
 
     # Monthly payments chart (last 6 months)
     six_months_ago = timezone.now() - timezone.timedelta(days=180)
-    monthly_payments_qs = Payment.objects.filter(
+    monthly_payments_qs = payment_qs.filter(
         created_at__gte=six_months_ago
     ).annotate(month=TruncMonth('created_at')).values('month').annotate(
         total=Sum('amount_number')
@@ -76,14 +103,14 @@ def dashboard(request):
         regs_by_branch.append(bs['registrations'])
 
     # Offers status distribution
-    offer_statuses = Offer.objects.values('master_payment_type').annotate(
+    offer_statuses = offer_qs.values('master_payment_type').annotate(
         count=Count('id')
     ).order_by('-count')
     offer_status_labels = [os['master_payment_type'] for os in offer_statuses]
     offer_status_data = [os['count'] for os in offer_statuses]
 
     # Payment methods distribution
-    payment_methods = Payment.objects.values('payment_method').annotate(
+    payment_methods = payment_qs.values('payment_method').annotate(
         count=Count('id')
     ).order_by('-count')
     payment_method_labels = [pm['payment_method'] for pm in payment_methods]
@@ -92,7 +119,7 @@ def dashboard(request):
     # Recent everything (activity feed) — merged + paginated
     activities = []
 
-    for s in Student.objects.select_related('contact').order_by('-created_at')[:50]:
+    for s in student_qs.select_related('contact').order_by('-created_at')[:50]:
         activities.append({
             'type': 'student',
             'title': f'طالب جديد: {s.get_full_name()}',
@@ -101,7 +128,7 @@ def dashboard(request):
             'css_class': 'success',
         })
 
-    for p in Payment.objects.select_related('account').order_by('-created_at')[:50]:
+    for p in payment_qs.select_related('account').order_by('-created_at')[:50]:
         activities.append({
             'type': 'payment',
             'title': f'سند قبض: {p.amount_number}',
@@ -110,7 +137,7 @@ def dashboard(request):
             'css_class': 'warning',
         })
 
-    for o in Offer.objects.select_related('master').order_by('-created_at')[:50]:
+    for o in offer_qs.select_related('master').order_by('-created_at')[:50]:
         activities.append({
             'type': 'offer',
             'title': f'عرض سعر: {o.customer_name}',
@@ -119,7 +146,7 @@ def dashboard(request):
             'css_class': 'info',
         })
 
-    for r in Account.objects.select_related('student', 'course').order_by('-created_at')[:50]:
+    for r in account_qs.select_related('student', 'course').order_by('-created_at')[:50]:
         activities.append({
             'type': 'registration',
             'title': f'تسجيل جديد: {r.student.get_full_name()}',
@@ -128,7 +155,7 @@ def dashboard(request):
             'css_class': 'purple',
         })
 
-    for c in Call.objects.select_related('offer', 'person').order_by('-created_at')[:50]:
+    for c in call_qs.select_related('offer', 'person').order_by('-created_at')[:50]:
         activities.append({
             'type': 'call',
             'title': f'مكالمة {c.get_call_type_display()}: {c.offer.customer_name}',
@@ -144,8 +171,8 @@ def dashboard(request):
     recent_activities = paginator.get_page(activity_page)
 
     # Keep separate small lists for other dashboard sections
-    recent_offers = Offer.objects.select_related('master').order_by('-created_at')[:6]
-    recent_student_offers = StudentOffer.objects.select_related('branch', 'course').order_by('-created_at')[:6]
+    recent_offers = offer_qs.select_related('master').order_by('-created_at')[:6]
+    recent_student_offers = studentoffer_qs.select_related('branch', 'course').order_by('-created_at')[:6]
 
     # Top 5 branches by revenue
     top_branches = sorted(branch_stats, key=lambda x: x['payments_total'], reverse=True)[:5]
@@ -172,8 +199,140 @@ def dashboard(request):
         'payment_method_labels': payment_method_labels,
         'payment_method_data': payment_method_data,
         'top_branches': top_branches,
+        'selected_branch': selected_branch,
+        'all_branches': branches,
     }
     return render(request, 'core/dashboard.html', context)
+
+
+@login_required
+def branch_dashboard(request, slug):
+    """لوحة تحكم مفصلة لفرع معين"""
+    branch = get_object_or_404(Branch, slug=slug)
+
+    # Stats filtered by this branch
+    registrations_qs = Account.objects.filter(course__master__branch=branch)
+    payments_qs = Payment.objects.filter(account__course__master__branch=branch)
+    offers_qs = Offer.objects.filter(master__branch=branch)
+    studentoffers_qs = StudentOffer.objects.filter(branch=branch)
+    courses_qs = Course.objects.filter(master__branch=branch)
+    calls_qs = Call.objects.filter(offer__master__branch=branch)
+    students_qs = Student.objects.filter(accounts__course__master__branch=branch).distinct()
+
+    students_count = students_qs.count()
+    courses_count = courses_qs.count()
+    registrations_count = registrations_qs.count()
+    payments_total = payments_qs.aggregate(total=Sum('amount_number'))['total'] or 0
+    offers_count = offers_qs.count()
+    student_offers_count = studentoffers_qs.count()
+    calls_count = calls_qs.count()
+
+    # Monthly payments chart (last 6 months)
+    six_months_ago = timezone.now() - timezone.timedelta(days=180)
+    monthly_payments_qs = payments_qs.filter(
+        created_at__gte=six_months_ago
+    ).annotate(month=TruncMonth('created_at')).values('month').annotate(
+        total=Sum('amount_number')
+    ).order_by('month')
+
+    months_labels = []
+    months_data = []
+    for mp in monthly_payments_qs:
+        months_labels.append(mp['month'].strftime('%Y-%m'))
+        months_data.append(float(mp['total'] or 0))
+
+    # Offers status distribution
+    offer_statuses = offers_qs.values('master_payment_type').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    offer_status_labels = [os['master_payment_type'] for os in offer_statuses]
+    offer_status_data = [os['count'] for os in offer_statuses]
+
+    # Payment methods distribution
+    payment_methods = payments_qs.values('payment_method').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    payment_method_labels = [pm['payment_method'] for pm in payment_methods]
+    payment_method_data = [pm['count'] for pm in payment_methods]
+
+    # Activity feed for this branch
+    activities = []
+
+    for s in students_qs.select_related('contact').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'student',
+            'title': f'طالب جديد: {s.get_full_name()}',
+            'desc': s.contact.mobile or '',
+            'time': s.created_at,
+            'css_class': 'success',
+        })
+
+    for p in payments_qs.select_related('account').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'payment',
+            'title': f'سند قبض: {p.amount_number}',
+            'desc': p.account.get_key(),
+            'time': p.created_at,
+            'css_class': 'warning',
+        })
+
+    for o in offers_qs.select_related('master').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'offer',
+            'title': f'عرض سعر: {o.customer_name}',
+            'desc': o.master.name,
+            'time': o.created_at,
+            'css_class': 'info',
+        })
+
+    for r in registrations_qs.select_related('student', 'course').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'registration',
+            'title': f'تسجيل جديد: {r.student.get_full_name()}',
+            'desc': r.course.master.name,
+            'time': r.created_at,
+            'css_class': 'purple',
+        })
+
+    for c in calls_qs.select_related('offer', 'person').order_by('-created_at')[:50]:
+        activities.append({
+            'type': 'call',
+            'title': f'مكالمة {c.get_call_type_display()}: {c.offer.customer_name}',
+            'desc': f'بواسطة {c.person.get_short_name()}',
+            'time': c.created_at,
+            'css_class': 'danger',
+        })
+
+    activities.sort(key=lambda x: x['time'], reverse=True)
+
+    paginator = Paginator(activities, 10)
+    activity_page = request.GET.get('activity_page', 1)
+    recent_activities = paginator.get_page(activity_page)
+
+    # Recent items
+    recent_offers = offers_qs.select_related('master').order_by('-created_at')[:6]
+    recent_student_offers = studentoffers_qs.select_related('branch', 'course').order_by('-created_at')[:6]
+
+    context = {
+        'branch': branch,
+        'students_count': students_count,
+        'courses_count': courses_count,
+        'registrations_count': registrations_count,
+        'payments_total': payments_total,
+        'offers_count': offers_count,
+        'student_offers_count': student_offers_count,
+        'calls_count': calls_count,
+        'recent_activities': recent_activities,
+        'recent_offers': recent_offers,
+        'recent_student_offers': recent_student_offers,
+        'months_labels': months_labels,
+        'months_data': months_data,
+        'offer_status_labels': offer_status_labels,
+        'offer_status_data': offer_status_data,
+        'payment_method_labels': payment_method_labels,
+        'payment_method_data': payment_method_data,
+    }
+    return render(request, 'core/branch_dashboard.html', context)
 
 
 # ============================================================
@@ -427,16 +586,22 @@ def branch_create_ajax(request):
     """إنشاء فرع جديد عبر AJAX (للـ Modal العائم)"""
     form = BranchForm(request.POST, request.FILES)
     if form.is_valid():
-        branch = form.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'تم إنشاء الفرع بنجاح',
-            'branch': {
-                'id': branch.id,
-                'name': branch.name,
-                'code': branch.code,
-            }
-        })
+        try:
+            branch = form.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'تم إنشاء الفرع بنجاح',
+                'branch': {
+                    'id': branch.id,
+                    'name': branch.name,
+                    'code': branch.code,
+                }
+            })
+        except IntegrityError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'code': ['هذا الكود مستخدم بالفعل. جرب كود تاني.']}
+            }, status=400)
     return JsonResponse({
         'success': False,
         'errors': form.errors

@@ -53,6 +53,7 @@
                     <td>{{ branch.company.name }}</td>
                     <td>{{ branch.phone1|default:"-" }}</td>
                     <td>
+                        <a href="{% url 'branch-dashboard' branch.slug %}" class="btn btn-sm btn-success" title="لوحة التحكم"><i class="bi bi-speedometer2"></i></a>
                         <a href="{% url 'branch-detail' branch.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
                         <button type="button" class="btn btn-sm btn-warning" onclick="openBranchModal({
                             id: {{ branch.id }},

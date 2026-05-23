@@ -1,10 +1,11 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404
 
 from courses.models import Course
 from students.models import Student
@@ -98,6 +99,13 @@ class AccountDeleteView(LoginRequiredMixin, DeleteView):
     slug_url_kwarg = 'slug'
     template_name = 'registrations/account_confirm_delete.html'
     success_url = reverse_lazy('registration-list')
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            return super().delete(request, *args, **kwargs)
+        except ProtectedError:
+            messages.error(request, 'لا يمكن حذف التسجيل لأنه مرتبط بمدفوعات. احذف المدفوعات الأول.')
+            return redirect(self.success_url)
 
 
 @require_POST

@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse
 from django.urls import reverse_lazy
@@ -146,19 +147,25 @@ def master_create_ajax(request):
     """إنشاء تخصص جديد عبر AJAX (للـ Modal)"""
     form = MasterForm(request.POST)
     if form.is_valid():
-        master = form.save(commit=False)
-        master.last_person = request.user
-        master.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'تم إنشاء التخصص بنجاح',
-            'master': {
-                'id': master.id,
-                'name': master.name,
-                'code': master.code,
-                'slug': master.slug,
-            }
-        })
+        try:
+            master = form.save(commit=False)
+            master.last_person = request.user
+            master.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'تم إنشاء التخصص بنجاح',
+                'master': {
+                    'id': master.id,
+                    'name': master.name,
+                    'code': master.code,
+                    'slug': master.slug,
+                }
+            })
+        except IntegrityError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'code': ['هذا الكود مستخدم بالفعل في نفس الفرع. جرب كود تاني.']}
+            }, status=400)
     return JsonResponse({
         'success': False,
         'errors': form.errors
