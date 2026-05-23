@@ -7,7 +7,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-journal-bookmark"></i> التخصصات</h2>
     {% if user|has_perm:'add_master' %}
-    <a href="{% url 'master-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> إضافة تخصص</a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#masterModal">
+        <i class="bi bi-plus-lg"></i> إضافة تخصص
+    </button>
     {% endif %}
 </div>
 
@@ -64,4 +66,127 @@
 </div>
 
 {% include "includes/pagination.html" %}
+
+<!-- Master Modal -->
+<div class="modal fade" id="masterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-journal-bookmark text-primary me-2"></i> إضافة تخصص جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="masterAlert"></div>
+                <form id="masterForm" class="modal-form">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                            <select name="branch" class="form-select" required>
+                                <option value="">اختر الفرع...</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">التصنيف</label>
+                            <select name="master_category" class="form-select">
+                                <option value="">اختر التصنيف...</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">الكود <span class="text-danger">*</span></label>
+                            <input type="number" name="code" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">اسم التخصص <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">المدة</label>
+                            <input type="text" name="period" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="saveMasterBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="masterSpinner"></span>
+                    <span id="masterBtnText">حفظ التخصص</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const masterModal = document.getElementById('masterModal');
+    const masterForm = document.getElementById('masterForm');
+    const saveBtn = document.getElementById('saveMasterBtn');
+    const spinner = document.getElementById('masterSpinner');
+    const btnText = document.getElementById('masterBtnText');
+    const alertBox = document.getElementById('masterAlert');
+
+    function showAlert(message, type) {
+        alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setLoading(loading) {
+        saveBtn.disabled = loading;
+        spinner.classList.toggle('d-none', !loading);
+        btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ التخصص';
+    }
+
+    masterModal.addEventListener('show.bs.modal', function() {
+        alertBox.innerHTML = '';
+        masterForm.reset();
+    });
+
+    saveBtn.addEventListener('click', function() {
+        if (!masterForm.checkValidity()) {
+            masterForm.reportValidity();
+            return;
+        }
+        setLoading(true);
+        const formData = new FormData(masterForm);
+
+        fetch('{% url "master-create-ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: new URLSearchParams(formData)
+        })
+        .then(r => r.json())
+        .then(data => {
+            setLoading(false);
+            if (data.success) {
+                showAlert(data.message, 'success');
+                masterForm.reset();
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(masterModal).hide();
+                    alertBox.innerHTML = '';
+                    window.location.reload();
+                }, 1200);
+            } else {
+                let errors = '';
+                for (const [field, msgs] of Object.entries(data.errors)) {
+                    errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
+                }
+                showAlert(errors || 'حدث خطأ أثناء الحفظ', 'danger');
+            }
+        })
+        .catch(() => {
+            setLoading(false);
+            showAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
+})();
+</script>
 {% endblock %}

@@ -1,7 +1,10 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
+from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.decorators import login_required
 
 from .models import Master, Course
 from .forms import MasterForm, CourseForm
@@ -25,6 +28,13 @@ class MasterListView(LoginRequiredMixin, ListView):
         if category:
             queryset = queryset.filter(master_category_id=category)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch, MasterCategory
+        context['branches'] = Branch.objects.all()
+        context['categories'] = MasterCategory.objects.all()
+        return context
 
 
 class MasterDetailView(LoginRequiredMixin, DetailView):
@@ -124,3 +134,32 @@ class CourseDeleteView(LoginRequiredMixin, DeleteView):
     model = Course
     template_name = 'courses/course_confirm_delete.html'
     success_url = reverse_lazy('course-list')
+
+
+# ============================================================
+# AJAX Views
+# ============================================================
+
+@login_required
+@require_POST
+def master_create_ajax(request):
+    """إنشاء تخصص جديد عبر AJAX (للـ Modal)"""
+    form = MasterForm(request.POST)
+    if form.is_valid():
+        master = form.save(commit=False)
+        master.last_person = request.user
+        master.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء التخصص بنجاح',
+            'master': {
+                'id': master.id,
+                'name': master.name,
+                'code': master.code,
+                'slug': master.slug,
+            }
+        })
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)
