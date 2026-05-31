@@ -21,7 +21,6 @@
                     <th>#</th>
                     <th>الاسم</th>
                     <th>الكود</th>
-                    <th>الفرع</th>
                     <th>الدور الافتراضي</th>
                     <th>الإجراءات</th>
                 </tr>
@@ -32,7 +31,6 @@
                     <td>{{ forloop.counter }}</td>
                     <td>{{ team.name }}</td>
                     <td>{{ team.code }}</td>
-                    <td>{{ team.branch|default:"-" }}</td>
                     <td>
                         {% if team.default_role %}
                         <span class="badge bg-info">{{ team.default_role.name }}</span>
@@ -46,7 +44,7 @@
                     <td>
                         <a href="{% url 'team-detail' team.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
                         {% if user|has_perm:'change_team' %}
-                        <button type="button" class="btn btn-sm btn-warning" onclick="openTeamModal({{ team.id }}, '{{ team.name|escapejs }}', '{{ team.code|escapejs }}', '{{ team.description|escapejs }}', {{ team.branch_id|default:'null' }}, {{ team.default_role_id|default:'null' }}, {{ team.default_branch_id|default:'null' }})">
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openTeamModal({{ team.id }}, '{{ team.name|escapejs }}', '{{ team.code|escapejs }}', '{{ team.description|escapejs }}', {{ team.default_role_id|default:'null' }}, {{ team.default_branch_id|default:'null' }})">
                             <i class="bi bi-pencil"></i>
                         </button>
                         {% endif %}
@@ -57,7 +55,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">لا يوجد فرق</td>
+                    <td colspan="5" class="text-center py-4 text-muted">لا يوجد فرق</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -82,29 +80,18 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="id_branch" class="form-label">الفرع</label>
-                            <select name="branch" id="id_branch" class="form-select">
-                                <option value="">---------</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
                             <label for="id_name" class="form-label">الاسم <span class="text-danger">*</span></label>
                             <input type="text" name="name" id="id_name" class="form-control" required>
                         </div>
-                    </div>
-
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="id_code" class="form-label">الكود <span class="text-danger">*</span></label>
                             <input type="text" name="code" id="id_code" class="form-control" required>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="id_description" class="form-label">الوصف</label>
-                            <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
-                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_description" class="form-label">الوصف</label>
+                        <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
                     </div>
 
                     <div class="row">
@@ -148,7 +135,7 @@
     const teamSaveBtn = document.getElementById('teamSaveBtn');
     const teamFormErrors = document.getElementById('teamFormErrors');
 
-    function openTeamModal(id, name, code, description, branchId, defaultRoleId, defaultBranchId) {
+    function openTeamModal(id, name, code, description, defaultRoleId, defaultBranchId) {
         teamFormErrors.classList.add('d-none');
         teamFormErrors.innerHTML = '';
         teamForm.reset();
@@ -159,7 +146,6 @@
             document.getElementById('id_name').value = name || '';
             document.getElementById('id_code').value = code || '';
             document.getElementById('id_description').value = description || '';
-            document.getElementById('id_branch').value = branchId || '';
             document.getElementById('id_default_role').value = defaultRoleId || '';
             document.getElementById('id_default_branch').value = defaultBranchId || '';
         } else {

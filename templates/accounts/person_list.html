@@ -80,6 +80,9 @@
                             <i class="bi bi-pencil"></i>
                         </button>
                         {% endif %}
+                        {% if user|has_perm:'add_employeerole' %}
+                        <button type="button" class="btn btn-sm btn-success" onclick="openPersonRoleModal({{ person.id }}, '{{ person.get_short_name|escapejs }}')"><i class="bi bi-key"></i></button>
+                        {% endif %}
                         {% if user|has_perm:'delete_person' %}
                         <a href="{% url 'person-delete' person.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                         {% endif %}
@@ -192,6 +195,59 @@
         </div>
     </div>
 </div>
+<!-- Person Role Modal -->
+<div class="modal fade" id="personRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-key text-success me-2"></i> إضافة دور لـ <span id="roleModalPersonName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="personRoleAlert"></div>
+                <form id="personRoleForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="person" id="roleModalPersonId" value="">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الدور <span class="text-danger">*</span></label>
+                        <select name="role" id="personRoleSelect" class="form-select" required>
+                            <option value="">اختر الدور...</option>
+                            {% for role in roles %}
+                            <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الفروع <span class="text-danger">*</span></label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="personSelectAllBranches" onchange="togglePersonBranches(this)">
+                            <label class="form-check-label fw-bold text-primary" for="personSelectAllBranches">
+                                <i class="bi bi-check-all"></i> كل الفروع
+                            </label>
+                        </div>
+                        <div class="row">
+                            {% for branch in branches %}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input person-branch-checkbox" type="checkbox" name="branches" value="{{ branch.id }}" id="pbranch_{{ branch.id }}">
+                                    <label class="form-check-label" for="pbranch_{{ branch.id }}">{{ branch.name }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-success" id="personRoleSaveBtn">
+                    <span class="spinner-border spinner-border-sm d-none" id="personRoleSpinner"></span>
+                    <span id="personRoleBtnText">حفظ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -234,6 +290,84 @@
         }
         personModal.show();
     }
+
+    const personRoleModal = new bootstrap.Modal(document.getElementById('personRoleModal'));
+    const personRoleForm = document.getElementById('personRoleForm');
+    const personRoleSaveBtn = document.getElementById('personRoleSaveBtn');
+    const personRoleSpinner = document.getElementById('personRoleSpinner');
+    const personRoleBtnText = document.getElementById('personRoleBtnText');
+    const personRoleAlert = document.getElementById('personRoleAlert');
+
+    function showPersonRoleAlert(message, type) {
+        personRoleAlert.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function setPersonRoleLoading(loading) {
+        personRoleSaveBtn.disabled = loading;
+        personRoleSpinner.classList.toggle('d-none', !loading);
+        personRoleBtnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ';
+    }
+
+    window.openPersonRoleModal = function(personId, personName) {
+        personRoleAlert.innerHTML = '';
+        personRoleForm.reset();
+        document.querySelectorAll('.person-branch-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('roleModalPersonId').value = personId;
+        document.getElementById('roleModalPersonName').textContent = personName || '';
+        personRoleModal.show();
+    };
+
+    window.togglePersonBranches = function(checkbox) {
+        document.querySelectorAll('.person-branch-checkbox').forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+    };
+
+    personRoleSaveBtn.addEventListener('click', function() {
+        const role = document.getElementById('personRoleSelect').value;
+        const branches = document.querySelectorAll('.person-branch-checkbox:checked');
+        const allBranches = document.getElementById('personSelectAllBranches').checked;
+
+        if (!role) {
+            showPersonRoleAlert('اختر الدور', 'warning');
+            return;
+        }
+        if (!allBranches && branches.length === 0) {
+            showPersonRoleAlert('اختر فرعاً واحداً على الأقل', 'warning');
+            return;
+        }
+
+        setPersonRoleLoading(true);
+        const formData = new FormData(personRoleForm);
+        const body = new URLSearchParams(formData);
+
+        fetch('{% url "employeerole-bulk-create" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body
+        })
+        .then(r => r.json())
+        .then(data => {
+            setPersonRoleLoading(false);
+            if (data.success) {
+                showPersonRoleAlert(data.message, 'success');
+                setTimeout(() => {
+                    personRoleModal.hide();
+                    personRoleAlert.innerHTML = '';
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showPersonRoleAlert(data.message || 'حدث خطأ', 'danger');
+            }
+        })
+        .catch(() => {
+            setPersonRoleLoading(false);
+            showPersonRoleAlert('حدث خطأ في الاتصال', 'danger');
+        });
+    });
 
     function savePerson() {
         const id = document.getElementById('personId').value;

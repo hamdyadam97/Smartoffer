@@ -37,7 +37,6 @@ class Permission(models.Model):
 class Team(models.Model):
     """فريق العمل"""
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
-    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='teams', verbose_name='الفرع', null=True, blank=True)
     name = models.CharField(max_length=255, verbose_name='اسم الفريق')
     code = models.CharField(max_length=50, unique=True, verbose_name='كود الفريق')
     description = models.TextField(blank=True, verbose_name='الوصف')

@@ -68,6 +68,7 @@ class PersonListView(LoginRequiredMixin, ListView):
         from core.models import Branch
         context['teams'] = Team.objects.all()
         context['branches'] = Branch.objects.all()
+        context['roles'] = Role.objects.all()
         return context
 
 
@@ -441,6 +442,25 @@ class PermissionDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+@require_POST
+def permission_create_ajax(request):
+    form = PermissionForm(request.POST)
+    if form.is_valid():
+        perm = form.save()
+        return JsonResponse({'success': True, 'message': 'تم إنشاء الصلاحية بنجاح', 'id': perm.id})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+def permission_update_ajax(request, pk):
+    perm = get_object_or_404(Permission, pk=pk)
+    form = PermissionForm(request.POST, instance=perm)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': 'تم تحديث الصلاحية بنجاح'})
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
 # ============================================================
 # EmployeeRole Views
 # ============================================================
@@ -455,6 +475,7 @@ class EmployeeRoleListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['teams'] = Team.objects.all()
         context['roles'] = Role.objects.all()
+        context['persons'] = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
         from core.models import Branch
         context['branches'] = Branch.objects.all()
         return context
@@ -494,34 +515,53 @@ class EmployeeRoleDeleteView(LoginRequiredMixin, DeleteView):
 
 @require_POST
 def employeerole_bulk_create(request):
-    """Assign a role to all members of a team in a specific branch."""
-    team_id = request.POST.get('team')
+    """Assign a role to person(s) across multiple branches."""
     role_id = request.POST.get('role')
-    branch_id = request.POST.get('branch')
+    if not role_id:
+        return JsonResponse({'success': False, 'message': 'الدور مطلوب'}, status=400)
 
-    if not all([team_id, role_id, branch_id]):
-        return JsonResponse({'success': False, 'message': 'جميع الحقول مطلوبة'}, status=400)
-
-    team = get_object_or_404(Team, pk=team_id)
     role = get_object_or_404(Role, pk=role_id)
-    branch = get_object_or_404('core.Branch', pk=branch_id)
 
-    members = team.members.all()
+    # Determine branches
+    all_branches = request.POST.get('all_branches') == 'on'
+    if all_branches:
+        from core.models import Branch
+        branches = list(Branch.objects.all())
+    else:
+        branch_ids = request.POST.getlist('branches')
+        if not branch_ids:
+            return JsonResponse({'success': False, 'message': 'اختر فرعاً واحداً على الأقل'}, status=400)
+        from core.models import Branch
+        branches = list(Branch.objects.filter(pk__in=branch_ids))
+
+    # Determine persons
+    person_id = request.POST.get('person')
+    team_id = request.POST.get('team')
+
+    if person_id:
+        persons = [get_object_or_404(Person, pk=person_id)]
+    elif team_id:
+        team = get_object_or_404(Team, pk=team_id)
+        persons = list(team.members.all())
+    else:
+        return JsonResponse({'success': False, 'message': 'اختر موظف أو فريق'}, status=400)
+
     created = 0
     skipped = 0
-    for person in members:
-        obj, was_created = EmployeeRole.objects.get_or_create(
-            person=person, role=role, branch=branch
-        )
-        if was_created:
-            created += 1
-        else:
-            skipped += 1
+    for person in persons:
+        for branch in branches:
+            obj, was_created = EmployeeRole.objects.get_or_create(
+                person=person, role=role, branch=branch
+            )
+            if was_created:
+                created += 1
+            else:
+                skipped += 1
 
-    return JsonResponse({
-        'success': True,
-        'message': f'تم تسجيل {created} موظف بنجاح' + (f' (تم تخطي {skipped} مسجل مسبقاً)' if skipped else '')
-    })
+    msg = f'تم إنشاء {created} دور بنجاح'
+    if skipped:
+        msg += f' (تم تخطي {skipped} مسجل مسبقاً)'
+    return JsonResponse({'success': True, 'message': msg})
 
 
 # ============================================================

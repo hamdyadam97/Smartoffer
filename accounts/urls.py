@@ -10,7 +10,8 @@ from .views import (
     role_create_ajax, role_update_ajax,
     EmployeeRoleListView, EmployeeRoleCreateView, EmployeeRoleUpdateView, EmployeeRoleDeleteView,
     EmployeePerformanceListView, EmployeePerformanceCreateView, EmployeePerformanceUpdateView, EmployeePerformanceDeleteView,
-    PermissionListView, PermissionCreateView, PermissionUpdateView, PermissionDeleteView,
+    PermissionListView, PermissionDeleteView,
+    permission_create_ajax, permission_update_ajax,
     employeerole_bulk_create,
 )
 
@@ -63,7 +64,7 @@ urlpatterns = [
 
     # Permission URLs
     path('permissions/', PermissionListView.as_view(), name='permission-list'),
-    path('permissions/create/', PermissionCreateView.as_view(), name='permission-create'),
-    path('permissions/<int:pk>/update/', PermissionUpdateView.as_view(), name='permission-update'),
     path('permissions/<int:pk>/delete/', PermissionDeleteView.as_view(), name='permission-delete'),
+    path('permissions/ajax/create/', permission_create_ajax, name='permission-create-ajax'),
+    path('permissions/ajax/<int:pk>/update/', permission_update_ajax, name='permission-update-ajax'),
 ]
