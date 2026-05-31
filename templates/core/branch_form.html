@@ -16,6 +16,19 @@
                 {% for field in form %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ field.label }}</label>
+
+                    {% if field.name == 'logo' and object and object.logo %}
+                    <div class="mb-2">
+                        <img src="{{ object.logo.url }}" alt="الشعار الحالي" class="img-thumbnail" style="max-height:120px;">
+                    </div>
+                    {% endif %}
+
+                    {% if field.name == 'signature' and object and object.signature %}
+                    <div class="mb-2">
+                        <img src="{{ object.signature.url }}" alt="التوقيع الحالي" class="img-thumbnail" style="max-height:120px;">
+                    </div>
+                    {% endif %}
+
                     {{ field }}
                     {% if field.errors %}
                     <div class="text-danger small">{{ field.errors|striptags }}</div>

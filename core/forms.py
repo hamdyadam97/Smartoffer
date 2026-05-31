@@ -51,6 +51,8 @@ class BranchForm(forms.ModelForm):
             'commercial_registration': forms.TextInput(attrs={'class': 'form-control'}),
             'licence_code': forms.TextInput(attrs={'class': 'form-control'}),
             'tax_code': forms.TextInput(attrs={'class': 'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'signature': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 
