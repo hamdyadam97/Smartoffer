@@ -26,6 +26,7 @@ urlpatterns = [
     path('', include('messaging.urls')),
     path('', include('notifications.urls')),
     path('', include('reports.urls')),
+    path('', include('project_assistant.urls')),
 ]
 
 if settings.DEBUG:

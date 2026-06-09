@@ -582,6 +582,31 @@
             color: #fff !important;
         }
 
+        /* AI Assistant Floating Button */
+        .assistant-float {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
+            color: #fff !important;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            z-index: 9999;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .assistant-float:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+            color: #fff !important;
+        }
+
         /* Sidebar Sections */
         .sidebar-section {
             margin-bottom: 4px;
@@ -788,6 +813,7 @@
                     {% if user|has_perm:'view_studentoffer' %}<li class="nav-item"><a class="nav-link {% if '/student-offers/' in request.path %}active{% endif %}" href="{% url 'studentoffer-list' %}"><i class="bi bi-tag"></i> عروض الأسعار</a></li>{% endif %}
                     {% if user|has_perm:'view_call' %}<li class="nav-item"><a class="nav-link {% if '/calls/' in request.path %}active{% endif %}" href="{% url 'call-list' %}"><i class="bi bi-telephone"></i> المكالمات</a></li>{% endif %}
                     {% if user|has_perm:'view_reportsnapshot' %}<li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reportsnapshot-list' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>{% endif %}
+                    <li class="nav-item"><a class="nav-link {% if '/project-assistant/' in request.path %}active{% endif %}" href="{% url 'project_assistant:chat_page' %}"><i class="bi bi-robot"></i> مساعد المشروع</a></li>
                 </ul>
             </nav>
             <main class="col-md-10 ms-sm-auto">
@@ -1035,6 +1061,11 @@
         }
     })();
     </script>
+
+    <!-- AI Assistant Floating Button -->
+    <a href="{% url 'project_assistant:chat_page' %}" class="assistant-float" title="مساعد المشروع الذكي">
+        <i class="bi bi-robot"></i>
+    </a>
 
     <a href="https://wa.me/966569736794" target="_blank" class="whatsapp-float" title="تواصل عبر واتساب">
         <i class="bi bi-whatsapp"></i>
