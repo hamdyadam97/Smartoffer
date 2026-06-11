@@ -1,4 +1,3 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
@@ -7,20 +6,24 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
 
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from core.models import Branch
 from .models import ReportSnapshot
 from .forms import ReportSnapshotForm
 from .utils import generate_report_data, get_dashboard_data
 
 
-class ReportSnapshotListView(LoginRequiredMixin, ListView):
+class ReportSnapshotListView(BranchPermissionMixin, ListView):
     model = ReportSnapshot
     template_name = 'reports/reportsnapshot_list.html'
     context_object_name = 'reports'
     paginate_by = 25
+    required_perm = 'view_report'
+    branch_field = 'branch'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -36,12 +39,13 @@ class ReportSnapshotListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ReportSnapshotDetailView(LoginRequiredMixin, DetailView):
+class ReportSnapshotDetailView(BranchPermissionMixin, DetailView):
     model = ReportSnapshot
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'reports/reportsnapshot_detail.html'
     context_object_name = 'report'
+    required_perm = 'view_report'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -49,12 +53,13 @@ class ReportSnapshotDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ReportSnapshotCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class ReportSnapshotCreateView(BranchPermissionMixin, SuccessMessageMixin, CreateView):
     model = ReportSnapshot
     form_class = ReportSnapshotForm
     template_name = 'reports/reportsnapshot_form.html'
     success_url = reverse_lazy('reportsnapshot-list')
     success_message = 'تم إنشاء التقرير بنجاح.'
+    required_perm = 'add_report'
 
     def form_valid(self, form):
         form.instance.generated_by = self.request.user
@@ -70,7 +75,7 @@ class ReportSnapshotCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateVi
         return response
 
 
-class ReportSnapshotUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class ReportSnapshotUpdateView(BranchPermissionMixin, SuccessMessageMixin, UpdateView):
     model = ReportSnapshot
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -78,15 +83,17 @@ class ReportSnapshotUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateVi
     template_name = 'reports/reportsnapshot_form.html'
     success_url = reverse_lazy('reportsnapshot-list')
     success_message = 'تم تحديث التقرير بنجاح.'
+    required_perm = 'change_report'
 
 
-class ReportSnapshotDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class ReportSnapshotDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
     model = ReportSnapshot
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'reports/reportsnapshot_confirm_delete.html'
     success_url = reverse_lazy('reportsnapshot-list')
     success_message = 'تم حذف التقرير بنجاح.'
+    required_perm = 'delete_report'
 
 
 @require_POST
@@ -131,8 +138,9 @@ def reportsnapshot_update_ajax(request, pk):
 # Dashboard
 # ============================================================
 
-class ReportDashboardView(LoginRequiredMixin, TemplateView):
+class ReportDashboardView(BranchPermissionMixin, TemplateView):
     template_name = 'reports/dashboard.html'
+    required_perm = 'view_report'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

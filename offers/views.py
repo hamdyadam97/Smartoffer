@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -513,14 +514,17 @@ def quick_offer_ajax(request):
 # StudentOffer
 # ============================================================
 
-class StudentOfferListView(LoginRequiredMixin, ListView):
+class StudentOfferListView(BranchPermissionMixin, ListView):
     model = StudentOffer
     template_name = 'offers/studentoffer_list.html'
     context_object_name = 'offers'
     paginate_by = 25
+    required_perm = 'view_studentoffer'
+    branch_field = 'branch'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -538,12 +542,13 @@ class StudentOfferListView(LoginRequiredMixin, ListView):
         return context
 
 
-class StudentOfferDetailView(LoginRequiredMixin, DetailView):
+class StudentOfferDetailView(BranchPermissionMixin, DetailView):
     model = StudentOffer
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'offers/studentoffer_detail.html'
     context_object_name = 'offer'
+    required_perm = 'view_studentoffer'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -554,19 +559,20 @@ class StudentOfferDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class StudentOfferCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class StudentOfferCreateView(BranchPermissionMixin, SuccessMessageMixin, CreateView):
     model = StudentOffer
     form_class = StudentOfferForm
     template_name = 'offers/studentoffer_form.html'
     success_url = reverse_lazy('studentoffer-list')
     success_message = 'تم إنشاء العرض بنجاح.'
+    required_perm = 'add_studentoffer'
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         return super().form_valid(form)
 
 
-class StudentOfferUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class StudentOfferUpdateView(BranchPermissionMixin, SuccessMessageMixin, UpdateView):
     model = StudentOffer
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -574,15 +580,17 @@ class StudentOfferUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView
     template_name = 'offers/studentoffer_form.html'
     success_url = reverse_lazy('studentoffer-list')
     success_message = 'تم تحديث العرض بنجاح.'
+    required_perm = 'change_studentoffer'
 
 
-class StudentOfferDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class StudentOfferDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
     model = StudentOffer
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'offers/studentoffer_confirm_delete.html'
     success_url = reverse_lazy('studentoffer-list')
     success_message = 'تم حذف العرض بنجاح.'
+    required_perm = 'delete_studentoffer'
 
 
 @require_POST
@@ -611,14 +619,17 @@ def studentoffer_update_ajax(request, pk):
 # OfferRecipient
 # ============================================================
 
-class OfferRecipientListView(LoginRequiredMixin, ListView):
+class OfferRecipientListView(BranchPermissionMixin, ListView):
     model = OfferRecipient
     template_name = 'offers/offerrecipient_list.html'
     context_object_name = 'recipients'
     paginate_by = 25
+    required_perm = 'view_studentoffer'
+    branch_field = 'offer__branch'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -631,47 +642,54 @@ class OfferRecipientListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class OfferRecipientDetailView(LoginRequiredMixin, DetailView):
+class OfferRecipientDetailView(BranchPermissionMixin, DetailView):
     model = OfferRecipient
     template_name = 'offers/offerrecipient_detail.html'
     context_object_name = 'recipient'
+    required_perm = 'view_studentoffer'
 
 
-class OfferRecipientCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class OfferRecipientCreateView(BranchPermissionMixin, SuccessMessageMixin, CreateView):
     model = OfferRecipient
     form_class = OfferRecipientForm
     template_name = 'offers/offerrecipient_form.html'
     success_url = reverse_lazy('offerrecipient-list')
     success_message = 'تم إنشاء المستلم بنجاح.'
+    required_perm = 'add_studentoffer'
 
 
-class OfferRecipientUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class OfferRecipientUpdateView(BranchPermissionMixin, SuccessMessageMixin, UpdateView):
     model = OfferRecipient
     form_class = OfferRecipientForm
     template_name = 'offers/offerrecipient_form.html'
     success_url = reverse_lazy('offerrecipient-list')
     success_message = 'تم تحديث المستلم بنجاح.'
+    required_perm = 'change_studentoffer'
 
 
-class OfferRecipientDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class OfferRecipientDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
     model = OfferRecipient
     template_name = 'offers/offerrecipient_confirm_delete.html'
     success_url = reverse_lazy('offerrecipient-list')
     success_message = 'تم حذف المستلم بنجاح.'
+    required_perm = 'delete_studentoffer'
 
 
 # ============================================================
 # OfferNote
 # ============================================================
 
-class OfferNoteListView(LoginRequiredMixin, ListView):
+class OfferNoteListView(BranchPermissionMixin, ListView):
     model = OfferNote
     template_name = 'offers/offernote_list.html'
     context_object_name = 'notes'
     paginate_by = 25
+    required_perm = 'view_offernote'
+    branch_field = 'offer__branch'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -681,34 +699,38 @@ class OfferNoteListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class OfferNoteDetailView(LoginRequiredMixin, DetailView):
+class OfferNoteDetailView(BranchPermissionMixin, DetailView):
     model = OfferNote
     template_name = 'offers/offernote_detail.html'
     context_object_name = 'note'
+    required_perm = 'view_offernote'
 
 
-class OfferNoteCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
+class OfferNoteCreateView(BranchPermissionMixin, SuccessMessageMixin, CreateView):
     model = OfferNote
     form_class = OfferNoteForm
     template_name = 'offers/offernote_form.html'
     success_url = reverse_lazy('offernote-list')
     success_message = 'تم إضافة الملاحظة بنجاح.'
+    required_perm = 'add_offernote'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class OfferNoteUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
+class OfferNoteUpdateView(BranchPermissionMixin, SuccessMessageMixin, UpdateView):
     model = OfferNote
     form_class = OfferNoteForm
     template_name = 'offers/offernote_form.html'
     success_url = reverse_lazy('offernote-list')
     success_message = 'تم تحديث الملاحظة بنجاح.'
+    required_perm = 'change_offernote'
 
 
-class OfferNoteDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
+class OfferNoteDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
     model = OfferNote
     template_name = 'offers/offernote_confirm_delete.html'
     success_url = reverse_lazy('offernote-list')
     success_message = 'تم حذف الملاحظة بنجاح.'
+    required_perm = 'delete_offernote'

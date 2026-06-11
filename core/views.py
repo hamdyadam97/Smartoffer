@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-from django.contrib.auth.mixins import LoginRequiredMixin
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
@@ -339,51 +339,56 @@ def branch_dashboard(request, slug):
 # Company Views
 # ============================================================
 
-class CompanyListView(LoginRequiredMixin, ListView):
+class CompanyListView(BranchPermissionMixin, ListView):
     model = Company
     template_name = 'core/company_list.html'
     context_object_name = 'companies'
     paginate_by = 20
+    required_perm = 'view_company'
 
 
-class CompanyDetailView(LoginRequiredMixin, DetailView):
+class CompanyDetailView(BranchPermissionMixin, DetailView):
     model = Company
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/company_detail.html'
     context_object_name = 'company'
+    required_perm = 'view_company'
 
 
-class CompanyCreateView(LoginRequiredMixin, CreateView):
+class CompanyCreateView(BranchPermissionMixin, CreateView):
     model = Company
     form_class = CompanyForm
     template_name = 'core/company_form.html'
     success_url = reverse_lazy('company-list')
+    required_perm = 'add_company'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء الشركة بنجاح')
         return super().form_valid(form)
 
 
-class CompanyUpdateView(LoginRequiredMixin, UpdateView):
+class CompanyUpdateView(BranchPermissionMixin, UpdateView):
     model = Company
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = CompanyForm
     template_name = 'core/company_form.html'
     success_url = reverse_lazy('company-list')
+    required_perm = 'change_company'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث الشركة بنجاح')
         return super().form_valid(form)
 
 
-class CompanyDeleteView(LoginRequiredMixin, DeleteView):
+class CompanyDeleteView(BranchPermissionMixin, DeleteView):
     model = Company
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/company_confirm_delete.html'
     success_url = reverse_lazy('company-list')
+    required_perm = 'delete_company'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الشركة بنجاح')
@@ -394,14 +399,17 @@ class CompanyDeleteView(LoginRequiredMixin, DeleteView):
 # Branch Views
 # ============================================================
 
-class BranchListView(LoginRequiredMixin, ListView):
+class BranchListView(BranchPermissionMixin, ListView):
     model = Branch
     template_name = 'core/branch_list.html'
     context_object_name = 'branches'
     paginate_by = 20
+    required_perm = 'view_branch'
+    branch_field = 'id'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -416,44 +424,48 @@ class BranchListView(LoginRequiredMixin, ListView):
         return context
 
 
-class BranchDetailView(LoginRequiredMixin, DetailView):
+class BranchDetailView(BranchPermissionMixin, DetailView):
     model = Branch
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/branch_detail.html'
     context_object_name = 'branch'
+    required_perm = 'view_branch'
 
 
-class BranchCreateView(LoginRequiredMixin, CreateView):
+class BranchCreateView(BranchPermissionMixin, CreateView):
     model = Branch
     form_class = BranchForm
     template_name = 'core/branch_form.html'
     success_url = reverse_lazy('branch-list')
+    required_perm = 'add_branch'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء الفرع بنجاح')
         return super().form_valid(form)
 
 
-class BranchUpdateView(LoginRequiredMixin, UpdateView):
+class BranchUpdateView(BranchPermissionMixin, UpdateView):
     model = Branch
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = BranchForm
     template_name = 'core/branch_form.html'
     success_url = reverse_lazy('branch-list')
+    required_perm = 'change_branch'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث الفرع بنجاح')
         return super().form_valid(form)
 
 
-class BranchDeleteView(LoginRequiredMixin, DeleteView):
+class BranchDeleteView(BranchPermissionMixin, DeleteView):
     model = Branch
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/branch_confirm_delete.html'
     success_url = reverse_lazy('branch-list')
+    required_perm = 'delete_branch'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الفرع بنجاح')
@@ -464,45 +476,56 @@ class BranchDeleteView(LoginRequiredMixin, DeleteView):
 # Bank Views
 # ============================================================
 
-class BankListView(LoginRequiredMixin, ListView):
+class BankListView(BranchPermissionMixin, ListView):
     model = Bank
     template_name = 'core/bank_list.html'
     context_object_name = 'banks'
     paginate_by = 20
+    required_perm = 'view_bank'
+    branch_field = 'branch'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        return queryset
 
 
-class BankDetailView(LoginRequiredMixin, DetailView):
+class BankDetailView(BranchPermissionMixin, DetailView):
     model = Bank
     template_name = 'core/bank_detail.html'
     context_object_name = 'bank'
+    required_perm = 'view_bank'
 
 
-class BankCreateView(LoginRequiredMixin, CreateView):
+class BankCreateView(BranchPermissionMixin, CreateView):
     model = Bank
     form_class = BankForm
     template_name = 'core/bank_form.html'
     success_url = reverse_lazy('bank-list')
+    required_perm = 'add_bank'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء البنك بنجاح')
         return super().form_valid(form)
 
 
-class BankUpdateView(LoginRequiredMixin, UpdateView):
+class BankUpdateView(BranchPermissionMixin, UpdateView):
     model = Bank
     form_class = BankForm
     template_name = 'core/bank_form.html'
     success_url = reverse_lazy('bank-list')
+    required_perm = 'change_bank'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث البنك بنجاح')
         return super().form_valid(form)
 
 
-class BankDeleteView(LoginRequiredMixin, DeleteView):
+class BankDeleteView(BranchPermissionMixin, DeleteView):
     model = Bank
     template_name = 'core/bank_confirm_delete.html'
     success_url = reverse_lazy('bank-list')
+    required_perm = 'delete_bank'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف البنك بنجاح')
@@ -513,11 +536,18 @@ class BankDeleteView(LoginRequiredMixin, DeleteView):
 # MasterCategory Views
 # ============================================================
 
-class MasterCategoryListView(LoginRequiredMixin, ListView):
+class MasterCategoryListView(BranchPermissionMixin, ListView):
     model = MasterCategory
     template_name = 'core/mastercategory_list.html'
     context_object_name = 'categories'
     paginate_by = 20
+    required_perm = 'view_mastercategory'
+    branch_field = 'branch'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -525,44 +555,48 @@ class MasterCategoryListView(LoginRequiredMixin, ListView):
         return context
 
 
-class MasterCategoryDetailView(LoginRequiredMixin, DetailView):
+class MasterCategoryDetailView(BranchPermissionMixin, DetailView):
     model = MasterCategory
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/mastercategory_detail.html'
     context_object_name = 'category'
+    required_perm = 'view_mastercategory'
 
 
-class MasterCategoryCreateView(LoginRequiredMixin, CreateView):
+class MasterCategoryCreateView(BranchPermissionMixin, CreateView):
     model = MasterCategory
     form_class = MasterCategoryForm
     template_name = 'core/mastercategory_form.html'
     success_url = reverse_lazy('mastercategory-list')
+    required_perm = 'add_mastercategory'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء التصنيف بنجاح')
         return super().form_valid(form)
 
 
-class MasterCategoryUpdateView(LoginRequiredMixin, UpdateView):
+class MasterCategoryUpdateView(BranchPermissionMixin, UpdateView):
     model = MasterCategory
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = MasterCategoryForm
     template_name = 'core/mastercategory_form.html'
     success_url = reverse_lazy('mastercategory-list')
+    required_perm = 'change_mastercategory'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث التصنيف بنجاح')
         return super().form_valid(form)
 
 
-class MasterCategoryDeleteView(LoginRequiredMixin, DeleteView):
+class MasterCategoryDeleteView(BranchPermissionMixin, DeleteView):
     model = MasterCategory
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'core/mastercategory_confirm_delete.html'
     success_url = reverse_lazy('mastercategory-list')
+    required_perm = 'delete_mastercategory'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف التصنيف بنجاح')

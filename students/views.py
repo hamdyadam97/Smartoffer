@@ -1,4 +1,3 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -6,18 +5,23 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
 
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
+
 from .models import Contact, Student
 from .forms import StudentForm
 
 
-class StudentListView(LoginRequiredMixin, ListView):
+class StudentListView(BranchPermissionMixin, ListView):
     model = Student
     template_name = 'students/student_list.html'
     context_object_name = 'students'
     paginate_by = 20
+    required_perm = 'view_student'
+    branch_field = 'accounts__course__master__branch'
 
     def get_queryset(self):
         queryset = Student.objects.select_related('contact').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -35,7 +39,8 @@ class StudentListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class StudentDetailView(LoginRequiredMixin, DetailView):
+class StudentDetailView(BranchPermissionMixin, DetailView):
+    required_perm = 'view_student'
     model = Student
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -43,7 +48,8 @@ class StudentDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'student'
 
 
-class StudentCreateView(LoginRequiredMixin, CreateView):
+class StudentCreateView(BranchPermissionMixin, CreateView):
+    required_perm = 'add_student'
     model = Student
     form_class = StudentForm
     template_name = 'students/student_form.html'
@@ -72,7 +78,8 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class StudentUpdateView(LoginRequiredMixin, UpdateView):
+class StudentUpdateView(BranchPermissionMixin, UpdateView):
+    required_perm = 'change_student'
     model = Student
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -101,7 +108,8 @@ class StudentUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class StudentDeleteView(LoginRequiredMixin, DeleteView):
+class StudentDeleteView(BranchPermissionMixin, DeleteView):
+    required_perm = 'delete_student'
     model = Student
     slug_field = 'slug'
     slug_url_kwarg = 'slug'

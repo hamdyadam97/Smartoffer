@@ -143,20 +143,50 @@ class Person(AbstractBaseUser, PermissionsMixin):
         branches.extend([access.branch for access in self.branch_accesses.all()])
         return list(set(branches))
 
-    def has_perm(self, perm_codename):
-        """Check if user has a specific permission via their roles"""
+    def has_perm(self, perm_codename, branch=None):
+        """Check if user has a specific permission via their roles.
+        If branch is given, the permission must be assigned through a role
+        on that exact branch.
+        """
         if self.is_superuser:
             return True
-        return Permission.objects.filter(
+        qs = Permission.objects.filter(
             codename=perm_codename,
             roles__employees__person=self
-        ).exists()
+        )
+        if branch is not None:
+            qs = qs.filter(roles__employees__branch=branch)
+        return qs.exists()
 
-    def has_perms(self, perm_codenames):
-        """Check if user has all specified permissions"""
+    def has_perms(self, perm_codenames, branch=None):
+        """Check if user has all specified permissions (optionally on a branch)."""
         if self.is_superuser:
             return True
-        return all(self.has_perm(p) for p in perm_codenames)
+        return all(self.has_perm(p, branch=branch) for p in perm_codenames)
+
+    def get_accessible_branches(self):
+        """Return all branches this user has any role on (main + role branches)."""
+        if self.is_superuser:
+            from core.models import Branch
+            return list(Branch.objects.all())
+        branches = set()
+        if self.branch:
+            branches.add(self.branch)
+        for access in self.branch_accesses.all():
+            branches.add(access.branch)
+        for er in self.employee_roles.all():
+            branches.add(er.branch)
+        return list(branches)
+
+    def get_branches_for_perm(self, perm_codename):
+        """Return branches where the user has a specific permission."""
+        if self.is_superuser:
+            from core.models import Branch
+            return list(Branch.objects.all())
+        branches = set()
+        for er in self.employee_roles.filter(role__permissions__codename=perm_codename):
+            branches.add(er.branch)
+        return list(branches)
 
 
 class BranchAccess(models.Model):

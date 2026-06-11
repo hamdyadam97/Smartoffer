@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -7,6 +6,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from courses.models import Course
 from students.models import Student
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
@@ -20,14 +20,17 @@ from .forms import (
 # Account Views
 # ============================================================
 
-class AccountListView(LoginRequiredMixin, ListView):
+class AccountListView(BranchPermissionMixin, ListView):
     model = Account
     template_name = 'registrations/account_list.html'
     context_object_name = 'accounts'
     paginate_by = 20
+    required_perm = 'view_registration'
+    branch_field = 'course__master__branch'
 
     def get_queryset(self):
         queryset = Account.objects.select_related('student', 'course', 'course__master', 'last_person').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -52,12 +55,13 @@ class AccountListView(LoginRequiredMixin, ListView):
         return context
 
 
-class AccountDetailView(LoginRequiredMixin, DetailView):
+class AccountDetailView(BranchPermissionMixin, DetailView):
     model = Account
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'registrations/account_detail.html'
     context_object_name = 'account'
+    required_perm = 'view_registration'
 
     def get_queryset(self):
         return Account.objects.select_related('student', 'course', 'course__master', 'last_person')
@@ -69,36 +73,39 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class AccountCreateView(LoginRequiredMixin, CreateView):
+class AccountCreateView(BranchPermissionMixin, CreateView):
     model = Account
     form_class = AccountForm
     template_name = 'registrations/account_form.html'
     success_url = reverse_lazy('registration-list')
+    required_perm = 'add_registration'
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
         return super().form_valid(form)
 
 
-class AccountUpdateView(LoginRequiredMixin, UpdateView):
+class AccountUpdateView(BranchPermissionMixin, UpdateView):
     model = Account
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = AccountForm
     template_name = 'registrations/account_form.html'
     success_url = reverse_lazy('registration-list')
+    required_perm = 'change_registration'
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
         return super().form_valid(form)
 
 
-class AccountDeleteView(LoginRequiredMixin, DeleteView):
+class AccountDeleteView(BranchPermissionMixin, DeleteView):
     model = Account
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'registrations/account_confirm_delete.html'
     success_url = reverse_lazy('registration-list')
+    required_perm = 'delete_registration'
 
     def delete(self, request, *args, **kwargs):
         try:
@@ -135,149 +142,171 @@ def account_update_ajax(request, pk):
 # AttachType Views
 # ============================================================
 
-class AttachTypeListView(LoginRequiredMixin, ListView):
+class AttachTypeListView(BranchPermissionMixin, ListView):
     model = AttachType
     template_name = 'registrations/attachtype_list.html'
     context_object_name = 'attach_types'
     paginate_by = 20
+    required_perm = 'view_attachtype'
 
 
-class AttachTypeDetailView(LoginRequiredMixin, DetailView):
+class AttachTypeDetailView(BranchPermissionMixin, DetailView):
     model = AttachType
     template_name = 'registrations/attachtype_detail.html'
     context_object_name = 'attach_type'
+    required_perm = 'view_attachtype'
 
 
-class AttachTypeCreateView(LoginRequiredMixin, CreateView):
+class AttachTypeCreateView(BranchPermissionMixin, CreateView):
     model = AttachType
     form_class = AttachTypeForm
     template_name = 'registrations/attachtype_form.html'
     success_url = reverse_lazy('attachtype-list')
+    required_perm = 'add_attachtype'
 
 
-class AttachTypeUpdateView(LoginRequiredMixin, UpdateView):
+class AttachTypeUpdateView(BranchPermissionMixin, UpdateView):
     model = AttachType
     form_class = AttachTypeForm
     template_name = 'registrations/attachtype_form.html'
     success_url = reverse_lazy('attachtype-list')
+    required_perm = 'change_attachtype'
 
 
-class AttachTypeDeleteView(LoginRequiredMixin, DeleteView):
+class AttachTypeDeleteView(BranchPermissionMixin, DeleteView):
     model = AttachType
     template_name = 'registrations/attachtype_confirm_delete.html'
     success_url = reverse_lazy('attachtype-list')
+    required_perm = 'delete_attachtype'
 
 
 # ============================================================
 # Attach Views
 # ============================================================
 
-class AttachListView(LoginRequiredMixin, ListView):
+class AttachListView(BranchPermissionMixin, ListView):
     model = Attach
     template_name = 'registrations/attach_list.html'
     context_object_name = 'attaches'
     paginate_by = 20
+    required_perm = 'view_attach'
+    branch_field = 'person__branch'
 
     def get_queryset(self):
         queryset = Attach.objects.select_related('attach_type', 'person').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         attach_type = self.request.GET.get('type')
         if attach_type:
             queryset = queryset.filter(attach_type_id=attach_type)
         return queryset
 
 
-class AttachDetailView(LoginRequiredMixin, DetailView):
+class AttachDetailView(BranchPermissionMixin, DetailView):
     model = Attach
     template_name = 'registrations/attach_detail.html'
     context_object_name = 'attach'
+    required_perm = 'view_attach'
 
     def get_queryset(self):
         return Attach.objects.select_related('attach_type', 'person')
 
 
-class AttachCreateView(LoginRequiredMixin, CreateView):
+class AttachCreateView(BranchPermissionMixin, CreateView):
     model = Attach
     form_class = AttachForm
     template_name = 'registrations/attach_form.html'
     success_url = reverse_lazy('attach-list')
+    required_perm = 'add_attach'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class AttachUpdateView(LoginRequiredMixin, UpdateView):
+class AttachUpdateView(BranchPermissionMixin, UpdateView):
     model = Attach
     form_class = AttachForm
     template_name = 'registrations/attach_form.html'
     success_url = reverse_lazy('attach-list')
+    required_perm = 'change_attach'
 
 
-class AttachDeleteView(LoginRequiredMixin, DeleteView):
+class AttachDeleteView(BranchPermissionMixin, DeleteView):
     model = Attach
     template_name = 'registrations/attach_confirm_delete.html'
     success_url = reverse_lazy('attach-list')
+    required_perm = 'delete_attach'
 
 
 # ============================================================
 # AccountAttach Views
 # ============================================================
 
-class AccountAttachListView(LoginRequiredMixin, ListView):
+class AccountAttachListView(BranchPermissionMixin, ListView):
     model = AccountAttach
     template_name = 'registrations/accountattach_list.html'
     context_object_name = 'account_attaches'
     paginate_by = 20
+    required_perm = 'view_accountattach'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         queryset = AccountAttach.objects.select_related('account', 'attach').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
         return queryset
 
 
-class AccountAttachDetailView(LoginRequiredMixin, DetailView):
+class AccountAttachDetailView(BranchPermissionMixin, DetailView):
     model = AccountAttach
     template_name = 'registrations/accountattach_detail.html'
     context_object_name = 'account_attach'
+    required_perm = 'view_accountattach'
 
     def get_queryset(self):
         return AccountAttach.objects.select_related('account', 'attach')
 
 
-class AccountAttachCreateView(LoginRequiredMixin, CreateView):
+class AccountAttachCreateView(BranchPermissionMixin, CreateView):
     model = AccountAttach
     form_class = AccountAttachForm
     template_name = 'registrations/accountattach_form.html'
     success_url = reverse_lazy('accountattach-list')
+    required_perm = 'add_accountattach'
 
 
-class AccountAttachUpdateView(LoginRequiredMixin, UpdateView):
+class AccountAttachUpdateView(BranchPermissionMixin, UpdateView):
     model = AccountAttach
     form_class = AccountAttachForm
     template_name = 'registrations/accountattach_form.html'
     success_url = reverse_lazy('accountattach-list')
+    required_perm = 'change_accountattach'
 
 
-class AccountAttachDeleteView(LoginRequiredMixin, DeleteView):
+class AccountAttachDeleteView(BranchPermissionMixin, DeleteView):
     model = AccountAttach
     template_name = 'registrations/accountattach_confirm_delete.html'
     success_url = reverse_lazy('accountattach-list')
+    required_perm = 'delete_accountattach'
 
 
 # ============================================================
 # AccountCondition Views
 # ============================================================
 
-class AccountConditionListView(LoginRequiredMixin, ListView):
+class AccountConditionListView(BranchPermissionMixin, ListView):
     model = AccountCondition
     template_name = 'registrations/accountcondition_list.html'
     context_object_name = 'account_conditions'
     paginate_by = 20
+    required_perm = 'view_accountcondition'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         queryset = AccountCondition.objects.select_related('account', 'person').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
@@ -287,93 +316,104 @@ class AccountConditionListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class AccountConditionDetailView(LoginRequiredMixin, DetailView):
+class AccountConditionDetailView(BranchPermissionMixin, DetailView):
     model = AccountCondition
     template_name = 'registrations/accountcondition_detail.html'
     context_object_name = 'account_condition'
+    required_perm = 'view_accountcondition'
 
     def get_queryset(self):
         return AccountCondition.objects.select_related('account', 'person')
 
 
-class AccountConditionCreateView(LoginRequiredMixin, CreateView):
+class AccountConditionCreateView(BranchPermissionMixin, CreateView):
     model = AccountCondition
     form_class = AccountConditionForm
     template_name = 'registrations/accountcondition_form.html'
     success_url = reverse_lazy('accountcondition-list')
+    required_perm = 'add_accountcondition'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class AccountConditionUpdateView(LoginRequiredMixin, UpdateView):
+class AccountConditionUpdateView(BranchPermissionMixin, UpdateView):
     model = AccountCondition
     form_class = AccountConditionForm
     template_name = 'registrations/accountcondition_form.html'
     success_url = reverse_lazy('accountcondition-list')
+    required_perm = 'change_accountcondition'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class AccountConditionDeleteView(LoginRequiredMixin, DeleteView):
+class AccountConditionDeleteView(BranchPermissionMixin, DeleteView):
     model = AccountCondition
     template_name = 'registrations/accountcondition_confirm_delete.html'
     success_url = reverse_lazy('accountcondition-list')
+    required_perm = 'delete_accountcondition'
 
 
 # ============================================================
 # AccountNote Views
 # ============================================================
 
-class AccountNoteListView(LoginRequiredMixin, ListView):
+class AccountNoteListView(BranchPermissionMixin, ListView):
     model = AccountNote
     template_name = 'registrations/accountnote_list.html'
     context_object_name = 'account_notes'
     paginate_by = 20
+    required_perm = 'view_accountnote'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         queryset = AccountNote.objects.select_related('account', 'person').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
         return queryset
 
 
-class AccountNoteDetailView(LoginRequiredMixin, DetailView):
+class AccountNoteDetailView(BranchPermissionMixin, DetailView):
     model = AccountNote
     template_name = 'registrations/accountnote_detail.html'
     context_object_name = 'account_note'
+    required_perm = 'view_accountnote'
 
     def get_queryset(self):
         return AccountNote.objects.select_related('account', 'person')
 
 
-class AccountNoteCreateView(LoginRequiredMixin, CreateView):
+class AccountNoteCreateView(BranchPermissionMixin, CreateView):
     model = AccountNote
     form_class = AccountNoteForm
     template_name = 'registrations/accountnote_form.html'
     success_url = reverse_lazy('accountnote-list')
+    required_perm = 'add_accountnote'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class AccountNoteUpdateView(LoginRequiredMixin, UpdateView):
+class AccountNoteUpdateView(BranchPermissionMixin, UpdateView):
     model = AccountNote
     form_class = AccountNoteForm
     template_name = 'registrations/accountnote_form.html'
     success_url = reverse_lazy('accountnote-list')
+    required_perm = 'change_accountnote'
 
     def form_valid(self, form):
         form.instance.person = self.request.user
         return super().form_valid(form)
 
 
-class AccountNoteDeleteView(LoginRequiredMixin, DeleteView):
+class AccountNoteDeleteView(BranchPermissionMixin, DeleteView):
     model = AccountNote
     template_name = 'registrations/accountnote_confirm_delete.html'
     success_url = reverse_lazy('accountnote-list')
+    required_perm = 'delete_accountnote'
