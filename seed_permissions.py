@@ -148,7 +148,7 @@ PERMISSIONS_DATA = [
     ('add_studentoffer', 'إضافة عرض طالب', 'offers', 'studentoffer', 'add'),
     ('change_studentoffer', 'تعديل عرض طالب', 'offers', 'studentoffer', 'change'),
     ('delete_studentoffer', 'حذف عرض طالب', 'offers', 'studentoffer', 'delete'),
-    ('send_studentoffer', 'إرسال عروض الطلاب', 'offers', 'studentoffer', 'add'),
+    ('send_studentoffer', 'إرسال عروض الطلاب', 'offers', 'studentoffer', 'change'),
 
     ('view_offernote', 'عرض ملاحظات العروض', 'offers', 'offernote', 'view'),
     ('add_offernote', 'إضافة ملاحظة عرض', 'offers', 'offernote', 'add'),
@@ -173,45 +173,57 @@ def seed_permissions():
     created_count = 0
     updated_count = 0
     skipped_count = 0
+    errors = []
 
     for codename, name, app_label, model_name, action in PERMISSIONS_DATA:
-        perm, was_created = Permission.objects.get_or_create(
-            codename=codename,
-            defaults={
-                'name': name,
-                'app_label': app_label,
-                'model_name': model_name,
-                'action': action,
-            }
-        )
-
-        if was_created:
-            created_count += 1
-            print(f'[+] Created: {codename}')
-        else:
-            # تحديث الاسم والتفاصيل لو الصلاحية موجودة مسبقاً
-            needs_update = (
-                perm.name != name or
-                perm.app_label != app_label or
-                perm.model_name != model_name or
-                perm.action != action
+        try:
+            perm, was_created = Permission.objects.get_or_create(
+                codename=codename,
+                defaults={
+                    'name': name,
+                    'app_label': app_label,
+                    'model_name': model_name,
+                    'action': action,
+                }
             )
-            if needs_update:
-                perm.name = name
-                perm.app_label = app_label
-                perm.model_name = model_name
-                perm.action = action
-                perm.save()
-                updated_count += 1
-                print(f'[~] Updated: {codename}')
+
+            if was_created:
+                created_count += 1
+                print(f'[+] Created: {codename}')
             else:
-                skipped_count += 1
+                # تحديث الاسم والتفاصيل لو الصلاحية موجودة مسبقاً
+                needs_update = (
+                    perm.name != name or
+                    perm.app_label != app_label or
+                    perm.model_name != model_name or
+                    perm.action != action
+                )
+                if needs_update:
+                    perm.name = name
+                    perm.app_label = app_label
+                    perm.model_name = model_name
+                    perm.action = action
+                    perm.save()
+                    updated_count += 1
+                    print(f'[~] Updated: {codename}')
+                else:
+                    skipped_count += 1
+        except Exception as e:
+            errors.append((codename, str(e)))
+            print(f'[x] Error: {codename} -> {e}')
 
     print('\n=== Seed Permissions Done ===')
     print(f'Created: {created_count}')
     print(f'Updated: {updated_count}')
     print(f'Skipped (no change): {skipped_count}')
+    print(f'Errors: {len(errors)}')
     print(f'Total: {len(PERMISSIONS_DATA)}')
+
+    if errors:
+        print('\n--- Errors ---')
+        for codename, err in errors:
+            print(f'{codename}: {err}')
+        raise SystemExit(1)
 
 
 if __name__ == '__main__':
