@@ -22,7 +22,7 @@ class MasterListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Master.objects.select_related('branch', 'master_category').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -96,7 +96,7 @@ class CourseListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Course.objects.select_related('master', 'master__branch').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, 'master__branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(

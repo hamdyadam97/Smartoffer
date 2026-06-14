@@ -23,7 +23,7 @@ class ReportSnapshotListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -46,6 +46,7 @@ class ReportSnapshotDetailView(BranchPermissionMixin, DetailView):
     template_name = 'reports/reportsnapshot_detail.html'
     context_object_name = 'report'
     required_perm = 'view_report'
+    branch_field = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

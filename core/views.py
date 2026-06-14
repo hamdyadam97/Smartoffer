@@ -345,6 +345,7 @@ class CompanyListView(BranchPermissionMixin, ListView):
     context_object_name = 'companies'
     paginate_by = 20
     required_perm = 'view_company'
+    branch_field = None
 
 
 class CompanyDetailView(BranchPermissionMixin, DetailView):
@@ -354,6 +355,7 @@ class CompanyDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/company_detail.html'
     context_object_name = 'company'
     required_perm = 'view_company'
+    branch_field = None
 
 
 class CompanyCreateView(BranchPermissionMixin, CreateView):
@@ -405,11 +407,10 @@ class BranchListView(BranchPermissionMixin, ListView):
     context_object_name = 'branches'
     paginate_by = 20
     required_perm = 'view_branch'
-    branch_field = 'id'
+    branch_field = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -431,6 +432,7 @@ class BranchDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/branch_detail.html'
     context_object_name = 'branch'
     required_perm = 'view_branch'
+    branch_field = None
 
 
 class BranchCreateView(BranchPermissionMixin, CreateView):
@@ -495,6 +497,7 @@ class BankDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/bank_detail.html'
     context_object_name = 'bank'
     required_perm = 'view_bank'
+    branch_field = None
 
 
 class BankCreateView(BranchPermissionMixin, CreateView):
@@ -562,6 +565,7 @@ class MasterCategoryDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/mastercategory_detail.html'
     context_object_name = 'category'
     required_perm = 'view_mastercategory'
+    branch_field = None
 
 
 class MasterCategoryCreateView(BranchPermissionMixin, CreateView):

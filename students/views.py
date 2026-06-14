@@ -21,7 +21,7 @@ class StudentListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Student.objects.select_related('contact').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, 'accounts__course__master__branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -36,7 +36,7 @@ class StudentListView(BranchPermissionMixin, ListView):
         preferred = self.request.GET.get('preferred_contact')
         if preferred:
             queryset = queryset.filter(preferred_contact=preferred)
-        return queryset
+        return queryset.distinct()
 
 
 class StudentDetailView(BranchPermissionMixin, DetailView):

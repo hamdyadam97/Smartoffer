@@ -1,7 +1,6 @@
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
@@ -11,6 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
+from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from .forms import (
     PersonCreationForm, PersonChangeForm, TeamForm,
     BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm, PermissionForm
@@ -39,14 +39,17 @@ def logout_view(request):
 # Person Views
 # ============================================================
 
-class PersonListView(LoginRequiredMixin, ListView):
+class PersonListView(BranchPermissionMixin, ListView):
     model = Person
     template_name = 'accounts/person_list.html'
     context_object_name = 'persons'
     paginate_by = 20
+    required_perm = 'view_person'
+    branch_field = 'branch'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -72,44 +75,48 @@ class PersonListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PersonDetailView(LoginRequiredMixin, DetailView):
+class PersonDetailView(BranchPermissionMixin, DetailView):
     model = Person
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/person_detail.html'
     context_object_name = 'person'
+    required_perm = 'view_person'
 
 
-class PersonCreateView(LoginRequiredMixin, CreateView):
+class PersonCreateView(BranchPermissionMixin, CreateView):
     model = Person
     form_class = PersonCreationForm
     template_name = 'accounts/person_form.html'
     success_url = reverse_lazy('person-list')
+    required_perm = 'add_person'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء المستخدم بنجاح')
         return super().form_valid(form)
 
 
-class PersonUpdateView(LoginRequiredMixin, UpdateView):
+class PersonUpdateView(BranchPermissionMixin, UpdateView):
     model = Person
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = PersonChangeForm
     template_name = 'accounts/person_form.html'
     success_url = reverse_lazy('person-list')
+    required_perm = 'change_person'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث المستخدم بنجاح')
         return super().form_valid(form)
 
 
-class PersonDeleteView(LoginRequiredMixin, DeleteView):
+class PersonDeleteView(BranchPermissionMixin, DeleteView):
     model = Person
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/person_confirm_delete.html'
     success_url = reverse_lazy('person-list')
+    required_perm = 'delete_person'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف المستخدم بنجاح')
@@ -139,11 +146,18 @@ def person_update_ajax(request, pk):
 # Team Views
 # ============================================================
 
-class TeamListView(LoginRequiredMixin, ListView):
+class TeamListView(BranchPermissionMixin, ListView):
     model = Team
     template_name = 'accounts/team_list.html'
     context_object_name = 'teams'
     paginate_by = 20
+    required_perm = 'view_team'
+    branch_field = 'default_branch'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, 'default_branch')
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -153,44 +167,48 @@ class TeamListView(LoginRequiredMixin, ListView):
         return context
 
 
-class TeamDetailView(LoginRequiredMixin, DetailView):
+class TeamDetailView(BranchPermissionMixin, DetailView):
     model = Team
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/team_detail.html'
     context_object_name = 'team'
+    required_perm = 'view_team'
 
 
-class TeamCreateView(LoginRequiredMixin, CreateView):
+class TeamCreateView(BranchPermissionMixin, CreateView):
     model = Team
     form_class = TeamForm
     template_name = 'accounts/team_form.html'
     success_url = reverse_lazy('team-list')
+    required_perm = 'add_team'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء الفريق بنجاح')
         return super().form_valid(form)
 
 
-class TeamUpdateView(LoginRequiredMixin, UpdateView):
+class TeamUpdateView(BranchPermissionMixin, UpdateView):
     model = Team
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = TeamForm
     template_name = 'accounts/team_form.html'
     success_url = reverse_lazy('team-list')
+    required_perm = 'change_team'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث الفريق بنجاح')
         return super().form_valid(form)
 
 
-class TeamDeleteView(LoginRequiredMixin, DeleteView):
+class TeamDeleteView(BranchPermissionMixin, DeleteView):
     model = Team
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/team_confirm_delete.html'
     success_url = reverse_lazy('team-list')
+    required_perm = 'delete_team'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الفريق بنجاح')
@@ -220,39 +238,44 @@ def team_update_ajax(request, pk):
 # BranchAccess Views
 # ============================================================
 
-class BranchAccessListView(LoginRequiredMixin, ListView):
+class BranchAccessListView(BranchPermissionMixin, ListView):
     model = BranchAccess
     template_name = 'accounts/branchaccess_list.html'
     context_object_name = 'accesses'
     paginate_by = 20
+    required_perm = 'view_branchaccess'
+    branch_field = 'branch'
 
 
-class BranchAccessCreateView(LoginRequiredMixin, CreateView):
+class BranchAccessCreateView(BranchPermissionMixin, CreateView):
     model = BranchAccess
     form_class = BranchAccessForm
     template_name = 'accounts/branchaccess_form.html'
     success_url = reverse_lazy('branchaccess-list')
+    required_perm = 'add_branchaccess'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء صلاحية الفرع بنجاح')
         return super().form_valid(form)
 
 
-class BranchAccessUpdateView(LoginRequiredMixin, UpdateView):
+class BranchAccessUpdateView(BranchPermissionMixin, UpdateView):
     model = BranchAccess
     form_class = BranchAccessForm
     template_name = 'accounts/branchaccess_form.html'
     success_url = reverse_lazy('branchaccess-list')
+    required_perm = 'change_branchaccess'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث صلاحية الفرع بنجاح')
         return super().form_valid(form)
 
 
-class BranchAccessDeleteView(LoginRequiredMixin, DeleteView):
+class BranchAccessDeleteView(BranchPermissionMixin, DeleteView):
     model = BranchAccess
     template_name = 'accounts/branchaccess_confirm_delete.html'
     success_url = reverse_lazy('branchaccess-list')
+    required_perm = 'delete_branchaccess'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف صلاحية الفرع بنجاح')
@@ -263,11 +286,13 @@ class BranchAccessDeleteView(LoginRequiredMixin, DeleteView):
 # Role Views
 # ============================================================
 
-class RoleListView(LoginRequiredMixin, ListView):
+class RoleListView(BranchPermissionMixin, ListView):
     model = Role
     template_name = 'accounts/role_list.html'
     context_object_name = 'roles'
     paginate_by = 20
+    required_perm = 'view_role'
+    branch_field = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -292,19 +317,23 @@ class RoleListView(LoginRequiredMixin, ListView):
         return context
 
 
-class RoleDetailView(LoginRequiredMixin, DetailView):
+class RoleDetailView(BranchPermissionMixin, DetailView):
     model = Role
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/role_detail.html'
     context_object_name = 'role'
+    required_perm = 'view_role'
+    branch_field = None
 
 
-class RoleCreateView(LoginRequiredMixin, CreateView):
+class RoleCreateView(BranchPermissionMixin, CreateView):
     model = Role
     form_class = RoleForm
     template_name = 'accounts/role_form.html'
     success_url = reverse_lazy('role-list')
+    required_perm = 'add_role'
+    branch_field = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -323,13 +352,15 @@ class RoleCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class RoleUpdateView(LoginRequiredMixin, UpdateView):
+class RoleUpdateView(BranchPermissionMixin, UpdateView):
     model = Role
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = RoleForm
     template_name = 'accounts/role_form.html'
     success_url = reverse_lazy('role-list')
+    required_perm = 'change_role'
+    branch_field = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -348,12 +379,14 @@ class RoleUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class RoleDeleteView(LoginRequiredMixin, DeleteView):
+class RoleDeleteView(BranchPermissionMixin, DeleteView):
     model = Role
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'accounts/role_confirm_delete.html'
     success_url = reverse_lazy('role-list')
+    required_perm = 'delete_role'
+    branch_field = None
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الدور بنجاح')
@@ -383,11 +416,13 @@ def role_update_ajax(request, pk):
 # Permission Views
 # ============================================================
 
-class PermissionListView(LoginRequiredMixin, ListView):
+class PermissionListView(BranchPermissionMixin, ListView):
     model = Permission
     template_name = 'accounts/permission_list.html'
     context_object_name = 'permissions'
     paginate_by = 30
+    required_perm = 'view_permission'
+    branch_field = None
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -410,32 +445,38 @@ class PermissionListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PermissionCreateView(LoginRequiredMixin, CreateView):
+class PermissionCreateView(BranchPermissionMixin, CreateView):
     model = Permission
     form_class = PermissionForm
     template_name = 'accounts/permission_form.html'
     success_url = reverse_lazy('permission-list')
+    required_perm = 'add_permission'
+    branch_field = None
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء الصلاحية بنجاح')
         return super().form_valid(form)
 
 
-class PermissionUpdateView(LoginRequiredMixin, UpdateView):
+class PermissionUpdateView(BranchPermissionMixin, UpdateView):
     model = Permission
     form_class = PermissionForm
     template_name = 'accounts/permission_form.html'
     success_url = reverse_lazy('permission-list')
+    required_perm = 'change_permission'
+    branch_field = None
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث الصلاحية بنجاح')
         return super().form_valid(form)
 
 
-class PermissionDeleteView(LoginRequiredMixin, DeleteView):
+class PermissionDeleteView(BranchPermissionMixin, DeleteView):
     model = Permission
     template_name = 'accounts/permission_confirm_delete.html'
     success_url = reverse_lazy('permission-list')
+    required_perm = 'delete_permission'
+    branch_field = None
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف الصلاحية بنجاح')
@@ -465,11 +506,18 @@ def permission_update_ajax(request, pk):
 # EmployeeRole Views
 # ============================================================
 
-class EmployeeRoleListView(LoginRequiredMixin, ListView):
+class EmployeeRoleListView(BranchPermissionMixin, ListView):
     model = EmployeeRole
     template_name = 'accounts/employeerole_list.html'
     context_object_name = 'employee_roles'
     paginate_by = 20
+    required_perm = 'view_employeerole'
+    branch_field = 'branch'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -481,32 +529,35 @@ class EmployeeRoleListView(LoginRequiredMixin, ListView):
         return context
 
 
-class EmployeeRoleCreateView(LoginRequiredMixin, CreateView):
+class EmployeeRoleCreateView(BranchPermissionMixin, CreateView):
     model = EmployeeRole
     form_class = EmployeeRoleForm
     template_name = 'accounts/employeerole_form.html'
     success_url = reverse_lazy('employeerole-list')
+    required_perm = 'add_employeerole'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء دور الموظف بنجاح')
         return super().form_valid(form)
 
 
-class EmployeeRoleUpdateView(LoginRequiredMixin, UpdateView):
+class EmployeeRoleUpdateView(BranchPermissionMixin, UpdateView):
     model = EmployeeRole
     form_class = EmployeeRoleForm
     template_name = 'accounts/employeerole_form.html'
     success_url = reverse_lazy('employeerole-list')
+    required_perm = 'change_employeerole'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث دور الموظف بنجاح')
         return super().form_valid(form)
 
 
-class EmployeeRoleDeleteView(LoginRequiredMixin, DeleteView):
+class EmployeeRoleDeleteView(BranchPermissionMixin, DeleteView):
     model = EmployeeRole
     template_name = 'accounts/employeerole_confirm_delete.html'
     success_url = reverse_lazy('employeerole-list')
+    required_perm = 'delete_employeerole'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف دور الموظف بنجاح')
@@ -568,39 +619,49 @@ def employeerole_bulk_create(request):
 # EmployeePerformance Views
 # ============================================================
 
-class EmployeePerformanceListView(LoginRequiredMixin, ListView):
+class EmployeePerformanceListView(BranchPermissionMixin, ListView):
     model = EmployeePerformance
     template_name = 'accounts/employeeperformance_list.html'
     context_object_name = 'performances'
     paginate_by = 20
+    required_perm = 'view_employeeperformance'
+    branch_field = 'branch'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
+        return queryset
 
 
-class EmployeePerformanceCreateView(LoginRequiredMixin, CreateView):
+class EmployeePerformanceCreateView(BranchPermissionMixin, CreateView):
     model = EmployeePerformance
     form_class = EmployeePerformanceForm
     template_name = 'accounts/employeeperformance_form.html'
     success_url = reverse_lazy('employeeperformance-list')
+    required_perm = 'add_employeeperformance'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء أداء الموظف بنجاح')
         return super().form_valid(form)
 
 
-class EmployeePerformanceUpdateView(LoginRequiredMixin, UpdateView):
+class EmployeePerformanceUpdateView(BranchPermissionMixin, UpdateView):
     model = EmployeePerformance
     form_class = EmployeePerformanceForm
     template_name = 'accounts/employeeperformance_form.html'
     success_url = reverse_lazy('employeeperformance-list')
+    required_perm = 'change_employeeperformance'
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث أداء الموظف بنجاح')
         return super().form_valid(form)
 
 
-class EmployeePerformanceDeleteView(LoginRequiredMixin, DeleteView):
+class EmployeePerformanceDeleteView(BranchPermissionMixin, DeleteView):
     model = EmployeePerformance
     template_name = 'accounts/employeeperformance_confirm_delete.html'
     success_url = reverse_lazy('employeeperformance-list')
+    required_perm = 'delete_employeeperformance'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف أداء الموظف بنجاح')

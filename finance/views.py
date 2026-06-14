@@ -1,4 +1,3 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -47,12 +46,13 @@ class PaymentListView(BranchPermissionMixin, ListView):
         return context
 
 
-class PaymentDetailView(LoginRequiredMixin, DetailView):
+class PaymentDetailView(BranchPermissionMixin, DetailView):
     model = Payment
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'finance/payment_detail.html'
     context_object_name = 'payment'
+    required_perm = 'view_payment'
 
     def get_queryset(self):
         return Payment.objects.select_related('account', 'last_person')
@@ -63,36 +63,39 @@ class PaymentDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class PaymentCreateView(LoginRequiredMixin, CreateView):
+class PaymentCreateView(BranchPermissionMixin, CreateView):
     model = Payment
     form_class = PaymentForm
     template_name = 'finance/payment_form.html'
     success_url = reverse_lazy('payment-list')
+    required_perm = 'add_payment'
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
         return super().form_valid(form)
 
 
-class PaymentUpdateView(LoginRequiredMixin, UpdateView):
+class PaymentUpdateView(BranchPermissionMixin, UpdateView):
     model = Payment
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = PaymentForm
     template_name = 'finance/payment_form.html'
     success_url = reverse_lazy('payment-list')
+    required_perm = 'change_payment'
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
         return super().form_valid(form)
 
 
-class PaymentDeleteView(LoginRequiredMixin, DeleteView):
+class PaymentDeleteView(BranchPermissionMixin, DeleteView):
     model = Payment
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     template_name = 'finance/payment_confirm_delete.html'
     success_url = reverse_lazy('payment-list')
+    required_perm = 'delete_payment'
 
 
 @require_POST
@@ -338,9 +341,12 @@ class BillBuyListView(BranchPermissionMixin, ListView):
     context_object_name = 'bill_buys'
     paginate_by = 20
     required_perm = 'view_billbuy'
+    branch_field = 'last_person__branch'
 
     def get_queryset(self):
-        return BillBuy.objects.select_related('bill_buy_type', 'last_person').all()
+        queryset = BillBuy.objects.select_related('bill_buy_type', 'last_person').all()
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        return queryset
 
 
 class BillBuyDetailView(BranchPermissionMixin, DetailView):
