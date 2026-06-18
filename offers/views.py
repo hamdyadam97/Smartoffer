@@ -105,8 +105,11 @@ def export_studentoffer_pdf(request, slug):
 
     candidates = [
         r'C:\Windows\Fonts\arial.ttf',
+        os.path.join(BASE_DIR, 'static', 'fonts', 'Amiri-Regular.ttf'),
+        os.path.join(BASE_DIR, 'staticfiles', 'fonts', 'Amiri-Regular.ttf'),
         os.path.join(BASE_DIR, 'static', 'fonts', 'Cairo-Regular.ttf'),
         os.path.join(BASE_DIR, 'staticfiles', 'fonts', 'Cairo-Regular.ttf'),
+        find('fonts/Amiri-Regular.ttf'),
         find('fonts/Cairo-Regular.ttf'),
     ]
 
