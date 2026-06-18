@@ -28,6 +28,10 @@ def custom_page_not_found_view(request, exception):
     return render(request, '404.html', status=404)
 
 
+def custom_permission_denied_view(request, exception=None):
+    return render(request, '403.html', status=403)
+
+
 @login_required
 def dashboard(request):
     # Optional branch filter from URL ?branch=<id>

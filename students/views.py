@@ -17,11 +17,11 @@ class StudentListView(BranchPermissionMixin, ListView):
     context_object_name = 'students'
     paginate_by = 20
     required_perm = 'view_student'
-    branch_field = 'accounts__course__master__branch'
+    branch_field = 'branch'
 
     def get_queryset(self):
-        queryset = Student.objects.select_related('contact').all()
-        queryset = filter_by_branch(queryset, self.request.user, 'accounts__course__master__branch')
+        queryset = Student.objects.select_related('contact', 'branch').all()
+        queryset = filter_by_branch(queryset, self.request.user, 'branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -38,6 +38,12 @@ class StudentListView(BranchPermissionMixin, ListView):
             queryset = queryset.filter(preferred_contact=preferred)
         return queryset.distinct()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch
+        context['branches'] = Branch.objects.all().order_by('code', 'name')
+        return context
+
 
 class StudentDetailView(BranchPermissionMixin, DetailView):
     required_perm = 'view_student'
@@ -46,6 +52,12 @@ class StudentDetailView(BranchPermissionMixin, DetailView):
     slug_url_kwarg = 'slug'
     template_name = 'students/student_detail.html'
     context_object_name = 'student'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch
+        context['branches'] = Branch.objects.all().order_by('code', 'name')
+        return context
 
 
 class StudentCreateView(BranchPermissionMixin, CreateView):
@@ -141,6 +153,7 @@ def student_create_ajax(request):
         contact = Contact.objects.create(**contact_data)
         student = Student.objects.create(
             contact=contact,
+            branch=form.cleaned_data['branch'],
             level=form.cleaned_data['level'],
             preferred_contact=form.cleaned_data['preferred_contact']
         )
@@ -170,6 +183,7 @@ def student_update_ajax(request, pk):
         contact.qualification = form.cleaned_data['qualification']
         contact.photo = form.cleaned_data['photo']
         contact.save()
+        student.branch = form.cleaned_data['branch']
         student.level = form.cleaned_data['level']
         student.preferred_contact = form.cleaned_data['preferred_contact']
         student.save()

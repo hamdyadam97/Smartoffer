@@ -102,6 +102,15 @@
                         <div class="tab-pane fade" id="settings-pane" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
+                                    <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                                    <select name="branch" id="s_branch" class="form-select" required>
+                                        <option value="">اختر الفرع...</option>
+                                        {% for branch in branches %}
+                                        <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label">المستوى <span class="text-danger">*</span></label>
                                     <select name="level" id="s_level" class="form-select" required>
                                         <option value="مبتدئ">مبتدئ</option>
@@ -154,7 +163,7 @@
         btnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ';
     }
 
-    window.openStudentModal = function(id, firstName, secondName, thirdName, forthName, mobile, phone, address, nationality, identityNumber, identityLocation, identityStartDate, birthDate, birthLocation, qualification, level, preferredContact) {
+    window.openStudentModal = function(id, firstName, secondName, thirdName, forthName, mobile, phone, address, nationality, identityNumber, identityLocation, identityStartDate, birthDate, birthLocation, qualification, branchId, level, preferredContact) {
         alertBox.innerHTML = '';
         studentForm.reset();
 
@@ -177,11 +186,13 @@
             document.getElementById('s_birth_date').value = birthDate || '';
             document.getElementById('s_birth_location').value = birthLocation || '';
             document.getElementById('s_qualification').value = qualification || '';
+            document.getElementById('s_branch').value = branchId || '';
             document.getElementById('s_level').value = level || 'مبتدئ';
             document.getElementById('s_preferred_contact').value = preferredContact || 'whatsapp';
             modalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل طالب';
         } else {
             studentId.value = '';
+            document.getElementById('s_branch').value = '';
             modalTitle.innerHTML = '<i class="bi bi-person-plus text-primary me-2"></i> طالب جديد';
         }
         new bootstrap.Modal(studentModal).show();

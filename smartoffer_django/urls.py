@@ -10,6 +10,7 @@ from accounts.views import login_view, logout_view
 from core.views import dashboard
 
 handler404 = 'core.views.custom_page_not_found_view'
+handler403 = 'core.views.custom_permission_denied_view'
 
 urlpatterns = [
     path('admin/', admin.site.urls),

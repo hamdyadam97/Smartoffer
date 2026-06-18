@@ -57,6 +57,7 @@ class Student(models.Model):
     ]
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     contact = models.OneToOneField(Contact, on_delete=models.CASCADE, related_name='student', verbose_name='جهة الاتصال')
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='students', verbose_name='الفرع')
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='مبتدئ', db_index=True, verbose_name='المستوى')
     preferred_contact = models.CharField(max_length=20, choices=CONTACT_CHOICES, default='whatsapp', db_index=True, verbose_name='طريقة التواصل المفضلة')
     created_at = models.DateTimeField(auto_now_add=True)

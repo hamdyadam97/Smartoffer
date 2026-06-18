@@ -26,7 +26,7 @@ class BranchPermissionMixin(LoginRequiredMixin):
         if self.required_perm and not request.user.is_superuser:
             branch = self.get_branch()
             if not request.user.has_perm(self.required_perm, branch=branch):
-                raise PermissionDenied('ليس لديك صلاحية في هذا الفرع')
+                raise PermissionDenied('غير مسموح لك دخول هنا')
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):

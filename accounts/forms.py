@@ -66,6 +66,17 @@ class PersonCreationForm(forms.ModelForm):
 
 
 class PersonChangeForm(forms.ModelForm):
+    password1 = forms.CharField(
+        label='كلمة المرور',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
+    password2 = forms.CharField(
+        label='تأكيد كلمة المرور',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
+
     class Meta:
         model = Person
         fields = [
@@ -89,6 +100,24 @@ class PersonChangeForm(forms.ModelForm):
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'options': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+        if password1 or password2:
+            if password1 != password2:
+                self.add_error('password2', 'كلمتا المرور غير متطابقتين')
+        return cleaned_data
+
+    def save(self, commit=True):
+        person = super().save(commit=False)
+        password1 = self.cleaned_data.get('password1')
+        if password1:
+            person.set_password(password1)
+        if commit:
+            person.save()
+        return person
 
 
 class BranchAccessForm(forms.ModelForm):

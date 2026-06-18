@@ -67,14 +67,17 @@ class StudentForm(forms.ModelForm):
 
     class Meta:
         model = Student
-        fields = ['level', 'preferred_contact']
+        fields = ['branch', 'level', 'preferred_contact']
         widgets = {
+            'branch': forms.Select(attrs={'class': 'form-select'}),
             'level': forms.Select(attrs={'class': 'form-select'}),
             'preferred_contact': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from core.models import Branch
+        self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
         if self.instance and self.instance.pk:
             contact = self.instance.contact
             self.fields['first_name'].initial = contact.first_name
