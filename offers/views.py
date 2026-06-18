@@ -389,8 +389,8 @@ def export_studentoffer_pdf(request, slug):
     # ========== FOOTER ==========
     creator = offer.created_by.get_full_name() or offer.created_by.email
     elements.append(Paragraph(_prepare_arabic(f"تم إعداد العرض بواسطة: {creator}"), footer_style))
-    if offer.valid_until:
-        elements.append(Paragraph(_prepare_arabic(f"سريان العرض حتى: {offer.valid_until.strftime('%Y-%m-%d')}"), footer_style))
+    if offer.end_date:
+        elements.append(Paragraph(_prepare_arabic(f"سريان العرض حتى: {offer.end_date.strftime('%Y-%m-%d')}"), footer_style))
 
     doc.build(elements)
     return response
