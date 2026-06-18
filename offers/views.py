@@ -19,6 +19,11 @@ from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, 
 from .whatsapp import send_whatsapp_message
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def _prepare_arabic(text):
     """Reshape and apply BiDi algorithm for Arabic text in ReportLab PDF.
     Escapes XML special chars so ReportLab Paragraph doesn't break."""
@@ -30,7 +35,8 @@ def _prepare_arabic(text):
         reshaped = arabic_reshaper.reshape(str(text))
         bidi_text = get_display(reshaped, base_dir='R')
         return bidi_text.replace('&', '&amp;')
-    except Exception:
+    except Exception as exc:
+        logger.warning('Arabic text preparation failed: %s', exc, exc_info=True)
         return str(text).replace('&', '&amp;')
 
 
@@ -93,18 +99,30 @@ def export_studentoffer_pdf(request, slug):
 
     # Register Arabic font
     from reportlab.pdfbase.pdfmetrics import registerFontFamily
-    arial_path = r'C:\Windows\Fonts\arial.ttf'
+    from django.conf import settings
     font_name = 'ArialArabic'
-    if os.path.exists(arial_path):
-        pdfmetrics.registerFont(TTFont(font_name, arial_path))
-        registerFontFamily(font_name, normal=font_name, bold=font_name, italic=font_name, boldItalic=font_name)
-    else:
-        font_path = find('fonts/Cairo-Regular.ttf') or os.path.join('static', 'fonts', 'Cairo-Regular.ttf')
+    BASE_DIR = settings.BASE_DIR
+
+    candidates = [
+        r'C:\Windows\Fonts\arial.ttf',
+        os.path.join(BASE_DIR, 'static', 'fonts', 'Cairo-Regular.ttf'),
+        os.path.join(BASE_DIR, 'staticfiles', 'fonts', 'Cairo-Regular.ttf'),
+        find('fonts/Cairo-Regular.ttf'),
+    ]
+
+    registered = False
+    for font_path in candidates:
         if font_path and os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont(font_name, font_path))
-            registerFontFamily(font_name, normal=font_name, bold=font_name, italic=font_name, boldItalic=font_name)
-        else:
-            font_name = 'Helvetica'
+            try:
+                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                registerFontFamily(font_name, normal=font_name, bold=font_name, italic=font_name, boldItalic=font_name)
+                registered = True
+                break
+            except Exception:
+                continue
+
+    if not registered:
+        font_name = 'Helvetica'
 
     # Palette
     PRIMARY = colors.HexColor('#1e40af')
