@@ -181,18 +181,17 @@ def export_studentoffer_pdf(request, slug):
     branch = offer.branch
     company = branch.company if branch else None
 
-    # ========== HEADER: LOGO + COMPANY/BRANCH ==========
-    logo_img = None
-    logo_path = None
-    if branch and branch.logo:
-        logo_path = branch.logo.path
-    elif company and company.logo:
-        logo_path = company.logo.path
-    if logo_path:
+    # ========== HEADER: COMPANY LOGO + BRANCH LOGO + INFO ==========
+    def _load_logo(image_field, width=2.0*cm, height=2.0*cm):
+        if not image_field:
+            return None
         try:
-            logo_img = Image(logo_path, width=2.0*cm, height=2.0*cm)
+            return Image(image_field.path, width=width, height=height)
         except Exception:
-            logo_img = None
+            return None
+
+    company_logo = _load_logo(company.logo if company else None)
+    branch_logo = _load_logo(branch.logo if branch else None)
 
     header_lines = []
     if company:
@@ -212,16 +211,34 @@ def export_studentoffer_pdf(request, slug):
         header_lines.append(' · '.join(contact_bits))
 
     header_text = '<br/>'.join(header_lines)
+    header_para = Paragraph(header_text, header_small_style) if header_text else None
 
-    if logo_img and header_text:
+    if company_logo and branch_logo and header_para:
         header_inner = Table(
-            [[logo_img, Paragraph(header_text, header_small_style)]],
+            [[company_logo, header_para, branch_logo]],
+            colWidths=[doc.width*0.16, doc.width*0.68, doc.width*0.16]
+        )
+    elif company_logo and branch_logo:
+        header_inner = Table(
+            [[company_logo, '', branch_logo]],
+            colWidths=[doc.width*0.16, doc.width*0.68, doc.width*0.16]
+        )
+    elif branch_logo and header_para:
+        header_inner = Table(
+            [[branch_logo, header_para]],
             colWidths=[doc.width*0.16, doc.width*0.84]
         )
-    elif logo_img:
-        header_inner = Table([[logo_img]], colWidths=[doc.width])
-    elif header_text:
-        header_inner = Table([[Paragraph(header_text, header_small_style)]], colWidths=[doc.width])
+    elif company_logo and header_para:
+        header_inner = Table(
+            [[company_logo, header_para]],
+            colWidths=[doc.width*0.16, doc.width*0.84]
+        )
+    elif branch_logo:
+        header_inner = Table([[branch_logo]], colWidths=[doc.width])
+    elif company_logo:
+        header_inner = Table([[company_logo]], colWidths=[doc.width])
+    elif header_para:
+        header_inner = Table([[header_para]], colWidths=[doc.width])
     else:
         header_inner = None
 
@@ -383,17 +400,32 @@ def export_studentoffer_pdf(request, slug):
     sig_img = None
     if sig_path:
         try:
-            sig_img = Image(sig_path, width=3.5*cm, height=1.6*cm)
+            sig_img = Image(sig_path, width=4.0*cm, height=1.8*cm)
         except Exception:
             sig_img = None
 
-    if sig_img:
-        elements.append(sig_img)
-        elements.append(Spacer(1, 0.1*cm))
+    sig_label = Paragraph(_prepare_arabic('التوقيع'), sig_style)
+    sig_line_or_img = sig_img or Paragraph(_prepare_arabic('________________________'), sig_style)
+    sig_box = Table(
+        [[sig_line_or_img], [sig_label]],
+        colWidths=[doc.width*0.42]
+    )
+    sig_box.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+    ]))
+
+    date_box = Paragraph(
+        _prepare_arabic(f"التاريخ: {offer.created_at.strftime('%Y-%m-%d')}"),
+        sig_style
+    )
 
     sig_row = [
-        Paragraph(_prepare_arabic(f"التاريخ: {offer.created_at.strftime('%Y-%m-%d')}"), sig_style),
-        Paragraph(_prepare_arabic('التوقيع: _______________________'), sig_style),
+        date_box,
+        sig_box,
     ]
     sig_table = Table([sig_row], colWidths=[doc.width*0.5, doc.width*0.5])
     sig_table.setStyle(TableStyle([
