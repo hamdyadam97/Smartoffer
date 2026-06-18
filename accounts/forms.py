@@ -1,9 +1,26 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission, Permission
+from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 
 
 class TeamForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['default_branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['default_role'].queryset = Role.objects.all().order_by('name')
+            else:
+                perm = 'add_team' if not self.instance.pk else 'change_team'
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['default_branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['default_role'].queryset = Role.objects.all().order_by('name')
+        else:
+            self.fields['default_branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['default_role'].queryset = Role.objects.all().order_by('name')
+
     class Meta:
         model = Team
         fields = ['name', 'code', 'description', 'default_role', 'default_branch']
@@ -25,6 +42,22 @@ class PersonCreationForm(forms.ModelForm):
         label='تأكيد كلمة المرور',
         widget=forms.PasswordInput(attrs={'class': 'form-control'})
     )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['team'].queryset = Team.objects.all().order_by('name')
+            else:
+                allowed = user.get_branches_for_perm('add_person')
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['team'].queryset = Team.objects.all().order_by('name')
 
     class Meta:
         model = Person
@@ -77,6 +110,22 @@ class PersonChangeForm(forms.ModelForm):
         required=False
     )
 
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['team'].queryset = Team.objects.all().order_by('name')
+            else:
+                allowed = user.get_branches_for_perm('change_person')
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['team'].queryset = Team.objects.all().order_by('name')
+
     class Meta:
         model = Person
         fields = [
@@ -121,6 +170,25 @@ class PersonChangeForm(forms.ModelForm):
 
 
 class BranchAccessForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            else:
+                perm = 'add_branchaccess' if not self.instance.pk else 'change_branchaccess'
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(
+                    is_staff=True, branch__pk__in=allowed_ids
+                ).order_by('first_name', 'forth_name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+
     class Meta:
         model = BranchAccess
         fields = ['person', 'branch']
@@ -140,13 +208,35 @@ class RoleForm(forms.ModelForm):
             'permissions': forms.CheckboxSelectMultiple(),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['permissions'].queryset = Permission.objects.all().order_by('app_label', 'model_name', 'action')
         self.fields['permissions'].required = False
 
 
 class EmployeeRoleForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+                self.fields['role'].queryset = Role.objects.all().order_by('name')
+            else:
+                perm = 'add_employeerole' if not self.instance.pk else 'change_employeerole'
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(
+                    is_staff=True, branch__pk__in=allowed_ids
+                ).order_by('first_name', 'forth_name')
+                self.fields['role'].queryset = Role.objects.all().order_by('name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            self.fields['role'].queryset = Role.objects.all().order_by('name')
+
     class Meta:
         model = EmployeeRole
         fields = ['person', 'role', 'branch']
@@ -158,6 +248,25 @@ class EmployeeRoleForm(forms.ModelForm):
 
 
 class EmployeePerformanceForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            else:
+                perm = 'add_employeeperformance' if not self.instance.pk else 'change_employeeperformance'
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+                self.fields['person'].queryset = Person.objects.filter(
+                    is_staff=True, branch__pk__in=allowed_ids
+                ).order_by('first_name', 'forth_name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+
     class Meta:
         model = EmployeePerformance
         fields = [
@@ -177,6 +286,9 @@ class EmployeePerformanceForm(forms.ModelForm):
 
 
 class PermissionForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = Permission
         fields = ['codename', 'name', 'app_label', 'model_name', 'action']

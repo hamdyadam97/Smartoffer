@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}قائمة سندات القبض{% endblock %}
 
@@ -52,8 +53,14 @@
                 <td>{{ payment.get_payment_method_display }}</td>
                 <td class="text-start">
                     <a href="{% url 'payment-detail' payment.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    {% has_perm_on_branch user 'change_payment' payment.account.course.master.branch as can_change_payment %}
+                    {% if can_change_payment %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="openPaymentModal({{ payment.id }}, '{{ payment.account.id }}', '{{ payment.code }}', '{{ payment.date|date:'Y-m-d\\TH:i' }}', '{{ payment.amount_number }}', '{{ payment.amount_string|escapejs }}', '{{ payment.type|escapejs }}', '{{ payment.payment_method|escapejs }}', '{{ payment.payment_method_code|escapejs }}', '{{ payment.note|escapejs }}')"><i class="bi bi-pencil"></i></button>
+                    {% endif %}
+                    {% has_perm_on_branch user 'delete_payment' payment.account.course.master.branch as can_delete_payment %}
+                    {% if can_delete_payment %}
                     <a href="{% url 'payment-delete' payment.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

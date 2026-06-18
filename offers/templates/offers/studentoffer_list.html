@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}عروض الطلاب{% endblock %}
 
@@ -48,8 +49,14 @@
                 <td>{{ offer.created_at|date:'Y-m-d H:i' }}</td>
                 <td class="text-start">
                     <a href="{% url 'studentoffer-detail' offer.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    {% has_perm_on_branch user 'change_studentoffer' offer.branch as can_change_studentoffer %}
+                    {% if can_change_studentoffer %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="openStudentOfferModal({{ offer.id }}, '{{ offer.title|escapejs }}', '{{ offer.content|escapejs }}', '{{ offer.branch.id }}', '{{ offer.course.id|default:'' }}', '{{ offer.price }}', '{{ offer.price_description|escapejs }}', '{{ offer.start_date|date:'Y-m-d' }}', '{{ offer.end_date|date:'Y-m-d' }}', '{{ offer.scheduled_at|date:'Y-m-d\\TH:i' }}', '{{ offer.status|escapejs }}')"><i class="bi bi-pencil"></i></button>
+                    {% endif %}
+                    {% has_perm_on_branch user 'delete_studentoffer' offer.branch as can_delete_studentoffer %}
+                    {% if can_delete_studentoffer %}
                     <a href="{% url 'studentoffer-delete' offer.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

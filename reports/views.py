@@ -1,4 +1,6 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -11,6 +13,32 @@ from core.models import Branch
 from .models import ReportSnapshot
 from .forms import ReportSnapshotForm
 from .utils import generate_report_data, get_dashboard_data
+
+
+def _report_branches(user):
+    """Return branches the user may view reports for."""
+    if user.is_executive():
+        return Branch.objects.all()
+    return Branch.objects.filter(pk__in=[b.pk for b in user.get_branches_for_perm('view_report')])
+
+
+def _can_view_report(user, report):
+    """Check whether the user may export/view a specific report snapshot."""
+    if user.is_executive():
+        return True
+    if report.branch:
+        return user.has_perm('view_report', report.branch)
+    return user.has_perm_on_any_branch('view_report')
+
+
+def _check_report_perm(user, perm, branch=None):
+    """Raise PermissionDenied if the user lacks the report permission (optionally on a branch)."""
+    if user.is_executive():
+        return
+    if branch is not None and not user.has_perm(perm, branch):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    if branch is None and not user.has_perm_on_any_branch(perm):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
 
 
 class ReportSnapshotListView(BranchPermissionMixin, ListView):
@@ -35,7 +63,7 @@ class ReportSnapshotListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['branches'] = Branch.objects.all()
+        context['branches'] = _report_branches(self.request.user)
         return context
 
 
@@ -50,7 +78,7 @@ class ReportSnapshotDetailView(BranchPermissionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['branches'] = Branch.objects.all()
+        context['branches'] = _report_branches(self.request.user)
         return context
 
 
@@ -63,14 +91,16 @@ class ReportSnapshotCreateView(BranchPermissionMixin, SuccessMessageMixin, Creat
     required_perm = 'add_report'
 
     def form_valid(self, form):
+        _check_report_perm(self.request.user, 'add_report', form.instance.branch)
         form.instance.generated_by = self.request.user
         response = super().form_valid(form)
         # Generate report data automatically
         self.object.data_json = generate_report_data(
             self.object.report_type,
-            self.object.branch,
-            self.object.start_date,
-            self.object.end_date
+            branch=self.object.branch,
+            start_date=self.object.start_date,
+            end_date=self.object.end_date,
+            user=self.request.user,
         )
         self.object.save(update_fields=['data_json'])
         return response
@@ -86,6 +116,20 @@ class ReportSnapshotUpdateView(BranchPermissionMixin, SuccessMessageMixin, Updat
     success_message = 'تم تحديث التقرير بنجاح.'
     required_perm = 'change_report'
 
+    def form_valid(self, form):
+        _check_report_perm(self.request.user, 'change_report', form.instance.branch)
+        response = super().form_valid(form)
+        # Regenerate report data automatically
+        self.object.data_json = generate_report_data(
+            self.object.report_type,
+            branch=self.object.branch,
+            start_date=self.object.start_date,
+            end_date=self.object.end_date,
+            user=self.request.user,
+        )
+        self.object.save(update_fields=['data_json'])
+        return response
+
 
 class ReportSnapshotDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
     model = ReportSnapshot
@@ -97,38 +141,45 @@ class ReportSnapshotDeleteView(BranchPermissionMixin, SuccessMessageMixin, Delet
     required_perm = 'delete_report'
 
 
+@login_required
 @require_POST
 def reportsnapshot_create_ajax(request):
     form = ReportSnapshotForm(request.POST)
     if form.is_valid():
         report = form.save(commit=False)
+        _check_report_perm(request.user, 'add_report', report.branch)
         report.generated_by = request.user
         report.save()
         # Generate report data automatically
         report.data_json = generate_report_data(
             report.report_type,
-            report.branch,
-            report.start_date,
-            report.end_date
+            branch=report.branch,
+            start_date=report.start_date,
+            end_date=report.end_date,
+            user=request.user,
         )
         report.save(update_fields=['data_json'])
         return JsonResponse({'success': True, 'message': 'تم إنشاء التقرير بنجاح', 'id': report.id, 'slug': report.slug})
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+@login_required
 @require_POST
 def reportsnapshot_update_ajax(request, pk):
     report = get_object_or_404(ReportSnapshot, pk=pk)
+    _check_report_perm(request.user, 'change_report', report.branch)
     form = ReportSnapshotForm(request.POST, instance=report)
     if form.is_valid():
         report = form.save(commit=False)
+        _check_report_perm(request.user, 'change_report', report.branch)
         report.save()
         # Regenerate data
         report.data_json = generate_report_data(
             report.report_type,
-            report.branch,
-            report.start_date,
-            report.end_date
+            branch=report.branch,
+            start_date=report.start_date,
+            end_date=report.end_date,
+            user=request.user,
         )
         report.save(update_fields=['data_json'])
         return JsonResponse({'success': True, 'message': 'تم تحديث التقرير بنجاح'})
@@ -147,8 +198,11 @@ class ReportDashboardView(BranchPermissionMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         branch_id = self.request.GET.get('branch')
         branch = Branch.objects.filter(pk=branch_id).first() if branch_id else None
-        context['dashboard'] = get_dashboard_data(branch=branch)
-        context['branches'] = Branch.objects.all()
+        context['dashboard'] = get_dashboard_data(
+            user=self.request.user,
+            branch=branch
+        )
+        context['branches'] = _report_branches(self.request.user)
         context['selected_branch'] = branch
         return context
 
@@ -157,11 +211,14 @@ class ReportDashboardView(BranchPermissionMixin, TemplateView):
 # Export to Excel
 # ============================================================
 
+@login_required
 def export_report_excel(request, slug):
     import openpyxl
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
     report = get_object_or_404(ReportSnapshot, slug=slug)
+    if not _can_view_report(request.user, report):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = report.get_report_type_display()
@@ -303,6 +360,7 @@ def _build_table(data, headers, doc_width, arabic_style):
     return table
 
 
+@login_required
 def export_report_pdf(request, slug):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape

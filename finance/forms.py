@@ -3,6 +3,20 @@ from .models import Payment, PaymentOut, Deposit, Withdraw, BillBuyType, BillBuy
 
 
 class PaymentForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from registrations.models import Account
+        queryset = Account.objects.select_related('student', 'course', 'course__master')
+        if user is not None:
+            if user.is_executive():
+                self.fields['account'].queryset = queryset.all()
+            else:
+                perm = 'add_payment' if not self.instance.pk else 'change_payment'
+                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+                self.fields['account'].queryset = queryset.filter(course__master__branch__pk__in=allowed)
+        else:
+            self.fields['account'].queryset = queryset.all()
+
     class Meta:
         model = Payment
         fields = [
@@ -23,6 +37,9 @@ class PaymentForm(forms.ModelForm):
 
 
 class PaymentOutForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = PaymentOut
         fields = [
@@ -41,6 +58,20 @@ class PaymentOutForm(forms.ModelForm):
 
 
 class DepositForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Bank
+        queryset = Bank.objects.select_related('branch')
+        if user is not None:
+            if user.is_executive():
+                self.fields['bank'].queryset = queryset.all()
+            else:
+                perm = 'add_deposit' if not self.instance.pk else 'change_deposit'
+                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+                self.fields['bank'].queryset = queryset.filter(branch__pk__in=allowed)
+        else:
+            self.fields['bank'].queryset = queryset.all()
+
     class Meta:
         model = Deposit
         fields = ['code', 'date', 'amount', 'bank', 'note']
@@ -54,6 +85,20 @@ class DepositForm(forms.ModelForm):
 
 
 class WithdrawForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Bank
+        queryset = Bank.objects.select_related('branch')
+        if user is not None:
+            if user.is_executive():
+                self.fields['bank'].queryset = queryset.all()
+            else:
+                perm = 'add_withdraw' if not self.instance.pk else 'change_withdraw'
+                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+                self.fields['bank'].queryset = queryset.filter(branch__pk__in=allowed)
+        else:
+            self.fields['bank'].queryset = queryset.all()
+
     class Meta:
         model = Withdraw
         fields = ['code', 'date', 'amount', 'bank', 'note']
@@ -67,6 +112,9 @@ class WithdrawForm(forms.ModelForm):
 
 
 class BillBuyTypeForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = BillBuyType
         fields = ['name', 'code', 'description']
@@ -78,6 +126,9 @@ class BillBuyTypeForm(forms.ModelForm):
 
 
 class BillBuyForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = BillBuy
         fields = [
@@ -97,6 +148,20 @@ class BillBuyForm(forms.ModelForm):
 
 
 class OfferForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from courses.models import Master
+        queryset = Master.objects.select_related('branch')
+        if user is not None:
+            if user.is_executive():
+                self.fields['master'].queryset = queryset.all()
+            else:
+                perm = 'add_offer_price' if not self.instance.pk else 'change_offer_price'
+                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+                self.fields['master'].queryset = queryset.filter(branch__pk__in=allowed)
+        else:
+            self.fields['master'].queryset = queryset.all()
+
     class Meta:
         model = Offer
         fields = [
@@ -128,6 +193,19 @@ class OfferForm(forms.ModelForm):
 
 
 class CallForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = Offer.objects.select_related('master')
+        if user is not None:
+            if user.is_executive():
+                self.fields['offer'].queryset = queryset.all()
+            else:
+                perm = 'add_call' if not self.instance.pk else 'change_call'
+                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+                self.fields['offer'].queryset = queryset.filter(master__branch__pk__in=allowed)
+        else:
+            self.fields['offer'].queryset = queryset.all()
+
     class Meta:
         model = Call
         fields = ['offer', 'call_type', 'duration', 'notes']

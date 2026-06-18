@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from django.views.generic import (
@@ -32,33 +33,100 @@ def custom_permission_denied_view(request, exception=None):
     return render(request, '403.html', status=403)
 
 
+DASHBOARD_PERMS = [
+    'view_student',
+    'view_account',
+    'view_offer',
+    'view_call',
+    'view_payment',
+    'view_course',
+    'view_studentoffer',
+]
+
+
+def _allowed_branch_ids_union(user, perms):
+    """Return set of branch ids the user can access for any of the given perms."""
+    if user.is_executive():
+        return None
+    ids = set()
+    for perm in perms:
+        for branch in user.get_branches_for_perm(perm):
+            ids.add(branch.pk)
+    return ids
+
+
+def _allowed_branches_queryset(user, perms):
+    """Return Branch queryset scoped to the user's allowed branches."""
+    ids = _allowed_branch_ids_union(user, perms)
+    if ids is None:
+        return Branch.objects.all()
+    return Branch.objects.filter(pk__in=ids)
+
+
+def _check_perm(user, perm):
+    """Raise PermissionDenied if the user does not have a permission on any branch."""
+    if user.is_executive():
+        return
+    if not user.get_branches_for_perm(perm):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+
+def _check_branch_perm(user, perm, branch=None):
+    """Raise PermissionDenied if the user lacks the permission (optionally on a branch)."""
+    if user.is_executive():
+        return
+    allowed_ids = {b.pk for b in user.get_branches_for_perm(perm)}
+    if not allowed_ids:
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    if branch is not None and branch.pk not in allowed_ids:
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+
 @login_required
 def dashboard(request):
     # Optional branch filter from URL ?branch=<id>
     selected_branch_id = request.GET.get('branch')
+    allowed_ids = _allowed_branch_ids_union(request.user, DASHBOARD_PERMS)
+
     selected_branch = None
     if selected_branch_id:
         selected_branch = get_object_or_404(Branch, pk=selected_branch_id)
+        if allowed_ids is not None and selected_branch.pk not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
 
-    # Base querysets (filtered by branch if selected)
-    student_qs = Student.objects.all()
-    course_qs = Course.objects.all()
-    account_qs = Account.objects.all()
-    payment_qs = Payment.objects.all()
-    offer_qs = Offer.objects.all()
-    studentoffer_qs = StudentOffer.objects.all()
-    call_qs = Call.objects.all()
+    # Base querysets scoped by permission
+    student_qs = filter_by_branch(
+        Student.objects.all(), request.user, 'accounts__course__master__branch', 'view_student'
+    )
+    course_qs = filter_by_branch(
+        Course.objects.all(), request.user, 'master__branch', 'view_course'
+    )
+    account_qs = filter_by_branch(
+        Account.objects.all(), request.user, 'course__master__branch', 'view_account'
+    )
+    payment_qs = filter_by_branch(
+        Payment.objects.all(), request.user, 'account__course__master__branch', 'view_payment'
+    )
+    offer_qs = filter_by_branch(
+        Offer.objects.all(), request.user, 'master__branch', 'view_offer'
+    )
+    studentoffer_qs = filter_by_branch(
+        StudentOffer.objects.all(), request.user, 'branch', 'view_studentoffer'
+    )
+    call_qs = filter_by_branch(
+        Call.objects.all(), request.user, 'offer__master__branch', 'view_call'
+    )
 
     if selected_branch:
-        student_qs = Student.objects.filter(
+        student_qs = student_qs.filter(
             accounts__course__master__branch=selected_branch
         ).distinct()
-        course_qs = Course.objects.filter(master__branch=selected_branch)
-        account_qs = Account.objects.filter(course__master__branch=selected_branch)
-        payment_qs = Payment.objects.filter(account__course__master__branch=selected_branch)
-        offer_qs = Offer.objects.filter(master__branch=selected_branch)
-        studentoffer_qs = StudentOffer.objects.filter(branch=selected_branch)
-        call_qs = Call.objects.filter(offer__master__branch=selected_branch)
+        course_qs = course_qs.filter(master__branch=selected_branch)
+        account_qs = account_qs.filter(course__master__branch=selected_branch)
+        payment_qs = payment_qs.filter(account__course__master__branch=selected_branch)
+        offer_qs = offer_qs.filter(master__branch=selected_branch)
+        studentoffer_qs = studentoffer_qs.filter(branch=selected_branch)
+        call_qs = call_qs.filter(offer__master__branch=selected_branch)
 
     # Base stats
     students_count = student_qs.count()
@@ -66,23 +134,40 @@ def dashboard(request):
     registrations_count = account_qs.count()
     payments_total = payment_qs.aggregate(total=Sum('amount_number'))['total'] or 0
     offers_count = offer_qs.count()
-    branches_count = Branch.objects.count()
+    branches_count = _allowed_branches_queryset(request.user, DASHBOARD_PERMS).count()
     student_offers_count = studentoffer_qs.count()
     calls_count = call_qs.count()
 
     # Branch stats with annotations
-    branches = Branch.objects.select_related('company').all()
+    branches = _allowed_branches_queryset(request.user, DASHBOARD_PERMS).select_related('company')
     branch_stats = []
     for branch in branches:
         branch_stats.append({
             'branch': branch,
-            'registrations': Account.objects.filter(course__master__branch=branch).count(),
-            'payments_total': Payment.objects.filter(account__course__master__branch=branch).aggregate(
-                total=Sum('amount_number'))['total'] or 0,
-            'offers': Offer.objects.filter(master__branch=branch).count(),
-            'student_offers': StudentOffer.objects.filter(branch=branch).count(),
-            'courses': Course.objects.filter(master__branch=branch).count(),
-            'masters': Course.objects.filter(master__branch=branch).values('master').distinct().count(),
+            'registrations': filter_by_branch(
+                Account.objects.filter(course__master__branch=branch),
+                request.user, 'course__master__branch', 'view_account'
+            ).count(),
+            'payments_total': filter_by_branch(
+                Payment.objects.filter(account__course__master__branch=branch),
+                request.user, 'account__course__master__branch', 'view_payment'
+            ).aggregate(total=Sum('amount_number'))['total'] or 0,
+            'offers': filter_by_branch(
+                Offer.objects.filter(master__branch=branch),
+                request.user, 'master__branch', 'view_offer'
+            ).count(),
+            'student_offers': filter_by_branch(
+                StudentOffer.objects.filter(branch=branch),
+                request.user, 'branch', 'view_studentoffer'
+            ).count(),
+            'courses': filter_by_branch(
+                Course.objects.filter(master__branch=branch),
+                request.user, 'master__branch', 'view_course'
+            ).count(),
+            'masters': filter_by_branch(
+                Course.objects.filter(master__branch=branch),
+                request.user, 'master__branch', 'view_course'
+            ).values('master').distinct().count(),
         })
 
     # Monthly payments chart (last 6 months)
@@ -214,14 +299,39 @@ def branch_dashboard(request, slug):
     """لوحة تحكم مفصلة لفرع معين"""
     branch = get_object_or_404(Branch, slug=slug)
 
-    # Stats filtered by this branch
-    registrations_qs = Account.objects.filter(course__master__branch=branch)
-    payments_qs = Payment.objects.filter(account__course__master__branch=branch)
-    offers_qs = Offer.objects.filter(master__branch=branch)
-    studentoffers_qs = StudentOffer.objects.filter(branch=branch)
-    courses_qs = Course.objects.filter(master__branch=branch)
-    calls_qs = Call.objects.filter(offer__master__branch=branch)
-    students_qs = Student.objects.filter(accounts__course__master__branch=branch).distinct()
+    allowed_ids = _allowed_branch_ids_union(request.user, DASHBOARD_PERMS)
+    if allowed_ids is not None and branch.pk not in allowed_ids:
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    # Stats filtered by this branch and scoped by permission
+    registrations_qs = filter_by_branch(
+        Account.objects.filter(course__master__branch=branch),
+        request.user, 'course__master__branch', 'view_account'
+    )
+    payments_qs = filter_by_branch(
+        Payment.objects.filter(account__course__master__branch=branch),
+        request.user, 'account__course__master__branch', 'view_payment'
+    )
+    offers_qs = filter_by_branch(
+        Offer.objects.filter(master__branch=branch),
+        request.user, 'master__branch', 'view_offer'
+    )
+    studentoffers_qs = filter_by_branch(
+        StudentOffer.objects.filter(branch=branch),
+        request.user, 'branch', 'view_studentoffer'
+    )
+    courses_qs = filter_by_branch(
+        Course.objects.filter(master__branch=branch),
+        request.user, 'master__branch', 'view_course'
+    )
+    calls_qs = filter_by_branch(
+        Call.objects.filter(offer__master__branch=branch),
+        request.user, 'offer__master__branch', 'view_call'
+    )
+    students_qs = filter_by_branch(
+        Student.objects.filter(accounts__course__master__branch=branch).distinct(),
+        request.user, 'accounts__course__master__branch', 'view_student'
+    )
 
     students_count = students_qs.count()
     courses_count = courses_qs.count()
@@ -415,6 +525,7 @@ class BranchListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = filter_by_branch(queryset, self.request.user, 'id', 'view_branch')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -501,7 +612,7 @@ class BankDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/bank_detail.html'
     context_object_name = 'bank'
     required_perm = 'view_bank'
-    branch_field = None
+    branch_field = 'branch'
 
 
 class BankCreateView(BranchPermissionMixin, CreateView):
@@ -510,6 +621,12 @@ class BankCreateView(BranchPermissionMixin, CreateView):
     template_name = 'core/bank_form.html'
     success_url = reverse_lazy('bank-list')
     required_perm = 'add_bank'
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء البنك بنجاح')
@@ -522,6 +639,12 @@ class BankUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'core/bank_form.html'
     success_url = reverse_lazy('bank-list')
     required_perm = 'change_bank'
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث البنك بنجاح')
@@ -533,6 +656,7 @@ class BankDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'core/bank_confirm_delete.html'
     success_url = reverse_lazy('bank-list')
     required_perm = 'delete_bank'
+    branch_field = 'branch'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف البنك بنجاح')
@@ -558,7 +682,9 @@ class MasterCategoryListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['branches'] = Branch.objects.all()
+        context['branches'] = _allowed_branches_queryset(
+            self.request.user, ['view_mastercategory']
+        )
         return context
 
 
@@ -569,7 +695,7 @@ class MasterCategoryDetailView(BranchPermissionMixin, DetailView):
     template_name = 'core/mastercategory_detail.html'
     context_object_name = 'category'
     required_perm = 'view_mastercategory'
-    branch_field = None
+    branch_field = 'branch'
 
 
 class MasterCategoryCreateView(BranchPermissionMixin, CreateView):
@@ -578,6 +704,12 @@ class MasterCategoryCreateView(BranchPermissionMixin, CreateView):
     template_name = 'core/mastercategory_form.html'
     success_url = reverse_lazy('mastercategory-list')
     required_perm = 'add_mastercategory'
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         messages.success(self.request, 'تم إنشاء التصنيف بنجاح')
@@ -592,6 +724,12 @@ class MasterCategoryUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'core/mastercategory_form.html'
     success_url = reverse_lazy('mastercategory-list')
     required_perm = 'change_mastercategory'
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         messages.success(self.request, 'تم تحديث التصنيف بنجاح')
@@ -605,6 +743,7 @@ class MasterCategoryDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'core/mastercategory_confirm_delete.html'
     success_url = reverse_lazy('mastercategory-list')
     required_perm = 'delete_mastercategory'
+    branch_field = 'branch'
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف التصنيف بنجاح')
@@ -618,6 +757,7 @@ class MasterCategoryDeleteView(BranchPermissionMixin, DeleteView):
 @login_required
 def companies_list_ajax(request):
     """جلب قائمة الشركات بصيغة JSON (للـ Modal)"""
+    _check_perm(request.user, 'view_company')
     companies = list(Company.objects.values('id', 'name'))
     return JsonResponse({'companies': companies})
 
@@ -626,6 +766,7 @@ def companies_list_ajax(request):
 @require_POST
 def branch_create_ajax(request):
     """إنشاء فرع جديد عبر AJAX (للـ Modal العائم)"""
+    _check_perm(request.user, 'add_branch')
     form = BranchForm(request.POST, request.FILES)
     if form.is_valid():
         try:
@@ -655,6 +796,7 @@ def branch_create_ajax(request):
 def branch_update_ajax(request, pk):
     """تحديث فرع عبر AJAX (للـ Modal العائم)"""
     branch = get_object_or_404(Branch, pk=pk)
+    _check_branch_perm(request.user, 'change_branch', branch)
     form = BranchForm(request.POST, request.FILES, instance=branch)
     if form.is_valid():
         form.save()
@@ -672,7 +814,10 @@ def branch_update_ajax(request, pk):
 @require_POST
 def mastercategory_create_ajax(request):
     """إنشاء تصنيف جديد عبر AJAX (للـ Modal العائم)"""
-    form = MasterCategoryForm(request.POST)
+    branch_id = request.POST.get('branch')
+    branch = get_object_or_404(Branch, pk=branch_id) if branch_id else None
+    _check_branch_perm(request.user, 'add_mastercategory', branch)
+    form = MasterCategoryForm(request.POST, user=request.user)
     if form.is_valid():
         category = form.save()
         return JsonResponse({
@@ -694,7 +839,8 @@ def mastercategory_create_ajax(request):
 def mastercategory_update_ajax(request, pk):
     """تحديث تصنيف عبر AJAX (للـ Modal العائم)"""
     category = get_object_or_404(MasterCategory, pk=pk)
-    form = MasterCategoryForm(request.POST, instance=category)
+    _check_branch_perm(request.user, 'change_mastercategory', category.branch)
+    form = MasterCategoryForm(request.POST, instance=category, user=request.user)
     if form.is_valid():
         form.save()
         return JsonResponse({
@@ -711,6 +857,7 @@ def mastercategory_update_ajax(request, pk):
 @require_POST
 def company_create_ajax(request):
     """إنشاء شركة جديدة عبر AJAX (للـ Modal العائم)"""
+    _check_perm(request.user, 'add_company')
     form = CompanyForm(request.POST, request.FILES)
     if form.is_valid():
         company = form.save()
@@ -733,6 +880,7 @@ def company_create_ajax(request):
 def company_update_ajax(request, pk):
     """تحديث شركة عبر AJAX (للـ Modal العائم)"""
     company = get_object_or_404(Company, pk=pk)
+    _check_perm(request.user, 'change_company')
     form = CompanyForm(request.POST, request.FILES, instance=company)
     if form.is_valid():
         form.save()

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
 {% block title %}قائمة التسجيلات{% endblock %}
 
@@ -60,8 +61,14 @@
                 <td>{{ account.get_remain_price }}</td>
                 <td class="text-start">
                     <a href="{% url 'registration-detail' account.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
+                    {% has_perm_on_branch user 'change_registration' account.course.master.branch as can_change_registration %}
+                    {% if can_change_registration %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="openRegistrationModal({{ account.id }}, '{{ account.course.id }}', '{{ account.student.id }}', '{{ account.code }}', '{{ account.register_date|date:'Y-m-d\\TH:i' }}', '{{ account.course_payment_type|escapejs }}', '{{ account.course_price }}', '{{ account.course_discount_amount }}', '{{ account.course_profit_amount }}', '{{ account.course_credit_amount }}', '{{ account.note|escapejs }}')"><i class="bi bi-pencil"></i></button>
+                    {% endif %}
+                    {% has_perm_on_branch user 'delete_registration' account.course.master.branch as can_delete_registration %}
+                    {% if can_delete_registration %}
                     <a href="{% url 'registration-delete' account.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

@@ -33,10 +33,12 @@
                     <td>{{ er.role.name }}</td>
                     <td>{{ er.branch.name }}</td>
                     <td>
-                        {% if user|has_perm:'change_employeerole' %}
+                        {% has_perm_on_branch user 'change_employeerole' er.branch as can_change_employeerole %}
+                        {% if can_change_employeerole %}
                         <a href="{% url 'employeerole-update' er.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
                         {% endif %}
-                        {% if user|has_perm:'delete_employeerole' %}
+                        {% has_perm_on_branch user 'delete_employeerole' er.branch as can_delete_employeerole %}
+                        {% if can_delete_employeerole %}
                         <a href="{% url 'employeerole-delete' er.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                         {% endif %}
                     </td>

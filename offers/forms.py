@@ -3,6 +3,14 @@ from .models import StudentOffer, OfferRecipient, OfferNote
 
 
 class StudentOfferForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            perm = 'change_studentoffer' if self.instance and self.instance.pk else 'add_studentoffer'
+            branch_ids = [b.pk for b in user.get_branches_for_perm(perm)]
+            self.fields['branch'].queryset = self.fields['branch'].queryset.filter(pk__in=branch_ids)
+            self.fields['course'].queryset = self.fields['course'].queryset.filter(master__branch__in=branch_ids)
+
     class Meta:
         model = StudentOffer
         exclude = ['created_by', 'created_at', 'updated_at', 'sent_at']
@@ -21,6 +29,14 @@ class StudentOfferForm(forms.ModelForm):
 
 
 class OfferRecipientForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            perm = 'change_studentoffer' if self.instance and self.instance.pk else 'add_studentoffer'
+            branch_ids = [b.pk for b in user.get_branches_for_perm(perm)]
+            self.fields['offer'].queryset = self.fields['offer'].queryset.filter(branch__in=branch_ids)
+            self.fields['student'].queryset = self.fields['student'].queryset.filter(branch__in=branch_ids)
+
     class Meta:
         model = OfferRecipient
         exclude = ['sent_at', 'opened_at', 'interacted_at']
@@ -34,6 +50,12 @@ class OfferRecipientForm(forms.ModelForm):
 
 class OfferRecipientAddForm(forms.ModelForm):
     """Form to add a recipient directly from an offer detail page (offer is preset)."""
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            branch_ids = [b.pk for b in user.get_branches_for_perm('change_studentoffer')]
+            self.fields['student'].queryset = self.fields['student'].queryset.filter(branch__in=branch_ids)
+
     class Meta:
         model = OfferRecipient
         exclude = ['offer', 'sent_at', 'opened_at', 'interacted_at']
@@ -71,15 +93,27 @@ class QuickOfferForm(forms.Form):
     contact_email = forms.EmailField(required=False, label='بريد المستلم', widget=forms.EmailInput(attrs={'class': 'form-control'}))
     channel = forms.ChoiceField(choices=OfferRecipient.CHANNEL_CHOICES, initial='whatsapp', label='قناة الإرسال', widget=forms.Select(attrs={'class': 'form-select'}))
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         from core.models import Branch
         from courses.models import Course
         super().__init__(*args, **kwargs)
-        self.fields['branch'].queryset = Branch.objects.all()
-        self.fields['course'].queryset = Course.objects.select_related('master').all()
+        if user is not None:
+            branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
+            self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
+            self.fields['course'].queryset = Course.objects.select_related('master').filter(master__branch__in=branch_ids)
+        else:
+            self.fields['branch'].queryset = Branch.objects.all()
+            self.fields['course'].queryset = Course.objects.select_related('master').all()
 
 
 class OfferNoteForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            perm = 'change_offernote' if self.instance and self.instance.pk else 'add_offernote'
+            branch_ids = [b.pk for b in user.get_branches_for_perm(perm)]
+            self.fields['offer'].queryset = self.fields['offer'].queryset.filter(branch__in=branch_ids)
+
     class Meta:
         model = OfferNote
         exclude = ['person', 'created_at']

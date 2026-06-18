@@ -3,6 +3,25 @@ from .models import Account, AttachType, Attach, AccountAttach, AccountCondition
 
 
 class AccountForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from courses.models import Course
+        from students.models import Student
+        perm = 'change_registration' if self.instance and self.instance.pk else 'add_registration'
+        if user is not None:
+            if user.is_executive():
+                self.fields['course'].queryset = Course.objects.all().order_by('-created_at')
+                self.fields['student'].queryset = Student.objects.all().order_by('-created_at')
+            else:
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['course'].queryset = Course.objects.filter(
+                    master__branch_id__in=allowed_ids
+                ).order_by('-created_at')
+                self.fields['student'].queryset = Student.objects.filter(
+                    branch_id__in=allowed_ids
+                ).order_by('-created_at')
+
     class Meta:
         model = Account
         fields = [
@@ -25,6 +44,9 @@ class AccountForm(forms.ModelForm):
 
 
 class AttachTypeForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = AttachType
         fields = ['name', 'code', 'description']
@@ -36,6 +58,9 @@ class AttachTypeForm(forms.ModelForm):
 
 
 class AttachForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = Attach
         fields = ['attach_type', 'title', 'file_data', 'file_name', 'file_type']
@@ -49,6 +74,23 @@ class AttachForm(forms.ModelForm):
 
 
 class AccountAttachForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        perm = 'change_accountattach' if self.instance and self.instance.pk else 'add_accountattach'
+        if user is not None:
+            if user.is_executive():
+                self.fields['account'].queryset = Account.objects.all().order_by('-created_at')
+                self.fields['attach'].queryset = Attach.objects.all().order_by('-created_at')
+            else:
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['account'].queryset = Account.objects.filter(
+                    course__master__branch_id__in=allowed_ids
+                ).order_by('-created_at')
+                self.fields['attach'].queryset = Attach.objects.filter(
+                    person__branch_id__in=allowed_ids
+                ).order_by('-created_at')
+
     class Meta:
         model = AccountAttach
         fields = ['account', 'attach']
@@ -59,6 +101,19 @@ class AccountAttachForm(forms.ModelForm):
 
 
 class AccountConditionForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        perm = 'change_accountcondition' if self.instance and self.instance.pk else 'add_accountcondition'
+        if user is not None:
+            if user.is_executive():
+                self.fields['account'].queryset = Account.objects.all().order_by('-created_at')
+            else:
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['account'].queryset = Account.objects.filter(
+                    course__master__branch_id__in=allowed_ids
+                ).order_by('-created_at')
+
     class Meta:
         model = AccountCondition
         fields = ['account', 'title', 'content', 'fulfilled']
@@ -71,6 +126,19 @@ class AccountConditionForm(forms.ModelForm):
 
 
 class AccountNoteForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        perm = 'change_accountnote' if self.instance and self.instance.pk else 'add_accountnote'
+        if user is not None:
+            if user.is_executive():
+                self.fields['account'].queryset = Account.objects.all().order_by('-created_at')
+            else:
+                allowed = user.get_branches_for_perm(perm)
+                allowed_ids = [b.pk for b in allowed]
+                self.fields['account'].queryset = Account.objects.filter(
+                    course__master__branch_id__in=allowed_ids
+                ).order_by('-created_at')
+
     class Meta:
         model = AccountNote
         fields = ['account', 'content']

@@ -148,14 +148,14 @@ class Person(AbstractBaseUser, PermissionsMixin):
         If branch is given, the permission must be assigned through a role
         on that exact branch.
         """
-        if self.is_superuser:
+        if self.is_executive():
             return True
-        qs = Permission.objects.filter(
-            codename=perm_codename,
-            roles__employees__person=self
+        qs = EmployeeRole.objects.filter(
+            person=self,
+            role__permissions__codename=perm_codename
         )
         if branch is not None:
-            qs = qs.filter(roles__employees__branch=branch)
+            qs = qs.filter(branch=branch)
         return qs.exists()
 
     def has_perms(self, perm_codenames, branch=None):
@@ -164,29 +164,62 @@ class Person(AbstractBaseUser, PermissionsMixin):
             return True
         return all(self.has_perm(p, branch=branch) for p in perm_codenames)
 
+    def is_executive(self):
+        """Executive managers bypass branch scope restrictions."""
+        return self.is_superuser
+
     def get_accessible_branches(self):
-        """Return all branches this user has any role on (main + role branches)."""
-        if self.is_superuser:
+        """Return branches where the user has any assigned role.
+        This is kept for compatibility but should NOT be used for permission checks.
+        Use get_branches_for_perm(perm) for permission-scoped branch access.
+        """
+        if self.is_executive():
             from core.models import Branch
             return list(Branch.objects.all())
         branches = set()
-        if self.branch:
-            branches.add(self.branch)
-        for access in self.branch_accesses.all():
-            branches.add(access.branch)
-        for er in self.employee_roles.all():
+        for er in self.employee_roles.select_related('branch').all():
             branches.add(er.branch)
         return list(branches)
 
     def get_branches_for_perm(self, perm_codename):
-        """Return branches where the user has a specific permission."""
-        if self.is_superuser:
+        """Return branches where the user has a specific permission via EmployeeRole.
+        This is the source of truth for Permission + Branch Scope.
+        """
+        if self.is_executive():
             from core.models import Branch
             return list(Branch.objects.all())
         branches = set()
-        for er in self.employee_roles.filter(role__permissions__codename=perm_codename):
+        for er in self.employee_roles.select_related('branch').filter(
+            role__permissions__codename=perm_codename
+        ):
             branches.add(er.branch)
         return list(branches)
+
+    def get_branches_for_perms(self, perm_codenames):
+        """Return branches where the user has ALL the specified permissions."""
+        if self.is_executive():
+            from core.models import Branch
+            return list(Branch.objects.all())
+        if not perm_codenames:
+            return []
+        branches = None
+        for perm in perm_codenames:
+            perm_branches = set(self.get_branches_for_perm(perm))
+            if branches is None:
+                branches = perm_branches
+            else:
+                branches &= perm_branches
+            if not branches:
+                return []
+        return list(branches)
+
+    def has_perm_on_any_branch(self, perm_codename):
+        """Check if user has a permission on at least one branch."""
+        if self.is_executive():
+            return True
+        return self.employee_roles.filter(
+            role__permissions__codename=perm_codename
+        ).exists()
 
 
 class BranchAccess(models.Model):

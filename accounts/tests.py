@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from core.models import Company, Branch
-from .models import Team, Person, BranchAccess, Role, EmployeeRole, EmployeePerformance
+from .models import Team, Person, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 from .forms import (
     TeamForm, PersonCreationForm, PersonChangeForm,
     BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm
@@ -161,6 +161,62 @@ class BranchAccessModelTest(TestCase):
     def test_get_branches_includes_access(self):
         branches = self.user.get_branches()
         self.assertIn(self.branch, branches)
+
+
+# ============================================================
+# Branch Scope Permission Tests
+# ============================================================
+
+class BranchScopePermissionTest(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(name='Test Co')
+        # Use dynamically chosen high codes to avoid collision with existing branches
+        max_code = Branch.objects.order_by('-code').values_list('code', flat=True).first() or 0
+        self.branch_a = Branch.objects.create(name='Branch A', code=max_code + 1, company=self.company)
+        self.branch_b = Branch.objects.create(name='Branch B', code=max_code + 2, company=self.company)
+        import uuid
+        self.suffix = uuid.uuid4().hex[:8]
+        self.user = User.objects.create_user(
+            email=f'scope_{self.suffix}@test.com',
+            password='test123',
+            first_name='Scope',
+            forth_name='User'
+        )
+        self.role = Role.objects.create(name=f'student_manager_{self.suffix}')
+        self.view_student = Permission.objects.get(codename='view_student')
+        self.change_student = Permission.objects.get(codename='change_student')
+        self.role.permissions.add(self.view_student, self.change_student)
+        EmployeeRole.objects.create(person=self.user, role=self.role, branch=self.branch_a)
+
+    def test_is_executive_for_superuser(self):
+        admin = User.objects.create_user(email=f'admin_{self.suffix}@test.com', password='test123', is_superuser=True)
+        self.assertTrue(admin.is_executive())
+        self.assertFalse(self.user.is_executive())
+        admin.delete()
+
+    def test_has_perm_on_allowed_branch(self):
+        self.assertTrue(self.user.has_perm('view_student', branch=self.branch_a))
+        self.assertTrue(self.user.has_perm('change_student', branch=self.branch_a))
+
+    def test_has_perm_denied_on_other_branch(self):
+        self.assertFalse(self.user.has_perm('view_student', branch=self.branch_b))
+        self.assertFalse(self.user.has_perm('change_student', branch=self.branch_b))
+
+    def test_get_branches_for_perm(self):
+        branches = self.user.get_branches_for_perm('view_student')
+        self.assertEqual(len(branches), 1)
+        self.assertIn(self.branch_a, branches)
+        self.assertNotIn(self.branch_b, branches)
+
+    def test_has_perm_on_any_branch(self):
+        self.assertTrue(self.user.has_perm_on_any_branch('view_student'))
+        self.assertFalse(self.user.has_perm_on_any_branch('delete_student'))
+
+    def test_superuser_sees_all_branches(self):
+        admin = User.objects.create_user(email=f'admin2_{self.suffix}@test.com', password='test123', is_superuser=True)
+        self.assertTrue(admin.has_perm('view_student', branch=self.branch_b))
+        self.assertEqual(len(admin.get_branches_for_perm('view_student')), Branch.objects.count())
+        admin.delete()
 
 
 # ============================================================

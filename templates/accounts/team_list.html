@@ -43,12 +43,14 @@
                     </td>
                     <td>
                         <a href="{% url 'team-detail' team.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        {% if user|has_perm:'change_team' %}
+                        {% has_perm_on_branch user 'change_team' team.default_branch as can_change_team %}
+                        {% if can_change_team %}
                         <button type="button" class="btn btn-sm btn-warning" onclick="openTeamModal({{ team.id }}, '{{ team.name|escapejs }}', '{{ team.code|escapejs }}', '{{ team.description|escapejs }}', {{ team.default_role_id|default:'null' }}, {{ team.default_branch_id|default:'null' }})">
                             <i class="bi bi-pencil"></i>
                         </button>
                         {% endif %}
-                        {% if user|has_perm:'delete_team' %}
+                        {% has_perm_on_branch user 'delete_team' team.default_branch as can_delete_team %}
+                        {% if can_delete_team %}
                         <a href="{% url 'team-delete' team.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                         {% endif %}
                     </td>

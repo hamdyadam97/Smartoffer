@@ -1,6 +1,7 @@
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 
+from accounts.mixins import filter_by_branch
 from core.models import Branch
 from students.models import Student
 from registrations.models import Account
@@ -8,7 +9,7 @@ from finance.models import Payment, Offer, Call
 from accounts.models import Person
 
 
-def generate_report_data(report_type, branch=None, start_date=None, end_date=None):
+def generate_report_data(report_type, user=None, branch=None, start_date=None, end_date=None):
     """Generate report data based on type and filters."""
     data = {}
 
@@ -22,11 +23,21 @@ def generate_report_data(report_type, branch=None, start_date=None, end_date=Non
         date_filter = Q(created_at__date__lte=end_date)
 
     if report_type == 'summary':
-        students_qs = Student.objects.filter(date_filter) if start_date or end_date else Student.objects.all()
-        accounts_qs = Account.objects.filter(date_filter) if start_date or end_date else Account.objects.all()
-        payments_qs = Payment.objects.filter(date_filter) if start_date or end_date else Payment.objects.all()
-        offers_qs = Offer.objects.filter(date_filter) if start_date or end_date else Offer.objects.all()
-        persons_qs = Person.objects.filter(date_filter) if start_date or end_date else Person.objects.all()
+        students_qs = filter_by_branch(
+            Student.objects.filter(date_filter), user, 'accounts__course__master__branch', 'view_student'
+        )
+        accounts_qs = filter_by_branch(
+            Account.objects.filter(date_filter), user, 'course__master__branch', 'view_account'
+        )
+        payments_qs = filter_by_branch(
+            Payment.objects.filter(date_filter), user, 'account__course__master__branch', 'view_payment'
+        )
+        offers_qs = filter_by_branch(
+            Offer.objects.filter(date_filter), user, 'master__branch', 'view_offer'
+        )
+        persons_qs = filter_by_branch(
+            Person.objects.filter(date_filter), user, 'branch', 'view_person'
+        )
 
         if branch:
             accounts_qs = accounts_qs.filter(course__master__branch=branch)
@@ -43,7 +54,9 @@ def generate_report_data(report_type, branch=None, start_date=None, end_date=Non
         data['إجمالي المبالغ المحصلة'] = float(total_paid)
 
     elif report_type == 'students':
-        qs = Student.objects.filter(date_filter) if start_date or end_date else Student.objects.all()
+        qs = filter_by_branch(
+            Student.objects.filter(date_filter), user, 'accounts__course__master__branch', 'view_student'
+        )
         if branch:
             qs = qs.filter(accounts__course__master__branch=branch).distinct()
 
@@ -52,7 +65,10 @@ def generate_report_data(report_type, branch=None, start_date=None, end_date=Non
         data['إجمالي الطلاب'] = qs.count()
 
     elif report_type == 'offers':
-        qs = Offer.objects.filter(date_filter).select_related('master', 'master__branch', 'last_person') if start_date or end_date else Offer.objects.select_related('master', 'master__branch', 'last_person').all()
+        qs = filter_by_branch(
+            Offer.objects.filter(date_filter).select_related('master', 'master__branch', 'last_person'),
+            user, 'master__branch', 'view_offer'
+        )
         if branch:
             qs = qs.filter(master__branch=branch)
 
@@ -75,16 +91,22 @@ def generate_report_data(report_type, branch=None, start_date=None, end_date=Non
 
     elif report_type == 'branches':
         branches = Branch.objects.all()
+        if user is not None and not user.is_executive():
+            allowed_ids = [b.pk for b in user.get_branches_for_perm('view_branch')]
+            branches = branches.filter(pk__in=allowed_ids)
         branches_data = []
         for b in branches:
-            students_count = Student.objects.filter(
-                accounts__course__master__branch=b
-            ).distinct().count()
-            registrations_count = Account.objects.filter(
-                course__master__branch=b
+            students_count = filter_by_branch(
+                Student.objects.filter(accounts__course__master__branch=b).distinct(),
+                user, 'accounts__course__master__branch', 'view_student'
             ).count()
-            payments_total = Payment.objects.filter(
-                account__course__master__branch=b
+            registrations_count = filter_by_branch(
+                Account.objects.filter(course__master__branch=b),
+                user, 'course__master__branch', 'view_account'
+            ).count()
+            payments_total = filter_by_branch(
+                Payment.objects.filter(account__course__master__branch=b),
+                user, 'account__course__master__branch', 'view_payment'
             ).aggregate(total=Sum('amount_number'))['total'] or 0
             branches_data.append({
                 'الفرع': b.name,
@@ -95,23 +117,37 @@ def generate_report_data(report_type, branch=None, start_date=None, end_date=Non
         data['مقارنة الفروع'] = branches_data
 
     elif report_type == 'employees':
-        qs = Person.objects.filter(date_filter) if start_date or end_date else Person.objects.all()
+        qs = filter_by_branch(
+            Person.objects.filter(date_filter), user, 'branch', 'view_person'
+        )
         data['إجمالي الموظفين'] = qs.count()
 
     return data
 
 
-def get_dashboard_data(branch=None):
-    """Get comprehensive dashboard data."""
+def get_dashboard_data(user=None, branch=None):
+    """Get comprehensive dashboard data scoped by user permissions."""
     data = {}
 
     # Base querysets
-    student_qs = Student.objects.all()
-    account_qs = Account.objects.all()
-    payment_qs = Payment.objects.all()
-    offer_qs = Offer.objects.all()
-    call_qs = Call.objects.all()
-    person_qs = Person.objects.all()
+    student_qs = filter_by_branch(
+        Student.objects.all(), user, 'accounts__course__master__branch', 'view_student'
+    )
+    account_qs = filter_by_branch(
+        Account.objects.all(), user, 'course__master__branch', 'view_account'
+    )
+    payment_qs = filter_by_branch(
+        Payment.objects.all(), user, 'account__course__master__branch', 'view_payment'
+    )
+    offer_qs = filter_by_branch(
+        Offer.objects.all(), user, 'master__branch', 'view_offer'
+    )
+    call_qs = filter_by_branch(
+        Call.objects.all(), user, 'offer__master__branch', 'view_call'
+    )
+    person_qs = filter_by_branch(
+        Person.objects.all(), user, 'branch', 'view_person'
+    )
 
     if branch:
         student_qs = student_qs.filter(accounts__course__master__branch=branch).distinct()
@@ -137,14 +173,31 @@ def get_dashboard_data(branch=None):
     data['payments_by_method'] = list(payment_qs.values('payment_method').annotate(count=Count('id'), total=Sum('amount_number')))
 
     # Branch comparison
+    branches = Branch.objects.all()
+    if user is not None and not user.is_executive():
+        allowed_ids = [b.pk for b in user.get_branches_for_perm('view_branch')]
+        branches = branches.filter(pk__in=allowed_ids)
+
     branches_data = []
-    for b in Branch.objects.all():
+    for b in branches:
         branches_data.append({
             'name': b.name,
-            'students': Student.objects.filter(accounts__course__master__branch=b).distinct().count(),
-            'registrations': Account.objects.filter(course__master__branch=b).count(),
-            'payments': float(Payment.objects.filter(account__course__master__branch=b).aggregate(total=Sum('amount_number'))['total'] or 0),
-            'offers': Offer.objects.filter(master__branch=b).count(),
+            'students': filter_by_branch(
+                Student.objects.filter(accounts__course__master__branch=b).distinct(),
+                user, 'accounts__course__master__branch', 'view_student'
+            ).count(),
+            'registrations': filter_by_branch(
+                Account.objects.filter(course__master__branch=b),
+                user, 'course__master__branch', 'view_account'
+            ).count(),
+            'payments': float(filter_by_branch(
+                Payment.objects.filter(account__course__master__branch=b),
+                user, 'account__course__master__branch', 'view_payment'
+            ).aggregate(total=Sum('amount_number'))['total'] or 0),
+            'offers': filter_by_branch(
+                Offer.objects.filter(master__branch=b),
+                user, 'master__branch', 'view_offer'
+            ).count(),
         })
     data['branches_comparison'] = branches_data
 

@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 
@@ -22,7 +23,12 @@ class MasterListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Master.objects.select_related('branch', 'master_category').all()
-        queryset = filter_by_branch(queryset, self.request.user, 'branch')
+        queryset = filter_by_branch(
+            queryset,
+            self.request.user,
+            'branch',
+            perm=self.required_perm,
+        )
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -37,13 +43,21 @@ class MasterListView(BranchPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from core.models import Branch, MasterCategory
-        context['branches'] = Branch.objects.all()
-        context['categories'] = MasterCategory.objects.all()
+        if self.request.user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.all().order_by('name')
+        else:
+            allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.filter(
+                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
+            ).order_by('name')
         return context
 
 
 class MasterDetailView(BranchPermissionMixin, DetailView):
     required_perm = 'view_master'
+    branch_field = 'branch'
     model = Master
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -53,10 +67,16 @@ class MasterDetailView(BranchPermissionMixin, DetailView):
 
 class MasterCreateView(BranchPermissionMixin, CreateView):
     required_perm = 'add_master'
+    branch_field = 'branch'
     model = Master
     form_class = MasterForm
     template_name = 'courses/master_form.html'
     success_url = reverse_lazy('master-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -65,12 +85,18 @@ class MasterCreateView(BranchPermissionMixin, CreateView):
 
 class MasterUpdateView(BranchPermissionMixin, UpdateView):
     required_perm = 'change_master'
+    branch_field = 'branch'
     model = Master
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
     form_class = MasterForm
     template_name = 'courses/master_form.html'
     success_url = reverse_lazy('master-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -79,6 +105,7 @@ class MasterUpdateView(BranchPermissionMixin, UpdateView):
 
 class MasterDeleteView(BranchPermissionMixin, DeleteView):
     required_perm = 'delete_master'
+    branch_field = 'branch'
     model = Master
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -96,7 +123,12 @@ class CourseListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Course.objects.select_related('master', 'master__branch').all()
-        queryset = filter_by_branch(queryset, self.request.user, 'master__branch')
+        queryset = filter_by_branch(
+            queryset,
+            self.request.user,
+            'master__branch',
+            perm=self.required_perm,
+        )
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -116,6 +148,7 @@ class CourseListView(BranchPermissionMixin, ListView):
 
 class CourseDetailView(BranchPermissionMixin, DetailView):
     required_perm = 'view_course'
+    branch_field = 'master__branch'
     model = Course
     template_name = 'courses/course_detail.html'
     context_object_name = 'course'
@@ -123,10 +156,16 @@ class CourseDetailView(BranchPermissionMixin, DetailView):
 
 class CourseCreateView(BranchPermissionMixin, CreateView):
     required_perm = 'add_course'
+    branch_field = 'master__branch'
     model = Course
     form_class = CourseForm
     template_name = 'courses/course_form.html'
     success_url = reverse_lazy('course-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -135,10 +174,16 @@ class CourseCreateView(BranchPermissionMixin, CreateView):
 
 class CourseUpdateView(BranchPermissionMixin, UpdateView):
     required_perm = 'change_course'
+    branch_field = 'master__branch'
     model = Course
     form_class = CourseForm
     template_name = 'courses/course_form.html'
     success_url = reverse_lazy('course-list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -147,6 +192,7 @@ class CourseUpdateView(BranchPermissionMixin, UpdateView):
 
 class CourseDeleteView(BranchPermissionMixin, DeleteView):
     required_perm = 'delete_course'
+    branch_field = 'master__branch'
     model = Course
     template_name = 'courses/course_confirm_delete.html'
     success_url = reverse_lazy('course-list')
@@ -160,7 +206,10 @@ class CourseDeleteView(BranchPermissionMixin, DeleteView):
 @require_POST
 def master_create_ajax(request):
     """إنشاء تخصص جديد عبر AJAX (للـ Modal)"""
-    form = MasterForm(request.POST)
+    if not request.user.has_perm_on_any_branch('add_master'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    form = MasterForm(request.POST, user=request.user)
     if form.is_valid():
         try:
             master = form.save(commit=False)

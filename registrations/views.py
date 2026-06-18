@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -30,7 +31,7 @@ class AccountListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Account.objects.select_related('student', 'course', 'course__master', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -62,6 +63,7 @@ class AccountDetailView(BranchPermissionMixin, DetailView):
     template_name = 'registrations/account_detail.html'
     context_object_name = 'account'
     required_perm = 'view_registration'
+    branch_field = 'course__master__branch'
 
     def get_queryset(self):
         return Account.objects.select_related('student', 'course', 'course__master', 'last_person')
@@ -79,6 +81,12 @@ class AccountCreateView(BranchPermissionMixin, CreateView):
     template_name = 'registrations/account_form.html'
     success_url = reverse_lazy('registration-list')
     required_perm = 'add_registration'
+    branch_field = 'course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -93,6 +101,12 @@ class AccountUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/account_form.html'
     success_url = reverse_lazy('registration-list')
     required_perm = 'change_registration'
+    branch_field = 'course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -106,6 +120,7 @@ class AccountDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'registrations/account_confirm_delete.html'
     success_url = reverse_lazy('registration-list')
     required_perm = 'delete_registration'
+    branch_field = 'course__master__branch'
 
     def delete(self, request, *args, **kwargs):
         try:
@@ -115,9 +130,12 @@ class AccountDeleteView(BranchPermissionMixin, DeleteView):
             return redirect(self.success_url)
 
 
+@login_required
 @require_POST
 def account_create_ajax(request):
-    form = AccountForm(request.POST)
+    if not request.user.has_perm_on_any_branch('add_registration'):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = AccountForm(request.POST, user=request.user)
     if form.is_valid():
         account = form.save(commit=False)
         account.last_person = request.user
@@ -126,10 +144,13 @@ def account_create_ajax(request):
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
+@login_required
 @require_POST
 def account_update_ajax(request, pk):
     account = get_object_or_404(Account, pk=pk)
-    form = AccountForm(request.POST, instance=account)
+    if not request.user.has_perm('change_registration', branch=account.course.master.branch):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = AccountForm(request.POST, instance=account, user=request.user)
     if form.is_valid():
         account = form.save(commit=False)
         account.last_person = request.user
@@ -164,6 +185,11 @@ class AttachTypeCreateView(BranchPermissionMixin, CreateView):
     success_url = reverse_lazy('attachtype-list')
     required_perm = 'add_attachtype'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
 
 class AttachTypeUpdateView(BranchPermissionMixin, UpdateView):
     model = AttachType
@@ -171,6 +197,11 @@ class AttachTypeUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/attachtype_form.html'
     success_url = reverse_lazy('attachtype-list')
     required_perm = 'change_attachtype'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class AttachTypeDeleteView(BranchPermissionMixin, DeleteView):
@@ -194,7 +225,7 @@ class AttachListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Attach.objects.select_related('attach_type', 'person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         attach_type = self.request.GET.get('type')
         if attach_type:
             queryset = queryset.filter(attach_type_id=attach_type)
@@ -206,6 +237,7 @@ class AttachDetailView(BranchPermissionMixin, DetailView):
     template_name = 'registrations/attach_detail.html'
     context_object_name = 'attach'
     required_perm = 'view_attach'
+    branch_field = 'person__branch'
 
     def get_queryset(self):
         return Attach.objects.select_related('attach_type', 'person')
@@ -217,6 +249,12 @@ class AttachCreateView(BranchPermissionMixin, CreateView):
     template_name = 'registrations/attach_form.html'
     success_url = reverse_lazy('attach-list')
     required_perm = 'add_attach'
+    branch_field = 'person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -229,6 +267,12 @@ class AttachUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/attach_form.html'
     success_url = reverse_lazy('attach-list')
     required_perm = 'change_attach'
+    branch_field = 'person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class AttachDeleteView(BranchPermissionMixin, DeleteView):
@@ -236,6 +280,7 @@ class AttachDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'registrations/attach_confirm_delete.html'
     success_url = reverse_lazy('attach-list')
     required_perm = 'delete_attach'
+    branch_field = 'person__branch'
 
 
 # ============================================================
@@ -252,7 +297,7 @@ class AccountAttachListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = AccountAttach.objects.select_related('account', 'attach').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
@@ -264,6 +309,7 @@ class AccountAttachDetailView(BranchPermissionMixin, DetailView):
     template_name = 'registrations/accountattach_detail.html'
     context_object_name = 'account_attach'
     required_perm = 'view_accountattach'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         return AccountAttach.objects.select_related('account', 'attach')
@@ -275,6 +321,12 @@ class AccountAttachCreateView(BranchPermissionMixin, CreateView):
     template_name = 'registrations/accountattach_form.html'
     success_url = reverse_lazy('accountattach-list')
     required_perm = 'add_accountattach'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class AccountAttachUpdateView(BranchPermissionMixin, UpdateView):
@@ -283,6 +335,12 @@ class AccountAttachUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/accountattach_form.html'
     success_url = reverse_lazy('accountattach-list')
     required_perm = 'change_accountattach'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class AccountAttachDeleteView(BranchPermissionMixin, DeleteView):
@@ -290,6 +348,7 @@ class AccountAttachDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'registrations/accountattach_confirm_delete.html'
     success_url = reverse_lazy('accountattach-list')
     required_perm = 'delete_accountattach'
+    branch_field = 'account__course__master__branch'
 
 
 # ============================================================
@@ -306,7 +365,7 @@ class AccountConditionListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = AccountCondition.objects.select_related('account', 'person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
@@ -321,6 +380,7 @@ class AccountConditionDetailView(BranchPermissionMixin, DetailView):
     template_name = 'registrations/accountcondition_detail.html'
     context_object_name = 'account_condition'
     required_perm = 'view_accountcondition'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         return AccountCondition.objects.select_related('account', 'person')
@@ -332,6 +392,12 @@ class AccountConditionCreateView(BranchPermissionMixin, CreateView):
     template_name = 'registrations/accountcondition_form.html'
     success_url = reverse_lazy('accountcondition-list')
     required_perm = 'add_accountcondition'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -344,6 +410,12 @@ class AccountConditionUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/accountcondition_form.html'
     success_url = reverse_lazy('accountcondition-list')
     required_perm = 'change_accountcondition'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -355,6 +427,7 @@ class AccountConditionDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'registrations/accountcondition_confirm_delete.html'
     success_url = reverse_lazy('accountcondition-list')
     required_perm = 'delete_accountcondition'
+    branch_field = 'account__course__master__branch'
 
 
 # ============================================================
@@ -371,7 +444,7 @@ class AccountNoteListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = AccountNote.objects.select_related('account', 'person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         account = self.request.GET.get('account')
         if account:
             queryset = queryset.filter(account_id=account)
@@ -383,6 +456,7 @@ class AccountNoteDetailView(BranchPermissionMixin, DetailView):
     template_name = 'registrations/accountnote_detail.html'
     context_object_name = 'account_note'
     required_perm = 'view_accountnote'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         return AccountNote.objects.select_related('account', 'person')
@@ -394,6 +468,12 @@ class AccountNoteCreateView(BranchPermissionMixin, CreateView):
     template_name = 'registrations/accountnote_form.html'
     success_url = reverse_lazy('accountnote-list')
     required_perm = 'add_accountnote'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -406,6 +486,12 @@ class AccountNoteUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'registrations/accountnote_form.html'
     success_url = reverse_lazy('accountnote-list')
     required_perm = 'change_accountnote'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -417,3 +503,4 @@ class AccountNoteDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'registrations/accountnote_confirm_delete.html'
     success_url = reverse_lazy('accountnote-list')
     required_perm = 'delete_accountnote'
+    branch_field = 'account__course__master__branch'

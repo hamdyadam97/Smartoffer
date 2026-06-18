@@ -264,6 +264,18 @@ class StudentOfferViewTests(BaseTestCase):
         response = self.client.get(reverse('studentoffer-detail', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 200)
 
+    def test_export_pdf(self):
+        from accounts.models import Role, EmployeeRole, Permission
+        role = Role.objects.create(name='offer_viewer_test')
+        perm = Permission.objects.get(codename='view_studentoffer')
+        role.permissions.add(perm)
+        EmployeeRole.objects.create(person=self.user, role=role, branch=self.branch)
+
+        response = self.client.get(reverse('studentoffer-export-pdf', kwargs={'slug': self.offer.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
     def test_create_get_authenticated(self):
         response = self.client.get(reverse('studentoffer-create'))
         self.assertEqual(response.status_code, 200)

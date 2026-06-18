@@ -75,7 +75,8 @@
                     </td>
                     <td>
                         <a href="{% url 'person-detail' person.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                        {% if user|has_perm:'change_person' %}
+                        {% has_perm_on_branch user 'change_person' person.branch as can_change_person %}
+                        {% if can_change_person %}
                         <button type="button" class="btn btn-sm btn-warning" onclick="openPersonModal({{ person.id }}, '{{ person.email|escapejs }}', '{{ person.first_name|escapejs }}', '{{ person.second_name|escapejs }}', '{{ person.third_name|escapejs }}', '{{ person.forth_name|escapejs }}', {{ person.team_id|default:'null' }}, {{ person.branch_id|default:'null' }}, {{ person.is_staff|yesno:'true,false' }}, {{ person.is_active|yesno:'true,false' }})">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -83,7 +84,8 @@
                         {% if user|has_perm:'add_employeerole' %}
                         <button type="button" class="btn btn-sm btn-success" onclick="openPersonRoleModal({{ person.id }}, '{{ person.get_short_name|escapejs }}')"><i class="bi bi-key"></i></button>
                         {% endif %}
-                        {% if user|has_perm:'delete_person' %}
+                        {% has_perm_on_branch user 'delete_person' person.branch as can_delete_person %}
+                        {% if can_delete_person %}
                         <a href="{% url 'person-delete' person.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                         {% endif %}
                     </td>

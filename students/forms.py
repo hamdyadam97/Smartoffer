@@ -3,6 +3,35 @@ from .models import Contact, Student
 
 
 class StudentForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from core.models import Branch
+        if user is not None:
+            if user.is_executive():
+                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+            else:
+                allowed = user.get_branches_for_perm('add_student') if not self.instance.pk else user.get_branches_for_perm('change_student')
+                self.fields['branch'].queryset = Branch.objects.filter(pk__in=[b.pk for b in allowed]).order_by('code', 'name')
+        else:
+            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+        if self.instance and self.instance.pk:
+            contact = self.instance.contact
+            self.fields['first_name'].initial = contact.first_name
+            self.fields['second_name'].initial = contact.second_name
+            self.fields['third_name'].initial = contact.third_name
+            self.fields['forth_name'].initial = contact.forth_name
+            self.fields['address'].initial = contact.address
+            self.fields['mobile'].initial = contact.mobile
+            self.fields['phone'].initial = contact.phone
+            self.fields['nationality'].initial = contact.nationality
+            self.fields['identity_number'].initial = contact.identity_number
+            self.fields['identity_location'].initial = contact.identity_location
+            self.fields['identity_start_date'].initial = contact.identity_start_date
+            self.fields['birth_date'].initial = contact.birth_date
+            self.fields['birth_location'].initial = contact.birth_location
+            self.fields['qualification'].initial = contact.qualification
+            self.fields['photo'].initial = contact.photo
+
     # Contact fields
     first_name = forms.CharField(
         max_length=100, label='الاسم الأول',
@@ -74,24 +103,3 @@ class StudentForm(forms.ModelForm):
             'preferred_contact': forms.Select(attrs={'class': 'form-select'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        from core.models import Branch
-        self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-        if self.instance and self.instance.pk:
-            contact = self.instance.contact
-            self.fields['first_name'].initial = contact.first_name
-            self.fields['second_name'].initial = contact.second_name
-            self.fields['third_name'].initial = contact.third_name
-            self.fields['forth_name'].initial = contact.forth_name
-            self.fields['address'].initial = contact.address
-            self.fields['mobile'].initial = contact.mobile
-            self.fields['phone'].initial = contact.phone
-            self.fields['nationality'].initial = contact.nationality
-            self.fields['identity_number'].initial = contact.identity_number
-            self.fields['identity_location'].initial = contact.identity_location
-            self.fields['identity_start_date'].initial = contact.identity_start_date
-            self.fields['birth_date'].initial = contact.birth_date
-            self.fields['birth_location'].initial = contact.birth_location
-            self.fields['qualification'].initial = contact.qualification
-            self.fields['photo'].initial = contact.photo

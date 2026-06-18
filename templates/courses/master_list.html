@@ -48,10 +48,12 @@
                 <td>{{ master.period|default:'-' }}</td>
                 <td class="text-start">
                     <a href="{% url 'master-detail' master.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    {% if user|has_perm:'change_master' %}
+                    {% has_perm_on_branch user 'change_master' master.branch as can_change_master %}
+                    {% if can_change_master %}
                     <a href="{% url 'master-update' master.slug %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
                     {% endif %}
-                    {% if user|has_perm:'delete_master' %}
+                    {% has_perm_on_branch user 'delete_master' master.branch as can_delete_master %}
+                    {% if can_delete_master %}
                     <a href="{% url 'master-delete' master.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                     {% endif %}
                 </td>

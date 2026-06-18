@@ -28,7 +28,7 @@ class PaymentListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Payment.objects.select_related('account', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, 'account__course__master__branch')
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(code__icontains=search)
@@ -53,6 +53,7 @@ class PaymentDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/payment_detail.html'
     context_object_name = 'payment'
     required_perm = 'view_payment'
+    branch_field = 'account__course__master__branch'
 
     def get_queryset(self):
         return Payment.objects.select_related('account', 'last_person')
@@ -69,6 +70,12 @@ class PaymentCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/payment_form.html'
     success_url = reverse_lazy('payment-list')
     required_perm = 'add_payment'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -83,6 +90,12 @@ class PaymentUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/payment_form.html'
     success_url = reverse_lazy('payment-list')
     required_perm = 'change_payment'
+    branch_field = 'account__course__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -96,11 +109,14 @@ class PaymentDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/payment_confirm_delete.html'
     success_url = reverse_lazy('payment-list')
     required_perm = 'delete_payment'
+    branch_field = 'account__course__master__branch'
 
 
 @require_POST
 def payment_create_ajax(request):
-    form = PaymentForm(request.POST)
+    if not request.user.has_perm_on_any_branch('add_payment'):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = PaymentForm(request.POST, user=request.user)
     if form.is_valid():
         payment = form.save(commit=False)
         payment.last_person = request.user
@@ -112,7 +128,9 @@ def payment_create_ajax(request):
 @require_POST
 def payment_update_ajax(request, pk):
     payment = get_object_or_404(Payment, pk=pk)
-    form = PaymentForm(request.POST, instance=payment)
+    if not request.user.has_perm('change_payment', branch=payment.account.course.master.branch):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = PaymentForm(request.POST, instance=payment, user=request.user)
     if form.is_valid():
         payment = form.save(commit=False)
         payment.last_person = request.user
@@ -131,6 +149,7 @@ class PaymentOutListView(BranchPermissionMixin, ListView):
     context_object_name = 'payment_outs'
     paginate_by = 20
     required_perm = 'view_paymentout'
+    branch_field = 'last_person__branch'
 
 
 class PaymentOutDetailView(BranchPermissionMixin, DetailView):
@@ -138,6 +157,7 @@ class PaymentOutDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/paymentout_detail.html'
     context_object_name = 'payment_out'
     required_perm = 'view_paymentout'
+    branch_field = 'last_person__branch'
 
 
 class PaymentOutCreateView(BranchPermissionMixin, CreateView):
@@ -146,6 +166,12 @@ class PaymentOutCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/paymentout_form.html'
     success_url = reverse_lazy('paymentout-list')
     required_perm = 'add_paymentout'
+    branch_field = 'last_person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -158,6 +184,12 @@ class PaymentOutUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/paymentout_form.html'
     success_url = reverse_lazy('paymentout-list')
     required_perm = 'change_paymentout'
+    branch_field = 'last_person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -169,6 +201,7 @@ class PaymentOutDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/paymentout_confirm_delete.html'
     success_url = reverse_lazy('paymentout-list')
     required_perm = 'delete_paymentout'
+    branch_field = 'last_person__branch'
 
 
 # ============================================================
@@ -185,7 +218,7 @@ class DepositListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Deposit.objects.select_related('bank', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         return queryset
 
 
@@ -194,6 +227,7 @@ class DepositDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/deposit_detail.html'
     context_object_name = 'deposit'
     required_perm = 'view_deposit'
+    branch_field = 'bank__branch'
 
     def get_queryset(self):
         return Deposit.objects.select_related('bank', 'last_person')
@@ -205,6 +239,12 @@ class DepositCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/deposit_form.html'
     success_url = reverse_lazy('deposit-list')
     required_perm = 'add_deposit'
+    branch_field = 'bank__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -217,6 +257,12 @@ class DepositUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/deposit_form.html'
     success_url = reverse_lazy('deposit-list')
     required_perm = 'change_deposit'
+    branch_field = 'bank__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -228,6 +274,7 @@ class DepositDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/deposit_confirm_delete.html'
     success_url = reverse_lazy('deposit-list')
     required_perm = 'delete_deposit'
+    branch_field = 'bank__branch'
 
 
 # ============================================================
@@ -244,7 +291,7 @@ class WithdrawListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Withdraw.objects.select_related('bank', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         return queryset
 
 
@@ -253,6 +300,7 @@ class WithdrawDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/withdraw_detail.html'
     context_object_name = 'withdraw'
     required_perm = 'view_withdraw'
+    branch_field = 'bank__branch'
 
     def get_queryset(self):
         return Withdraw.objects.select_related('bank', 'last_person')
@@ -264,6 +312,12 @@ class WithdrawCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/withdraw_form.html'
     success_url = reverse_lazy('withdraw-list')
     required_perm = 'add_withdraw'
+    branch_field = 'bank__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -276,6 +330,12 @@ class WithdrawUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/withdraw_form.html'
     success_url = reverse_lazy('withdraw-list')
     required_perm = 'change_withdraw'
+    branch_field = 'bank__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -287,6 +347,7 @@ class WithdrawDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/withdraw_confirm_delete.html'
     success_url = reverse_lazy('withdraw-list')
     required_perm = 'delete_withdraw'
+    branch_field = 'bank__branch'
 
 
 # ============================================================
@@ -315,6 +376,11 @@ class BillBuyTypeCreateView(BranchPermissionMixin, CreateView):
     success_url = reverse_lazy('billbuytype-list')
     required_perm = 'add_billbuytype'
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
 
 class BillBuyTypeUpdateView(BranchPermissionMixin, UpdateView):
     model = BillBuyType
@@ -322,6 +388,11 @@ class BillBuyTypeUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/billbuytype_form.html'
     success_url = reverse_lazy('billbuytype-list')
     required_perm = 'change_billbuytype'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 class BillBuyTypeDeleteView(BranchPermissionMixin, DeleteView):
@@ -345,7 +416,7 @@ class BillBuyListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = BillBuy.objects.select_related('bill_buy_type', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         return queryset
 
 
@@ -354,6 +425,7 @@ class BillBuyDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/billbuy_detail.html'
     context_object_name = 'bill_buy'
     required_perm = 'view_billbuy'
+    branch_field = 'last_person__branch'
 
     def get_queryset(self):
         return BillBuy.objects.select_related('bill_buy_type', 'last_person')
@@ -365,6 +437,12 @@ class BillBuyCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/billbuy_form.html'
     success_url = reverse_lazy('billbuy-list')
     required_perm = 'add_billbuy'
+    branch_field = 'last_person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -377,6 +455,12 @@ class BillBuyUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/billbuy_form.html'
     success_url = reverse_lazy('billbuy-list')
     required_perm = 'change_billbuy'
+    branch_field = 'last_person__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -388,6 +472,7 @@ class BillBuyDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/billbuy_confirm_delete.html'
     success_url = reverse_lazy('billbuy-list')
     required_perm = 'delete_billbuy'
+    branch_field = 'last_person__branch'
 
 
 # ============================================================
@@ -404,7 +489,7 @@ class OfferListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Offer.objects.select_related('master', 'master__branch', 'last_person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(customer_name__icontains=search)
@@ -422,6 +507,7 @@ class OfferDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/offer_detail.html'
     context_object_name = 'offer'
     required_perm = 'view_offer_price'
+    branch_field = 'master__branch'
 
     def get_queryset(self):
         return Offer.objects.select_related('master', 'master__branch', 'last_person')
@@ -433,6 +519,12 @@ class OfferCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/offer_form.html'
     success_url = reverse_lazy('offer-list')
     required_perm = 'add_offer_price'
+    branch_field = 'master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -445,6 +537,12 @@ class OfferUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/offer_form.html'
     success_url = reverse_lazy('offer-list')
     required_perm = 'change_offer_price'
+    branch_field = 'master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -456,6 +554,7 @@ class OfferDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/offer_confirm_delete.html'
     success_url = reverse_lazy('offer-list')
     required_perm = 'delete_offer_price'
+    branch_field = 'master__branch'
 
 
 # ============================================================
@@ -472,7 +571,7 @@ class CallListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Call.objects.select_related('offer', 'person').all()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
+        queryset = filter_by_branch(queryset, self.request.user, self.branch_field, perm=self.required_perm)
         offer = self.request.GET.get('offer')
         if offer:
             queryset = queryset.filter(offer_id=offer)
@@ -494,6 +593,7 @@ class CallDetailView(BranchPermissionMixin, DetailView):
     template_name = 'finance/call_detail.html'
     context_object_name = 'call'
     required_perm = 'view_call'
+    branch_field = 'offer__master__branch'
 
     def get_queryset(self):
         return Call.objects.select_related('offer', 'person')
@@ -510,6 +610,12 @@ class CallCreateView(BranchPermissionMixin, CreateView):
     template_name = 'finance/call_form.html'
     success_url = reverse_lazy('call-list')
     required_perm = 'add_call'
+    branch_field = 'offer__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -524,6 +630,12 @@ class CallUpdateView(BranchPermissionMixin, UpdateView):
     template_name = 'finance/call_form.html'
     success_url = reverse_lazy('call-list')
     required_perm = 'change_call'
+    branch_field = 'offer__master__branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         form.instance.person = self.request.user
@@ -537,11 +649,14 @@ class CallDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'finance/call_confirm_delete.html'
     success_url = reverse_lazy('call-list')
     required_perm = 'delete_call'
+    branch_field = 'offer__master__branch'
 
 
 @require_POST
 def call_create_ajax(request):
-    form = CallForm(request.POST)
+    if not request.user.has_perm_on_any_branch('add_call'):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = CallForm(request.POST, user=request.user)
     if form.is_valid():
         call = form.save(commit=False)
         call.person = request.user
@@ -553,7 +668,9 @@ def call_create_ajax(request):
 @require_POST
 def call_update_ajax(request, pk):
     call = get_object_or_404(Call, pk=pk)
-    form = CallForm(request.POST, instance=call)
+    if not request.user.has_perm('change_call', branch=call.offer.master.branch):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = CallForm(request.POST, instance=call, user=request.user)
     if form.is_valid():
         call = form.save(commit=False)
         call.save()

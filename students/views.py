@@ -21,7 +21,7 @@ class StudentListView(BranchPermissionMixin, ListView):
 
     def get_queryset(self):
         queryset = Student.objects.select_related('contact', 'branch').all()
-        queryset = filter_by_branch(queryset, self.request.user, 'branch')
+        queryset = filter_by_branch(queryset, self.request.user, 'branch', perm=self.required_perm)
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
@@ -41,7 +41,11 @@ class StudentListView(BranchPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from core.models import Branch
-        context['branches'] = Branch.objects.all().order_by('code', 'name')
+        allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+        if self.request.user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+        else:
+            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
         return context
 
 
@@ -52,11 +56,16 @@ class StudentDetailView(BranchPermissionMixin, DetailView):
     slug_url_kwarg = 'slug'
     template_name = 'students/student_detail.html'
     context_object_name = 'student'
+    branch_field = 'branch'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from core.models import Branch
-        context['branches'] = Branch.objects.all().order_by('code', 'name')
+        allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+        if self.request.user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+        else:
+            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
         return context
 
 
@@ -66,6 +75,12 @@ class StudentCreateView(BranchPermissionMixin, CreateView):
     form_class = StudentForm
     template_name = 'students/student_form.html'
     success_url = reverse_lazy('student-list')
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         contact_data = {
@@ -98,6 +113,12 @@ class StudentUpdateView(BranchPermissionMixin, UpdateView):
     form_class = StudentForm
     template_name = 'students/student_form.html'
     success_url = reverse_lazy('student-list')
+    branch_field = 'branch'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         contact = self.object.contact
@@ -127,11 +148,14 @@ class StudentDeleteView(BranchPermissionMixin, DeleteView):
     slug_url_kwarg = 'slug'
     template_name = 'students/student_confirm_delete.html'
     success_url = reverse_lazy('student-list')
+    branch_field = 'branch'
 
 
 @require_POST
 def student_create_ajax(request):
-    form = StudentForm(request.POST, request.FILES)
+    if not request.user.has_perm_on_any_branch('add_student'):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = StudentForm(request.POST, request.FILES, user=request.user)
     if form.is_valid():
         contact_data = {
             'first_name': form.cleaned_data['first_name'],
@@ -164,7 +188,9 @@ def student_create_ajax(request):
 @require_POST
 def student_update_ajax(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    form = StudentForm(request.POST, request.FILES, instance=student)
+    if not request.user.has_perm('change_student', branch=student.branch):
+        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
+    form = StudentForm(request.POST, request.FILES, instance=student, user=request.user)
     if form.is_valid():
         contact = student.contact
         contact.first_name = form.cleaned_data['first_name']

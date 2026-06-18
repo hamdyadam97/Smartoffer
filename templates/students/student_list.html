@@ -66,12 +66,14 @@
                 <td><code>{{ student.slug }}</code></td>
                 <td class="text-start">
                     <a href="{% url 'student-detail' student.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    {% if user|has_perm:'change_student' %}
+                    {% has_perm_on_branch user 'change_student' student.branch as can_change_student %}
+                    {% if can_change_student %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="openStudentModal({{ student.id }}, '{{ student.contact.first_name|escapejs }}', '{{ student.contact.second_name|escapejs }}', '{{ student.contact.third_name|escapejs }}', '{{ student.contact.forth_name|escapejs }}', '{{ student.contact.mobile|escapejs }}', '{{ student.contact.phone|escapejs }}', '{{ student.contact.address|escapejs }}', '{{ student.contact.nationality|escapejs }}', '{{ student.contact.identity_number|escapejs }}', '{{ student.contact.identity_location|escapejs }}', '{{ student.contact.identity_start_date|default:''|escapejs }}', '{{ student.contact.birth_date|default:''|escapejs }}', '{{ student.contact.birth_location|escapejs }}', '{{ student.contact.qualification|escapejs }}', {{ student.branch_id|default:'null' }}, '{{ student.level|escapejs }}', '{{ student.preferred_contact|escapejs }}')">
                         <i class="bi bi-pencil"></i>
                     </button>
                     {% endif %}
-                    {% if user|has_perm:'delete_student' %}
+                    {% has_perm_on_branch user 'delete_student' student.branch as can_delete_student %}
+                    {% if can_delete_student %}
                     <a href="{% url 'student-delete' student.slug %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                     {% endif %}
                 </td>
