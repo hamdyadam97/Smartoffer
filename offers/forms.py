@@ -81,8 +81,8 @@ class OfferRecipientAddForm(forms.ModelForm):
 class QuickOfferForm(forms.Form):
     """Form to quickly create an offer + recipient in one step."""
     # Offer fields
-    title = forms.CharField(max_length=255, label='عنوان العرض', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    content = forms.CharField(label='محتوى العرض', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    title = forms.CharField(max_length=255, label='نوع الاستراك  ', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    content = forms.CharField(label=' البيان ووصف العرض ', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
     course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
