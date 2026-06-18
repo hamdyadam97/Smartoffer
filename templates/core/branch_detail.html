@@ -54,7 +54,7 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card mb-3">
     <div class="card-header bg-secondary text-white"><i class="bi bi-file-text"></i> البيانات التجارية</div>
     <div class="card-body">
         <table class="table table-borderless mb-0">
@@ -62,6 +62,30 @@
             <tr><td class="fw-bold">رقم الترخيص</td><td>{{ branch.licence_code|default:"-" }}</td></tr>
             <tr><td class="fw-bold">الرقم الضريبي</td><td>{{ branch.tax_code|default:"-" }}</td></tr>
         </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-info text-white"><i class="bi bi-image"></i> الشعار والتوقيع</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 text-center mb-3">
+                <h6 class="text-secondary">شعار الفرع</h6>
+                {% if branch.logo %}
+                <img src="{{ branch.logo.url }}" alt="شعار {{ branch.name }}" class="img-thumbnail" style="max-height:150px;">
+                {% else %}
+                <div class="text-muted">لا يوجد شعار</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-center mb-3">
+                <h6 class="text-secondary">توقيع الفرع</h6>
+                {% if branch.signature %}
+                <img src="{{ branch.signature.url }}" alt="توقيع {{ branch.name }}" class="img-thumbnail" style="max-height:150px;">
+                {% else %}
+                <div class="text-muted">لا يوجد توقيع</div>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

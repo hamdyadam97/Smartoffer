@@ -73,7 +73,8 @@
                             commercial_registration: '{{ branch.commercial_registration|escapejs }}',
                             licence_code: '{{ branch.licence_code|escapejs }}',
                             tax_code: '{{ branch.tax_code|escapejs }}',
-                            logo: '{{ branch.logo|escapejs }}'
+                            logo: '{{ branch.logo|escapejs }}',
+                            signature_url: '{% if branch.signature %}{{ branch.signature.url|escapejs }}{% endif %}'
                         })">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -171,6 +172,13 @@
                             <label class="form-label">الشعار</label>
                             <input type="file" name="logo" id="branchLogo" class="form-control" accept="image/*">
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">التوقيع</label>
+                            <input type="file" name="signature" id="branchSignature" class="form-control" accept="image/*">
+                            <div id="branchSignaturePreview" class="mt-2 d-none">
+                                <img src="" alt="التوقيع الحالي" class="img-thumbnail" style="max-height:80px;">
+                            </div>
+                        </div>
                         <div class="col-12 mb-3">
                             <label class="form-label">العنوان</label>
                             <textarea name="address" id="branchAddress" class="form-control" rows="2"></textarea>
@@ -211,6 +219,8 @@
     const branchLicenceCode = document.getElementById('branchLicenceCode');
     const branchTaxCode = document.getElementById('branchTaxCode');
     const branchAddress = document.getElementById('branchAddress');
+    const branchSignature = document.getElementById('branchSignature');
+    const branchSignaturePreview = document.getElementById('branchSignaturePreview');
     const branchModalTitle = document.getElementById('branchModalTitle');
     const saveBtn = document.getElementById('saveBranchBtn');
     const spinner = document.getElementById('branchSpinner');
@@ -247,10 +257,17 @@
             branchCommercialReg.value = data.commercial_registration || '';
             branchLicenceCode.value = data.licence_code || '';
             branchTaxCode.value = data.tax_code || '';
+            if (data.signature_url) {
+                branchSignaturePreview.querySelector('img').src = data.signature_url;
+                branchSignaturePreview.classList.remove('d-none');
+            } else {
+                branchSignaturePreview.classList.add('d-none');
+            }
             branchModalTitle.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i> تعديل فرع';
             btnText.textContent = 'تحديث الفرع';
         } else {
             branchId.value = '';
+            branchSignaturePreview.classList.add('d-none');
             branchModalTitle.innerHTML = '<i class="bi bi-building-add text-primary me-2"></i> إضافة فرع جديد';
             btnText.textContent = 'حفظ الفرع';
         }
