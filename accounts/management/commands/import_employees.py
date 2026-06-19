@@ -58,6 +58,12 @@ EMPLOYEES = [
     ("بسام أبو نصر", "روت", "b.abualnasser@root-jo.com", "962789654321"),
     ("علاء حسان", "روت", "alaa@root-jo.com", "962789456123"),
     ("فاطمة عيد الرويلي", "المورد الوافي", "f.alruwaili@ararhni.com", "966569731556"),
+    # موظفو root go academy / الجذور الرقمية
+    ("سارة علي خلوفة الشهري", "روت", "sara.shahri@ararhni.com", "966532975406"),
+    ("شام العزام", "روت", "shamazzam961@gmail.com", "962790704655"),
+    ("نضال العبيدات", "روت", "nidalobeidat@root-jo.com", "962789456123"),
+    ("لانا طوالبة", "روت", "lana_alqadery@root-jo.com", "962789414512"),
+    ("وز ابو خضر", "روت", "rose.abukhader@root-jo.com", "962790362203"),
 ]
 
 
