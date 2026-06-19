@@ -2,7 +2,7 @@ from django.db import IntegrityError
 from django.db.models import Q, Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.decorators import login_required
@@ -123,7 +123,7 @@ class CourseListView(BranchPermissionMixin, ListView):
     branch_field = 'master__branch'
 
     def get_queryset(self):
-        queryset = Course.objects.select_related('master', 'master__branch').all()
+        queryset = Course.objects.select_related('master', 'master__branch', 'master__branch__company').all()
         queryset = filter_by_branch(
             queryset,
             self.request.user,
@@ -145,6 +145,26 @@ class CourseListView(BranchPermissionMixin, ListView):
         if start_after:
             queryset = queryset.filter(start_date__gte=start_after)
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch, MasterCategory
+        user = self.request.user
+        if user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.all().order_by('name')
+            context['form_master_queryset'] = Master.objects.select_related('branch').order_by('branch__name', 'code', 'name')
+        else:
+            allowed_master_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
+            context['branches'] = Branch.objects.filter(pk__in=allowed_master_ids).order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.filter(
+                Q(branch__pk__in=allowed_master_ids) | Q(branch__isnull=True)
+            ).order_by('name')
+            allowed_course_ids = [b.pk for b in user.get_branches_for_perm('add_course')]
+            context['form_master_queryset'] = Master.objects.select_related('branch').filter(
+                branch__pk__in=allowed_course_ids
+            ).order_by('branch__name', 'code', 'name')
+        return context
 
 
 class CourseDetailView(BranchPermissionMixin, DetailView):
@@ -291,3 +311,44 @@ def master_info_ajax(request, pk):
             'code': master.code,
         }
     })
+
+
+@login_required
+@require_POST
+def course_create_ajax(request):
+    """إنشاء دورة جديدة عبر AJAX (للـ Modal)"""
+    if not request.user.has_perm_on_any_branch('add_course'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    form = CourseForm(request.POST, user=request.user)
+    if form.is_valid():
+        course = form.save(commit=False)
+        course.last_person = request.user
+        try:
+            course.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'تم إنشاء الدورة بنجاح',
+                'course': {
+                    'id': course.id,
+                    'code': course.code,
+                    'master_name': course.master.name,
+                    'instructor': course.instructor,
+                    'company_name': course.company_name,
+                    'target_level': course.target_level,
+                    'start_date': course.start_date.isoformat() if course.start_date else None,
+                    'end_date': course.end_date.isoformat() if course.end_date else None,
+                    'detail_url': reverse('course-detail', args=[course.pk]),
+                    'update_url': reverse('course-update', args=[course.pk]),
+                    'delete_url': reverse('course-delete', args=[course.pk]),
+                }
+            })
+        except IntegrityError:
+            return JsonResponse({
+                'success': False,
+                'errors': {'code': ['هذا الكود مستخدم بالفعل لنفس التخصص. جرب كود تاني.']}
+            }, status=400)
+    return JsonResponse({
+        'success': False,
+        'errors': form.errors
+    }, status=400)

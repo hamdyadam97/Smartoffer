@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     MasterListView, MasterDetailView, MasterCreateView, MasterUpdateView, MasterDeleteView,
-    master_create_ajax, master_info_ajax,
+    master_create_ajax, master_info_ajax, course_create_ajax,
     CourseListView, CourseDetailView, CourseCreateView, CourseUpdateView, CourseDeleteView,
 )
 
@@ -15,6 +15,7 @@ urlpatterns = [
     path('masters/<str:slug>/delete/', MasterDeleteView.as_view(), name='master-delete'),
 
     path('courses/', CourseListView.as_view(), name='course-list'),
+    path('courses/ajax/create/', course_create_ajax, name='course-create-ajax'),
     path('courses/create/', CourseCreateView.as_view(), name='course-create'),
     path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
     path('courses/<int:pk>/update/', CourseUpdateView.as_view(), name='course-update'),

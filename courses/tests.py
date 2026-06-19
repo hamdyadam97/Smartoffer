@@ -66,3 +66,44 @@ class CourseFormAjaxTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertTrue(Master.objects.filter(pk=data['master']['id']).exists())
+
+    def test_course_list_has_modal_context(self):
+        response = self.client.get(reverse('course-list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('branches', response.context)
+        self.assertIn('categories', response.context)
+        self.assertIn('form_master_queryset', response.context)
+        self.assertContains(response, 'courseModal')
+        self.assertContains(response, 'course-create-ajax')
+
+    def test_course_create_ajax_adds_course(self):
+        url = reverse('course-create-ajax')
+        response = self.client.post(url, {
+            'master': self.master.pk,
+            'code': 1,
+            'instructor': 'Dr. Ahmed',
+            'company_name': '',
+            'max_student_count': 20,
+            'target_level': 'الكل',
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertTrue(Course.objects.filter(pk=data['course']['id']).exists())
+
+    def test_course_create_ajax_requires_permission(self):
+        # مستخدم بدون صلاحية
+        other = Person.objects.create_user(
+            email='other@example.com',
+            password='testpass123',
+            first_name='Other',
+            forth_name='User',
+        )
+        self.client.force_login(other)
+        url = reverse('course-create-ajax')
+        response = self.client.post(url, {
+            'master': self.master.pk,
+            'code': 5,
+            'target_level': 'الكل',
+        })
+        self.assertEqual(response.status_code, 403)
