@@ -55,15 +55,15 @@ EMPLOYEES = [
     ("أمجاد الحربي", "نساء حفر الباطن", "amjad.alharbi@ararhni.com", "966537970119"),
     ("شادية العنزي", "نساء حفر الباطن", "shadia.alanzi@ararhni.com", "966549712401"),
     ("نوره العنزي", "نساء حفر الباطن", "noura.alanzi@ararhni.com", "966549927982"),
-    ("بسام أبو نصر", "روت", "b.abualnasser@root-jo.com", "962789654321"),
-    ("علاء حسان", "روت", "alaa@root-jo.com", "962789456123"),
+    ("بسام أبو نصر", "Root Academy", "b.abualnasser@root-jo.com", "962789654321"),
+    ("علاء حسان", "Root Academy", "alaa@root-jo.com", "962789456123"),
     ("فاطمة عيد الرويلي", "المورد الوافي", "f.alruwaili@ararhni.com", "966569731556"),
     # موظفو root go academy / الجذور الرقمية
-    ("سارة علي خلوفة الشهري", "روت", "sara.shahri@ararhni.com", "966532975406"),
-    ("شام العزام", "روت", "shamazzam961@gmail.com", "962790704655"),
-    ("نضال العبيدات", "روت", "nidalobeidat@root-jo.com", "962789456123"),
-    ("لانا طوالبة", "روت", "lana_alqadery@root-jo.com", "962789414512"),
-    ("وز ابو خضر", "روت", "rose.abukhader@root-jo.com", "962790362203"),
+    ("سارة علي خلوفة الشهري", "Root Academy", "sara.shahri@ararhni.com", "966532975406"),
+    ("شام العزام", "Root Academy", "shamazzam961@gmail.com", "962790704655"),
+    ("نضال العبيدات", "Root Academy", "nidalobeidat@root-jo.com", "962789456123"),
+    ("لانا طوالبة", "Root Academy", "lana_alqadery@root-jo.com", "962789414512"),
+    ("وز ابو خضر", "Root Academy", "rose.abukhader@root-jo.com", "962790362203"),
 ]
 
 
