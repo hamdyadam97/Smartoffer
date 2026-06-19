@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
 from django.utils import timezone
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from django.contrib.messages.views import SuccessMessageMixin
@@ -450,6 +452,7 @@ def export_studentoffer_pdf(request, slug):
     return response
 
 
+
 # ============================================================
 # Send Offer to Single Recipient
 # ============================================================
@@ -490,9 +493,21 @@ def send_offer_to_recipient(request, slug, recipient_pk):
         if not email:
             messages.warning(request, 'لا يوجد بريد إلكتروني مسجل لهذا المستلم.')
         else:
-            messages.info(request, f'تمت محاكاة إرسال الإيميل إلى {email} (قيد التطوير).')
-            recipient.status = 'مرسل'
-            recipient.save()
+            try:
+                send_mail(
+                    subject=offer.title,
+                    message=body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                messages.success(request, f'تم إرسال الإيميل إلى {recipient_name}.')
+                recipient.status = 'مرسل'
+                recipient.sent_at = timezone.now()
+                recipient.save()
+            except Exception as e:
+                logger.exception('Failed to send offer email to %s', email)
+                messages.error(request, f'فشل إرسال الإيميل: {str(e)}')
     elif channel == 'app':
         messages.warning(request, 'قناة إشعار التطبيق غير مفعلة حالياً.')
     else:
@@ -585,10 +600,21 @@ def send_offer_to_all(request, slug):
         elif channel == 'email':
             email = contact.email if contact else recipient.contact_email
             if email:
-                # TODO: integrate real email backend
-                recipient.status = 'مرسل'
-                recipient.save()
-                sent_count += 1
+                try:
+                    send_mail(
+                        subject=offer.title,
+                        message=body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+                    recipient.status = 'مرسل'
+                    recipient.sent_at = timezone.now()
+                    recipient.save()
+                    sent_count += 1
+                except Exception as e:
+                    logger.exception('Failed to send offer email to %s', email)
+                    failed_count += 1
             else:
                 failed_count += 1
         elif channel == 'app':
