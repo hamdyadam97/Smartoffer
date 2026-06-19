@@ -1,6 +1,7 @@
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -167,6 +168,21 @@ class CourseCreateView(BranchPermissionMixin, CreateView):
         kwargs['user'] = self.request.user
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch, MasterCategory
+        user = self.request.user
+        if user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.all().order_by('name')
+        else:
+            allowed_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
+            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.filter(
+                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
+            ).order_by('name')
+        return context
+
     def form_valid(self, form):
         form.instance.last_person = self.request.user
         return super().form_valid(form)
@@ -184,6 +200,21 @@ class CourseUpdateView(BranchPermissionMixin, UpdateView):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from core.models import Branch, MasterCategory
+        user = self.request.user
+        if user.is_executive():
+            context['branches'] = Branch.objects.all().order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.all().order_by('name')
+        else:
+            allowed_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
+            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+            context['categories'] = MasterCategory.objects.filter(
+                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
+            ).order_by('name')
+        return context
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
@@ -234,3 +265,29 @@ def master_create_ajax(request):
         'success': False,
         'errors': form.errors
     }, status=400)
+
+
+@login_required
+def master_info_ajax(request, pk):
+    """جلب معلومات التخصص لإنشاء دورة (الشركة + الكود التالي)"""
+    master = get_object_or_404(Master, pk=pk)
+    # التحقق من صلاحية رؤية التخصص
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_course')]
+        if master.branch_id not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    company_name = master.branch.company.name if master.branch and master.branch.company else ''
+    last_code = Course.objects.filter(master=master).aggregate(Max('code'))['code__max'] or 0
+    next_code = int(last_code) + 1
+
+    return JsonResponse({
+        'success': True,
+        'company_name': company_name,
+        'next_code': next_code,
+        'master': {
+            'id': master.id,
+            'name': master.name,
+            'code': master.code,
+        }
+    })
