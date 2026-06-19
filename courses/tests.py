@@ -29,11 +29,14 @@ class CourseFormAjaxTests(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
 
-    def test_course_create_view_has_modal_context(self):
-        response = self.client.get(reverse('course-create'))
+    def test_course_list_has_modal_context(self):
+        response = self.client.get(reverse('course-list'))
         self.assertEqual(response.status_code, 200)
         self.assertIn('branches', response.context)
         self.assertIn('categories', response.context)
+        self.assertIn('form_master_queryset', response.context)
+        self.assertContains(response, 'courseModal')
+        self.assertContains(response, 'course-create-ajax')
         self.assertContains(response, 'masterModal')
         self.assertContains(response, 'master-info-ajax')
 
@@ -66,15 +69,6 @@ class CourseFormAjaxTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertTrue(Master.objects.filter(pk=data['master']['id']).exists())
-
-    def test_course_list_has_modal_context(self):
-        response = self.client.get(reverse('course-list'))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('branches', response.context)
-        self.assertIn('categories', response.context)
-        self.assertIn('form_master_queryset', response.context)
-        self.assertContains(response, 'courseModal')
-        self.assertContains(response, 'course-create-ajax')
 
     def test_course_create_ajax_adds_course(self):
         url = reverse('course-create-ajax')

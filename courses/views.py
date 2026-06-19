@@ -175,39 +175,6 @@ class CourseDetailView(BranchPermissionMixin, DetailView):
     context_object_name = 'course'
 
 
-class CourseCreateView(BranchPermissionMixin, CreateView):
-    required_perm = 'add_course'
-    branch_field = 'master__branch'
-    model = Course
-    form_class = CourseForm
-    template_name = 'courses/course_form.html'
-    success_url = reverse_lazy('course-list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from core.models import Branch, MasterCategory
-        user = self.request.user
-        if user.is_executive():
-            context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.all().order_by('name')
-        else:
-            allowed_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
-            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.filter(
-                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
-            ).order_by('name')
-        return context
-
-    def form_valid(self, form):
-        form.instance.last_person = self.request.user
-        return super().form_valid(form)
-
-
 class CourseUpdateView(BranchPermissionMixin, UpdateView):
     required_perm = 'change_course'
     branch_field = 'master__branch'

@@ -354,7 +354,8 @@ def export_studentoffer_pdf(request, slug):
 
     # ========== PRICE HIGHLIGHT ==========
     price_label = _prepare_arabic('قيمة العرض')
-    price_value = _prepare_arabic(f'{offer.price:,.2f} ريال')
+    currency_name = offer.branch.company.get_currency_display_name() if offer.branch and offer.branch.company else 'ريال'
+    price_value = _prepare_arabic(f'{offer.price:,.2f} {currency_name}')
     price_note = _prepare_arabic(offer.price_description) if offer.price_description else ''
 
     price_inner = [

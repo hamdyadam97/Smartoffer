@@ -52,7 +52,7 @@
                         <li class="list-group-item"><strong>المحتوى:</strong> {{ offer.content|linebreaksbr }}</li>
                         <li class="list-group-item"><strong>الفرع:</strong> {{ offer.branch }}</li>
                         <li class="list-group-item"><strong>الدورة:</strong> {{ offer.course|default:'-' }}</li>
-                        <li class="list-group-item"><strong>السعر:</strong> {{ offer.price }} ريال {% if offer.price_description %}({{ offer.price_description }}){% endif %}</li>
+                        <li class="list-group-item"><strong>السعر:</strong> {{ offer.price }} {{ offer.branch.company.get_currency_display_name }} {% if offer.price_description %}({{ offer.price_description }}){% endif %}</li>
                         <li class="list-group-item"><strong>تاريخ بداية العرض:</strong> {{ offer.start_date|default:'-' }}</li>
                         <li class="list-group-item"><strong>تاريخ نهاية العرض:</strong> {{ offer.end_date|default:'-' }}</li>
                         <li class="list-group-item"><strong>الحالة:</strong> {{ offer.get_status_display }}</li>

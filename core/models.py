@@ -4,9 +4,18 @@ from django.utils.text import slugify
 
 class Company(models.Model):
     """الشركة"""
+    CURRENCY_CHOICES = [
+        ('SAR', 'ريال سعودي'),
+        ('JOD', 'دينار أردني'),
+        ('USD', 'دولار أمريكي'),
+        ('EGP', 'جنيه مصري'),
+        ('AED', 'درهم إماراتي'),
+    ]
+
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     name = models.CharField(max_length=255, verbose_name='اسم الشركة')
     sub_name = models.CharField(max_length=255, blank=True, verbose_name='الاسم الفرعي')
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='SAR', verbose_name='العملة')
     address = models.TextField(blank=True, verbose_name='العنوان')
     phone1 = models.CharField(max_length=20, blank=True, verbose_name='التليفون 1')
     phone2 = models.CharField(max_length=20, blank=True, verbose_name='التليفون 2')
@@ -39,6 +48,10 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_currency_display_name(self):
+        """Return the Arabic display name for the company's currency."""
+        return dict(self.CURRENCY_CHOICES).get(self.currency, self.currency)
 
 
 class Branch(models.Model):

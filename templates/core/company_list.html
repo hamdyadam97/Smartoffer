@@ -52,6 +52,7 @@
                             website: '{{ company.website|escapejs }}',
                             commercial_registration: '{{ company.commercial_registration|escapejs }}',
                             tax_code: '{{ company.tax_code|escapejs }}',
+                            currency: '{{ company.currency|escapejs }}',
                             logo_url: '{% if company.logo %}{{ company.logo.url|escapejs }}{% endif %}'
                         })">
                             <i class="bi bi-pencil"></i>
@@ -115,6 +116,14 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">الاسم الفرعي</label>
                                     <input type="text" name="sub_name" id="companySubName" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">العملة</label>
+                                    <select name="currency" id="companyCurrency" class="form-select">
+                                        {% for code, label in company_currency_choices %}
+                                        <option value="{{ code }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label class="form-label">العنوان</label>
@@ -206,6 +215,7 @@
     const companyId = document.getElementById('companyId');
     const companyName = document.getElementById('companyName');
     const companySubName = document.getElementById('companySubName');
+    const companyCurrency = document.getElementById('companyCurrency');
     const companyAddress = document.getElementById('companyAddress');
     const companyPhone1 = document.getElementById('companyPhone1');
     const companyPhone2 = document.getElementById('companyPhone2');
@@ -250,6 +260,7 @@
             companyId.value = data.id;
             companyName.value = data.name || '';
             companySubName.value = data.sub_name || '';
+            companyCurrency.value = data.currency || 'SAR';
             companyAddress.value = data.address || '';
             companyPhone1.value = data.phone1 || '';
             companyPhone2.value = data.phone2 || '';

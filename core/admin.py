@@ -4,7 +4,8 @@ from .models import Company, Branch, Bank, MasterCategory
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'phone1', 'created_at']
+    list_display = ['name', 'currency', 'email', 'phone1', 'created_at']
+    list_filter = ['currency']
     search_fields = ['name', 'email', 'phone1']
 
 

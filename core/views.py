@@ -461,6 +461,11 @@ class CompanyListView(BranchPermissionMixin, ListView):
     required_perm = 'view_company'
     branch_field = None
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['company_currency_choices'] = Company.CURRENCY_CHOICES
+        return context
+
 
 class CompanyDetailView(BranchPermissionMixin, DetailView):
     model = Company

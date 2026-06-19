@@ -44,7 +44,7 @@
                 <td><a href="{% url 'studentoffer-detail' offer.slug %}">{{ offer.title }}</a></td>
                 <td>{{ offer.branch }}</td>
                 <td>{{ offer.course|default:'-' }}</td>
-                <td>{{ offer.price }} ريال</td>
+                <td>{{ offer.price }} {{ offer.branch.company.get_currency_display_name }}</td>
                 <td><span class="badge bg-secondary">{{ offer.get_status_display }}</span></td>
                 <td>{{ offer.created_at|date:'Y-m-d H:i' }}</td>
                 <td class="text-start">

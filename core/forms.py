@@ -6,13 +6,14 @@ class CompanyForm(forms.ModelForm):
     class Meta:
         model = Company
         fields = [
-            'name', 'sub_name', 'address', 'phone1', 'phone2',
+            'name', 'sub_name', 'currency', 'address', 'phone1', 'phone2',
             'postal_code', 'mobile', 'fax', 'email', 'website',
             'commercial_registration', 'tax_code', 'logo'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'sub_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'currency': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'phone1': forms.TextInput(attrs={'class': 'form-control'}),
             'phone2': forms.TextInput(attrs={'class': 'form-control'}),

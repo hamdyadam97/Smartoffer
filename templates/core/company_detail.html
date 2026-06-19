@@ -20,6 +20,7 @@
             website: '{{ company.website|escapejs }}',
             commercial_registration: '{{ company.commercial_registration|escapejs }}',
             tax_code: '{{ company.tax_code|escapejs }}',
+            currency: '{{ company.currency|escapejs }}',
             logo_url: '{% if company.logo %}{{ company.logo.url|escapejs }}{% endif %}'
         })">
             <i class="bi bi-pencil"></i> تعديل
@@ -48,6 +49,7 @@
             <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> البيانات الأساسية</div>
             <div class="card-body">
                 <table class="table table-borderless mb-0">
+                    <tr><td class="fw-bold">العملة</td><td>{{ company.get_currency_display_name }}</td></tr>
                     <tr><td class="fw-bold">العنوان</td><td>{{ company.address|default:"-" }}</td></tr>
                     <tr><td class="fw-bold">الرقم البريدي</td><td>{{ company.postal_code|default:"-" }}</td></tr>
                 </table>
