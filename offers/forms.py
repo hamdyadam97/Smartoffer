@@ -88,9 +88,9 @@ class QuickOfferForm(forms.Form):
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
     price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
     # Recipient fields
-    contact_name = forms.CharField(max_length=255, label='اسم المستلم', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    contact_phone = forms.CharField(max_length=20, label='جوال المستلم', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
-    contact_email = forms.EmailField(required=False, label='بريد المستلم', widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    contact_name = forms.CharField(max_length=255, label='اسم المشترك', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    contact_phone = forms.CharField(max_length=20, label='جوال المشترك', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
+    contact_email = forms.EmailField(required=False, label='بريد المشترك', widget=forms.EmailInput(attrs={'class': 'form-control'}))
     channel = forms.ChoiceField(choices=OfferRecipient.CHANNEL_CHOICES, initial='whatsapp', label='قناة الإرسال', widget=forms.Select(attrs={'class': 'form-select'}))
 
     def __init__(self, *args, user=None, **kwargs):
