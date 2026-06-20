@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-# Also load production env file if it exists (e.g. on VPS)
+# Also load production env file if it exists (e.g. on VPS) without overriding existing vars
 if os.path.exists('.env.production'):
-    load_dotenv('.env.production', override=True)
+    load_dotenv('.env.production', override=False)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
