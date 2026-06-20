@@ -18,7 +18,7 @@ from courses.models import Course
 from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
 from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm
-from .whatsapp import send_whatsapp_message
+from .whatsapp import send_whatsapp_message, send_whatsapp_pdf
 
 
 import logging
@@ -547,13 +547,24 @@ def send_offer_to_recipient(request, slug, recipient_pk):
         if not phone:
             messages.error(request, 'لا يوجد رقم محمول مسجل لهذا المستلم.')
             return redirect('studentoffer-detail', slug=slug)
-        result = send_whatsapp_message(phone, body)
-        if result.get('success'):
-            messages.success(request, f'تم إرسال العرض عبر واتساب إلى {recipient_name}.')
-            recipient.status = 'مرسل'
-            recipient.save()
-        else:
-            messages.error(request, f'فشل إرسال واتساب: {result.get("error", "خطأ غير معروف")}')
+        try:
+            pdf_buffer = build_offer_pdf(offer, recipient.pk)
+            result = send_whatsapp_pdf(
+                phone,
+                filename=f"offer-{offer.slug}.pdf",
+                pdf_bytes=pdf_buffer.getvalue(),
+                caption=body,
+            )
+            if result.get('success'):
+                messages.success(request, f'تم إرسال العرض عبر واتساب إلى {recipient_name}.')
+                recipient.status = 'مرسل'
+                recipient.sent_at = timezone.now()
+                recipient.save()
+            else:
+                messages.error(request, f'فشل إرسال واتساب: {result.get("error", "خطأ غير معروف")}')
+        except Exception as e:
+            logger.exception('Failed to send offer WhatsApp to %s', phone)
+            messages.error(request, f'فشل إرسال واتساب: {str(e)}')
     elif channel == 'email':
         email = contact.email if contact else recipient.contact_email
         if not email:
@@ -648,12 +659,23 @@ def send_offer_to_all(request, slug):
         if channel == 'whatsapp':
             phone = contact.mobile if contact else recipient.contact_phone
             if phone:
-                result = send_whatsapp_message(phone, body)
-                if result.get('success'):
-                    recipient.status = 'مرسل'
-                    recipient.save()
-                    sent_count += 1
-                else:
+                try:
+                    pdf_buffer = build_offer_pdf(offer, recipient.pk)
+                    result = send_whatsapp_pdf(
+                        phone,
+                        filename=f"offer-{offer.slug}.pdf",
+                        pdf_bytes=pdf_buffer.getvalue(),
+                        caption=body,
+                    )
+                    if result.get('success'):
+                        recipient.status = 'مرسل'
+                        recipient.sent_at = timezone.now()
+                        recipient.save()
+                        sent_count += 1
+                    else:
+                        failed_count += 1
+                except Exception as e:
+                    logger.exception('Failed to send offer WhatsApp to %s', phone)
                     failed_count += 1
             else:
                 failed_count += 1
