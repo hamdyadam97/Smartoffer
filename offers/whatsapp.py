@@ -53,6 +53,7 @@ def _send_ultramsg_text(to_number: str, body: str) -> dict:
     encoded_data = parse.urlencode(data).encode()
     req = request.Request(url, data=encoded_data, method='POST')
     req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    req.add_header('User-Agent', 'SmartOffer/1.0')
 
     try:
         with request.urlopen(req, timeout=30) as response:
@@ -84,6 +85,7 @@ def _send_ultramsg_document(to_number: str, filename: str, pdf_bytes: bytes, cap
     encoded_data = parse.urlencode(data).encode()
     req = request.Request(url, data=encoded_data, method='POST')
     req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    req.add_header('User-Agent', 'SmartOffer/1.0')
 
     try:
         with request.urlopen(req, timeout=60) as response:
