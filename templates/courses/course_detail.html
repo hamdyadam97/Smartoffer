@@ -23,6 +23,7 @@
                 <li class="list-group-item"><strong>الشركة:</strong> {{ course.company_name|default:'-' }}</li>
                 <li class="list-group-item"><strong>الحد الأقصى للطلاب:</strong> {{ course.max_student_count }}</li>
                 <li class="list-group-item"><strong>المستوى المستهدف:</strong> {{ course.target_level }}</li>
+                <li class="list-group-item"><strong>عدد الساعات:</strong> {{ course.hours|default:'-' }}</li>
                 <li class="list-group-item"><strong>تاريخ البداية:</strong> {{ course.start_date|default:'-' }}</li>
                 <li class="list-group-item"><strong>تاريخ النهاية:</strong> {{ course.end_date|default:'-' }}</li>
                 <li class="list-group-item"><strong>آخر تعديل:</strong> {{ course.last_person|default:'-' }}</li>
