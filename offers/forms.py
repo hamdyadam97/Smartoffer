@@ -81,7 +81,7 @@ class OfferRecipientAddForm(forms.ModelForm):
 class QuickOfferForm(forms.Form):
     """Form to quickly create an offer + recipient in one step."""
     # Offer fields
-    title = forms.CharField(max_length=255, label='نوع الاستراك  ', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    master = forms.ModelChoiceField(queryset=None, label='نوع الاشتراك (التخصص)', widget=forms.Select(attrs={'class': 'form-select'}))
     content = forms.CharField(label=' البيان ووصف العرض ', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
     course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
@@ -95,14 +95,16 @@ class QuickOfferForm(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         from core.models import Branch
-        from courses.models import Course
+        from courses.models import Master, Course
         super().__init__(*args, **kwargs)
         if user is not None:
             branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
             self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
+            self.fields['master'].queryset = Master.objects.select_related('branch').filter(branch__in=branch_ids)
             self.fields['course'].queryset = Course.objects.select_related('master').filter(master__branch__in=branch_ids)
         else:
             self.fields['branch'].queryset = Branch.objects.all()
+            self.fields['master'].queryset = Master.objects.select_related('branch').all()
             self.fields['course'].queryset = Course.objects.select_related('master').all()
 
 

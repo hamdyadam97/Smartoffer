@@ -313,10 +313,15 @@ def build_offer_pdf(offer, recipient=None):
         elements.append(Spacer(1, 0.3*cm))
 
     # ========== OFFER DETAILS ==========
+    course_hours = ''
+    if offer.course and offer.course.hours:
+        course_hours = f"{offer.course.hours} ساعة"
+
     detail_rows = [
         [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), field_style), Paragraph(_prepare_arabic('الفرع'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
+        [Paragraph(_prepare_arabic(course_hours or '-'), field_style), Paragraph(_prepare_arabic('عدد الساعات'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), field_style), Paragraph(_prepare_arabic('تاريخ العرض'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.get_status_display()), field_style), Paragraph(_prepare_arabic('الحالة'), section_label_style)],
     ]
@@ -480,11 +485,16 @@ def _get_recipient_context(offer, recipient):
     company = branch.company if branch else None
     currency_name = company.get_currency_display_name() if company else 'ريال'
 
+    course_hours = None
+    if offer.course and offer.course.hours:
+        course_hours = f"{offer.course.hours} ساعة"
+
     return {
         'offer': offer,
         'recipient_name': recipient_name,
         'branch_name': branch.name if branch else '-',
         'course_name': str(offer.course) if offer.course else None,
+        'course_hours': course_hours,
         'currency_name': currency_name,
         'creator_name': offer.created_by.get_full_name() or offer.created_by.email,
     }
@@ -713,6 +723,37 @@ def send_offer_to_all(request, slug):
     return redirect('studentoffer-detail', slug=slug)
 
 
+@login_required
+def branch_offer_template_ajax(request, branch_id):
+    """AJAX endpoint to fetch the default offer template for a branch."""
+    from core.models import Branch
+    branch = get_object_or_404(Branch, pk=branch_id)
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_studentoffer')]
+        if branch_id not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+    return JsonResponse({
+        'success': True,
+        'template': branch.offer_template or '',
+    })
+
+
+@login_required
+def master_courses_ajax(request, master_id):
+    """AJAX endpoint to fetch courses for a given master (used in quick offer modal)."""
+    from courses.models import Master, Course
+    master = get_object_or_404(Master, pk=master_id)
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_studentoffer')]
+        if master.branch_id not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+    courses = Course.objects.filter(master=master).values('id', 'code', 'master__name').order_by('-created_at')
+    return JsonResponse({
+        'success': True,
+        'courses': list(courses),
+    })
+
+
 @require_POST
 @login_required
 def quick_offer_ajax(request):
@@ -723,7 +764,7 @@ def quick_offer_ajax(request):
     if form.is_valid():
         cd = form.cleaned_data
         offer = StudentOffer.objects.create(
-            title=cd['title'],
+            title=cd['master'].name,
             content=cd['content'],
             branch=cd['branch'],
             course=cd['course'],
@@ -777,12 +818,17 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from accounts.mixins import filter_by_branch
+        from courses.models import Master
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
+            context['masters'] = Master.objects.select_related('branch').all().order_by('branch__name', 'name')
             context['courses'] = Course.objects.select_related('master').all()
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+            context['masters'] = Master.objects.select_related('branch').filter(
+                branch__in=allowed_ids
+            ).order_by('branch__name', 'name')
             context['courses'] = filter_by_branch(
                 Course.objects.select_related('master'), self.request.user, 'master__branch', perm='view_course'
             )

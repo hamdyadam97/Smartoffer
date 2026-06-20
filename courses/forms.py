@@ -46,7 +46,7 @@ class CourseForm(forms.ModelForm):
 
     class Meta:
         model = Course
-        fields = ['master', 'code', 'instructor', 'company_name', 'max_student_count', 'target_level', 'start_date', 'end_date']
+        fields = ['master', 'code', 'instructor', 'company_name', 'max_student_count', 'target_level', 'hours', 'start_date', 'end_date']
         widgets = {
             'master': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
@@ -54,6 +54,7 @@ class CourseForm(forms.ModelForm):
             'company_name': forms.TextInput(attrs={'class': 'form-control'}),
             'max_student_count': forms.NumberInput(attrs={'class': 'form-control'}),
             'target_level': forms.Select(attrs={'class': 'form-select'}),
+            'hours': forms.NumberInput(attrs={'class': 'form-control'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }

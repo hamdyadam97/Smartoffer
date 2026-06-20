@@ -5,6 +5,8 @@ urlpatterns = [
     # StudentOffer
     path('student-offers/', views.StudentOfferListView.as_view(), name='studentoffer-list'),
     path('student-offers/ajax/quick/', views.quick_offer_ajax, name='quick-offer-ajax'),
+    path('student-offers/ajax/branch-template/<int:branch_id>/', views.branch_offer_template_ajax, name='branch-offer-template-ajax'),
+    path('student-offers/ajax/master-courses/<int:master_id>/', views.master_courses_ajax, name='master-courses-ajax'),
     path('student-offers/<str:slug>/', views.StudentOfferDetailView.as_view(), name='studentoffer-detail'),
     path('student-offers/create/', views.StudentOfferCreateView.as_view(), name='studentoffer-create'),
     path('student-offers/<str:slug>/update/', views.StudentOfferUpdateView.as_view(), name='studentoffer-update'),

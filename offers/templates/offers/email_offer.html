@@ -114,6 +114,12 @@
                         <td>{{ course_name }}</td>
                     </tr>
                     {% endif %}
+                    {% if course_hours %}
+                    <tr>
+                        <td>عدد الساعات</td>
+                        <td>{{ course_hours }}</td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td>تاريخ العرض</td>
                         <td>{{ offer.created_at|date:'Y-m-d' }}</td>

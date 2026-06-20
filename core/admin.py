@@ -14,6 +14,15 @@ class BranchAdmin(admin.ModelAdmin):
     list_display = ['code', 'name', 'company', 'phone1', 'created_at']
     list_filter = ['company']
     search_fields = ['name', 'code', 'email']
+    fieldsets = (
+        (None, {
+            'fields': ('company', 'code', 'name', 'sub_name', 'address', 'phone1', 'phone2', 'postal_code', 'mobile', 'fax', 'email', 'website', 'commercial_registration', 'licence_code', 'tax_code', 'logo', 'signature')
+        }),
+        ('نموذج العرض', {
+            'fields': ('offer_template',),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Bank)

@@ -96,12 +96,17 @@
                         <div class="tab-pane fade show active" id="q-offer-pane" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label"> نوع الاشتراك <span class="text-danger">*</span></label>
-                                    <input type="text" name="title" class="form-control" required>
+                                    <label class="form-label">نوع الاشتراك (التخصص) <span class="text-danger">*</span></label>
+                                    <select name="master" id="quickOfferMaster" class="form-select" required>
+                                        <option value="">اختر التخصص...</option>
+                                        {% for m in masters %}
+                                        <option value="{{ m.id }}">{{ m.name }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">الفرع <span class="text-danger">*</span></label>
-                                    <select name="branch" class="form-select" required>
+                                    <select name="branch" id="quickOfferBranch" class="form-select" required>
                                         <option value="">اختر الفرع...</option>
                                         {% for b in branches %}
                                         <option value="{{ b.id }}">{{ b.name }}</option>
@@ -112,11 +117,8 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">الدورة</label>
-                                    <select name="course" class="form-select">
+                                    <select name="course" id="quickOfferCourse" class="form-select">
                                         <option value="">---------</option>
-                                        {% for c in courses %}
-                                        <option value="{{ c.id }}">{{ c.master.name }}</option>
-                                        {% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
@@ -130,7 +132,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">البيان ووصف العرض <span class="text-danger">*</span></label>
-                                <textarea name="content" class="form-control" rows="3" required></textarea>
+                                <textarea name="content" id="quickOfferContent" class="form-control" rows="3" required></textarea>
                             </div>
                         </div>
                         <div class="tab-pane fade" id="q-recipient-pane" role="tabpanel">
@@ -179,6 +181,52 @@
     const saveBtn = document.getElementById('saveQuickOfferBtn');
     const spinner = document.getElementById('saveQuickOfferSpinner');
     const btnText = document.getElementById('saveQuickOfferBtnText');
+    const masterSelect = document.getElementById('quickOfferMaster');
+    const courseSelect = document.getElementById('quickOfferCourse');
+    const branchSelect = document.getElementById('quickOfferBranch');
+    const contentArea = document.getElementById('quickOfferContent');
+
+    function loadBranchTemplate(branchId) {
+        if (!branchId || !contentArea) return;
+        fetch('{% url "branch-offer-template-ajax" 0 %}'.replace('0', branchId))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.template && !contentArea.value.trim()) {
+                    contentArea.value = data.template;
+                }
+            })
+            .catch(() => {});
+    }
+
+    if (branchSelect) {
+        branchSelect.addEventListener('change', function() {
+            loadBranchTemplate(this.value);
+        });
+    }
+
+    function loadCourses(masterId) {
+        courseSelect.innerHTML = '<option value="">---------</option>';
+        if (!masterId) return;
+        fetch('{% url "master-courses-ajax" 0 %}'.replace('0', masterId))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.courses) {
+                    data.courses.forEach(c => {
+                        const option = document.createElement('option');
+                        option.value = c.id;
+                        option.textContent = (c.code || '-') + ' - ' + c.master__name;
+                        courseSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    if (masterSelect) {
+        masterSelect.addEventListener('change', function() {
+            loadCourses(this.value);
+        });
+    }
 
     function showAlert(message, type) {
         alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';

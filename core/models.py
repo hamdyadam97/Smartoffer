@@ -74,6 +74,7 @@ class Branch(models.Model):
     tax_code = models.CharField(max_length=50, blank=True, verbose_name='الرقم الضريبي')
     logo = models.ImageField(upload_to='branch_logos/', blank=True, verbose_name='الشعار')
     signature = models.ImageField(upload_to='branch_signatures/', blank=True, verbose_name='التوقيع')
+    offer_template = models.TextField(blank=True, verbose_name='نموذج وصف العرض')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
