@@ -17,7 +17,7 @@
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="بحث بالمحاضر أو الشركة..." value="{{ request.GET.search|default:'' }}">
+                <input type="text" name="search" class="form-control" placeholder="بحث بالكود أو المحاضر أو الشركة..." value="{{ request.GET.search|default:'' }}">
             </div>
             <div class="col-md-3">
                 <select name="target_level" class="form-select">
@@ -115,8 +115,8 @@
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">الكود <span class="text-danger">*</span></label>
-                            <input type="number" name="code" id="courseCode" class="form-control" required>
+                            <label class="form-label">الكود <small class="text-muted">(يتم التوليد تلقائيًا)</small></label>
+                            <input type="number" name="code" id="courseCode" class="form-control" placeholder="يتم التوليد تلقائيًا">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">المحاضر</label>
@@ -176,7 +176,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">الفرع <span class="text-danger">*</span></label>
-                            <select name="branch" class="form-select" required>
+                            <select name="branch" id="masterBranch" class="form-select" required>
                                 <option value="">اختر الفرع...</option>
                                 {% for branch in branches %}
                                 <option value="{{ branch.id }}">{{ branch.name }}</option>
@@ -193,8 +193,8 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">الكود <span class="text-danger">*</span></label>
-                            <input type="number" name="code" class="form-control" required>
+                            <label class="form-label">الكود <small class="text-muted">(يتم التوليد تلقائيًا)</small></label>
+                            <input type="number" name="code" id="masterCode" class="form-control" placeholder="يتم التوليد تلقائيًا">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">اسم التخصص <span class="text-danger">*</span></label>
@@ -321,6 +321,29 @@
     const masterSpinner = document.getElementById('masterSpinner');
     const masterBtnText = document.getElementById('masterBtnText');
     const masterAlertBox = document.getElementById('masterAlert');
+    const masterBranch = document.getElementById('masterBranch');
+    const masterCode = document.getElementById('masterCode');
+
+    function fillMasterCode(branchId) {
+        if (!branchId) {
+            masterCode.value = '';
+            return;
+        }
+        fetch('{% url "master-next-code-ajax" 0 %}'.replace('0', branchId))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    masterCode.value = data.next_code || '';
+                }
+            })
+            .catch(() => {});
+    }
+
+    if (masterBranch) {
+        masterBranch.addEventListener('change', function() {
+            fillMasterCode(this.value);
+        });
+    }
 
     function showMasterAlert(message, type) {
         masterAlertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';

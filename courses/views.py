@@ -133,6 +133,8 @@ class CourseListView(BranchPermissionMixin, ListView):
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
+                Q(code__icontains=search) |
+                Q(master__code__icontains=search) |
                 Q(instructor__icontains=search) | Q(company_name__icontains=search)
             )
         master = self.request.GET.get('master')
@@ -252,6 +254,39 @@ def master_create_ajax(request):
         'success': False,
         'errors': form.errors
     }, status=400)
+
+
+@login_required
+def master_next_code_ajax(request, branch_id):
+    """جلب الكود التالي للتخصص بناءً على الفرع."""
+    from core.models import Branch
+    branch = get_object_or_404(Branch, pk=branch_id)
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_master')]
+        if branch_id not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+    last_code = Master.objects.filter(branch=branch).aggregate(Max('code'))['code__max'] or 0
+    return JsonResponse({
+        'success': True,
+        'next_code': int(last_code) + 1,
+        'branch_id': branch_id,
+    })
+
+
+@login_required
+def course_next_code_ajax(request, master_id):
+    """جلب الكود التالي للدورة بناءً على التخصص."""
+    master = get_object_or_404(Master, pk=master_id)
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_course')]
+        if master.branch_id not in allowed_ids:
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+    last_code = Course.objects.filter(master=master).aggregate(Max('code'))['code__max'] or 0
+    return JsonResponse({
+        'success': True,
+        'next_code': int(last_code) + 1,
+        'master_id': master_id,
+    })
 
 
 @login_required

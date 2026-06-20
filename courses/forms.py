@@ -26,7 +26,7 @@ class MasterForm(forms.ModelForm):
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'master_category': forms.Select(attrs={'class': 'form-select'}),
-            'code': forms.NumberInput(attrs={'class': 'form-control'}),
+            'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'period': forms.TextInput(attrs={'class': 'form-control'}),
         }
@@ -49,7 +49,7 @@ class CourseForm(forms.ModelForm):
         fields = ['master', 'code', 'instructor', 'company_name', 'max_student_count', 'target_level', 'start_date', 'end_date']
         widgets = {
             'master': forms.Select(attrs={'class': 'form-select'}),
-            'code': forms.NumberInput(attrs={'class': 'form-control'}),
+            'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
             'instructor': forms.TextInput(attrs={'class': 'form-control'}),
             'company_name': forms.TextInput(attrs={'class': 'form-control'}),
             'max_student_count': forms.NumberInput(attrs={'class': 'form-control'}),
