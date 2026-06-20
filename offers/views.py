@@ -287,8 +287,8 @@ def build_offer_pdf(offer, recipient=None):
             r_email = recipient.contact_email
 
         recipient_rows = [
-            [Paragraph(_prepare_arabic(r_name), field_style), Paragraph(_prepare_arabic('المستلم'), section_label_style)],
-            [Paragraph(_prepare_arabic(r_phone or '-'), field_style), Paragraph(_prepare_arabic('الجوال'), section_label_style)],
+            [Paragraph(_prepare_arabic(r_name), field_style), Paragraph(_prepare_arabic('اسم المشترك'), section_label_style)],
+            [Paragraph(_prepare_arabic(r_phone or '-'), field_style), Paragraph(_prepare_arabic('الهاتف'), section_label_style)],
         ]
         if r_email:
             recipient_rows.append([
