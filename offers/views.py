@@ -548,7 +548,7 @@ def send_offer_to_recipient(request, slug, recipient_pk):
             messages.error(request, 'لا يوجد رقم محمول مسجل لهذا المستلم.')
             return redirect('studentoffer-detail', slug=slug)
         try:
-            pdf_buffer = build_offer_pdf(offer, recipient.pk)
+            pdf_buffer = build_offer_pdf(offer, recipient)
             result = send_whatsapp_pdf(
                 phone,
                 filename=f"offer-{offer.slug}.pdf",
@@ -660,7 +660,7 @@ def send_offer_to_all(request, slug):
             phone = contact.mobile if contact else recipient.contact_phone
             if phone:
                 try:
-                    pdf_buffer = build_offer_pdf(offer, recipient.pk)
+                    pdf_buffer = build_offer_pdf(offer, recipient)
                     result = send_whatsapp_pdf(
                         phone,
                         filename=f"offer-{offer.slug}.pdf",
