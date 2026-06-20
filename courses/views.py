@@ -113,6 +113,16 @@ class MasterDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'courses/master_confirm_delete.html'
     success_url = reverse_lazy('master-list')
 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.courses.exists():
+            messages.error(
+                request,
+                f'لا يمكن حذف التخصص "{self.object.name}" لأنه مرتبط بـ {self.object.courses.count()} دورة/دورات. يجب حذف أو نقل الدورات أولاً.'
+            )
+            return redirect(self.success_url)
+        return super().post(request, *args, **kwargs)
+
 
 class CourseListView(BranchPermissionMixin, ListView):
     model = Course
