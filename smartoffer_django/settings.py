@@ -137,10 +137,17 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@smartoffer.com')
 
-# WhatsApp settings (Twilio)
+# WhatsApp settings
+WHATSAPP_PROVIDER = os.environ.get('WHATSAPP_PROVIDER', 'twilio').lower()
+
+# Twilio (legacy)
 WHATSAPP_TWILIO_SID = os.environ.get('WHATSAPP_TWILIO_SID', '')
 WHATSAPP_TWILIO_TOKEN = os.environ.get('WHATSAPP_TWILIO_TOKEN', '')
 WHATSAPP_TWILIO_FROM = os.environ.get('WHATSAPP_TWILIO_FROM', '')
+
+# Ultramsg
+ULTRAMSG_INSTANCE_ID = os.environ.get('ULTRAMSG_INSTANCE_ID', '') or os.environ.get('WHATSAPP_INSTANCE_ID', '')
+ULTRAMSG_TOKEN = os.environ.get('ULTRAMSG_TOKEN', '') or os.environ.get('WHATSAPP_API_TOKEN', '')
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.Person'
