@@ -52,6 +52,7 @@ class Course(models.Model):
     master = models.ForeignKey(Master, on_delete=models.PROTECT, related_name='courses', verbose_name='التخصص')
     
     code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
+    name = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='اسم الدورة')
     instructor = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='المحاضر')
     company_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الشركة')
     max_student_count = models.PositiveIntegerField(default=1, verbose_name='الحد الأقصى للطلاب')
@@ -79,6 +80,8 @@ class Course(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
+        if self.name:
+            return f"{self.code} - {self.name}"
         return f"{self.code} - {self.master.name}"
 
     def get_full_key(self):

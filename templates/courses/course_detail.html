@@ -19,6 +19,7 @@
             <ul class="list-group list-group-flush">
                 <li class="list-group-item"><strong>التخصص:</strong> {{ course.master }}</li>
                 <li class="list-group-item"><strong>الكود:</strong> {{ course.code }}</li>
+                <li class="list-group-item"><strong>اسم الدورة:</strong> {{ course.name|default:'-' }}</li>
                 <li class="list-group-item"><strong>المحاضر:</strong> {{ course.instructor|default:'-' }}</li>
                 <li class="list-group-item"><strong>الشركة:</strong> {{ course.company_name|default:'-' }}</li>
                 <li class="list-group-item"><strong>الحد الأقصى للطلاب:</strong> {{ course.max_student_count }}</li>

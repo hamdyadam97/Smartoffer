@@ -32,6 +32,11 @@
                     {% if form.code.errors %}<div class="text-danger small">{{ form.code.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-6 mb-3">
+                    <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
                     <label for="{{ form.instructor.id_for_label }}" class="form-label">{{ form.instructor.label }}</label>
                     {{ form.instructor }}
                     {% if form.instructor.errors %}<div class="text-danger small">{{ form.instructor.errors }}</div>{% endif %}

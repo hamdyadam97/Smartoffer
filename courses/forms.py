@@ -46,10 +46,11 @@ class CourseForm(forms.ModelForm):
 
     class Meta:
         model = Course
-        fields = ['master', 'code', 'instructor', 'company_name', 'max_student_count', 'target_level', 'hours', 'start_date', 'end_date']
+        fields = ['master', 'code', 'name', 'instructor', 'company_name', 'max_student_count', 'target_level', 'hours', 'start_date', 'end_date']
         widgets = {
             'master': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
             'instructor': forms.TextInput(attrs={'class': 'form-control'}),
             'company_name': forms.TextInput(attrs={'class': 'form-control'}),
             'max_student_count': forms.NumberInput(attrs={'class': 'form-control'}),
