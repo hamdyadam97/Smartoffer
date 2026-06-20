@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+# Also load production env file if it exists (e.g. on VPS)
+if os.path.exists('.env.production'):
+    load_dotenv('.env.production', override=True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -148,6 +151,9 @@ WHATSAPP_TWILIO_FROM = os.environ.get('WHATSAPP_TWILIO_FROM', '')
 # Ultramsg
 ULTRAMSG_INSTANCE_ID = os.environ.get('ULTRAMSG_INSTANCE_ID', '') or os.environ.get('WHATSAPP_INSTANCE_ID', '')
 ULTRAMSG_TOKEN = os.environ.get('ULTRAMSG_TOKEN', '') or os.environ.get('WHATSAPP_API_TOKEN', '')
+
+import logging
+logging.info('WhatsApp provider loaded: %s', WHATSAPP_PROVIDER)
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.Person'

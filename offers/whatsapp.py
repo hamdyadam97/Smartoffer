@@ -135,6 +135,7 @@ def send_whatsapp_pdf(to_number: str, filename: str, pdf_bytes: bytes, caption: 
     Falls back to text message for Twilio/dev mode.
     """
     provider = getattr(settings, 'WHATSAPP_PROVIDER', 'twilio').lower()
+    print(f"[WhatsApp DEBUG] provider={provider}, instance={getattr(settings, 'ULTRAMSG_INSTANCE_ID', '')[:6]}..., token_present={bool(getattr(settings, 'ULTRAMSG_TOKEN', ''))}")
 
     if provider == 'ultramsg':
         instance_id = getattr(settings, 'ULTRAMSG_INSTANCE_ID', None)
