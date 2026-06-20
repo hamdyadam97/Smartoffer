@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from django.contrib.messages.views import SuccessMessageMixin
@@ -70,9 +70,10 @@ def _prepare_arabic_paragraph(text):
     return '<br/>'.join(out_lines)
 
 
-def export_studentoffer_pdf(request, slug):
-    """Export offer as a clean, modern one-page PDF."""
+def build_offer_pdf(offer, recipient=None):
+    """Build offer PDF as BytesIO. Used by export and email attachment."""
     import os
+    from io import BytesIO
 
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -84,15 +85,9 @@ def export_studentoffer_pdf(request, slug):
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT
     from django.contrib.staticfiles.finders import find
 
-    offer = get_object_or_404(StudentOffer, slug=slug)
-    if not request.user.has_perm('view_studentoffer', branch=offer.branch):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="offer-{offer.slug}.pdf"'
-
+    buffer = BytesIO()
     doc = SimpleDocTemplate(
-        response, pagesize=A4,
+        buffer, pagesize=A4,
         rightMargin=1.5*cm, leftMargin=1.5*cm,
         topMargin=1.0*cm, bottomMargin=1.0*cm
     )
@@ -276,14 +271,7 @@ def export_studentoffer_pdf(request, slug):
     elements.append(Spacer(1, 0.35*cm))
 
     # ========== RECIPIENT INFO ==========
-    recipient = None
-    recipient_pk = request.GET.get('recipient')
-    if recipient_pk:
-        try:
-            recipient = offer.recipients.select_related('student__contact').get(pk=recipient_pk)
-        except OfferRecipient.DoesNotExist:
-            pass
-    if not recipient:
+    if recipient is None:
         recipient = offer.recipients.select_related('student__contact').first()
 
     if recipient:
@@ -449,17 +437,95 @@ def export_studentoffer_pdf(request, slug):
         elements.append(Paragraph(_prepare_arabic(f"سريان العرض حتى: {offer.end_date.strftime('%Y-%m-%d')}"), footer_style))
 
     doc.build(elements)
-    return response
+    buffer.seek(0)
+    return buffer
 
+
+def export_studentoffer_pdf(request, slug):
+    """Export offer as a clean, modern one-page PDF."""
+    offer = get_object_or_404(StudentOffer, slug=slug)
+    if not request.user.has_perm('view_studentoffer', branch=offer.branch):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    recipient_pk = request.GET.get('recipient')
+    recipient = None
+    if recipient_pk:
+        try:
+            recipient = offer.recipients.select_related('student__contact').get(pk=recipient_pk)
+        except OfferRecipient.DoesNotExist:
+            pass
+    if not recipient:
+        recipient = offer.recipients.select_related('student__contact').first()
+
+    buffer = build_offer_pdf(offer, recipient=recipient)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="offer-{offer.slug}.pdf"'
+    return response
 
 
 # ============================================================
 # Send Offer to Single Recipient
 # ============================================================
 
+def _get_recipient_context(offer, recipient):
+    """Build context for offer email template."""
+    student = recipient.student if recipient else None
+    contact = getattr(student, 'contact', None)
+    if student:
+        recipient_name = contact.get_full_name() if contact else student.get_full_name()
+    else:
+        recipient_name = recipient.contact_name or 'مستلم سريع' if recipient else 'مستلم سريع'
+
+    branch = offer.branch
+    company = branch.company if branch else None
+    currency_name = company.get_currency_display_name() if company else 'ريال'
+
+    return {
+        'offer': offer,
+        'recipient_name': recipient_name,
+        'branch_name': branch.name if branch else '-',
+        'course_name': str(offer.course) if offer.course else None,
+        'currency_name': currency_name,
+        'creator_name': offer.created_by.get_full_name() or offer.created_by.email,
+    }
+
+
+def send_offer_email(offer, recipient, email):
+    """Send offer email with HTML body and PDF attachment."""
+    from django.template.loader import render_to_string
+    from django.core.mail import EmailMultiAlternatives
+
+    context = _get_recipient_context(offer, recipient)
+    subject = offer.title
+    html_body = render_to_string('offers/email_offer.html', context)
+    text_body = f"""{offer.title}
+
+{offer.content}
+
+السعر: {offer.price} {context['currency_name']}
+"""
+
+    pdf_buffer = build_offer_pdf(offer, recipient=recipient)
+
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[email],
+    )
+    msg.attach_alternative(html_body, 'text/html')
+    msg.attach(
+        filename=f"offer-{offer.slug}.pdf",
+        content=pdf_buffer.getvalue(),
+        mimetype='application/pdf',
+    )
+    msg.send()
+
+
 @login_required
 def send_offer_to_recipient(request, slug, recipient_pk):
     """Send an offer to a single recipient via their preferred channel."""
+    print(""""Send an offer to a single recipient via their preferred channel.""");
     offer = get_object_or_404(StudentOffer, slug=slug)
     if not request.user.has_perm('change_studentoffer', branch=offer.branch):
         raise PermissionDenied('غير مسموح لك دخول هنا')
@@ -494,13 +560,7 @@ def send_offer_to_recipient(request, slug, recipient_pk):
             messages.warning(request, 'لا يوجد بريد إلكتروني مسجل لهذا المستلم.')
         else:
             try:
-                send_mail(
-                    subject=offer.title,
-                    message=body,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
-                )
+                send_offer_email(offer, recipient, email)
                 messages.success(request, f'تم إرسال الإيميل إلى {recipient_name}.')
                 recipient.status = 'مرسل'
                 recipient.sent_at = timezone.now()
@@ -601,13 +661,7 @@ def send_offer_to_all(request, slug):
             email = contact.email if contact else recipient.contact_email
             if email:
                 try:
-                    send_mail(
-                        subject=offer.title,
-                        message=body,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        fail_silently=False,
-                    )
+                    send_offer_email(offer, recipient, email)
                     recipient.status = 'مرسل'
                     recipient.sent_at = timezone.now()
                     recipient.save()
