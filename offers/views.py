@@ -314,7 +314,7 @@ def build_offer_pdf(offer, recipient=None):
 
     # ========== OFFER DETAILS ==========
     detail_rows = [
-        [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('عنوان العرض'), section_label_style)],
+        [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), field_style), Paragraph(_prepare_arabic('الفرع'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), field_style), Paragraph(_prepare_arabic('تاريخ العرض'), section_label_style)],

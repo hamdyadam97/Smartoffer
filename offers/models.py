@@ -13,7 +13,7 @@ class StudentOffer(models.Model):
         ('مرسلة', 'مرسلة'),
         ('منتهية', 'منتهية'),
     ]
-    title = models.CharField(max_length=255, verbose_name='عنوان العرض')
+    title = models.CharField(max_length=255, verbose_name='نوع الاشتراك ')
     content = models.TextField(verbose_name='محتوى العرض')
     branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, db_index=True, related_name='offers', verbose_name='الفرع')
     course = models.ForeignKey('courses.Course', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='offers', verbose_name='الدورة')
