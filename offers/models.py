@@ -18,6 +18,8 @@ class StudentOffer(models.Model):
     branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, db_index=True, related_name='offers', verbose_name='الفرع')
     master = models.ForeignKey('courses.Master', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='student_offers', verbose_name='التخصص')
     course = models.ForeignKey('courses.Course', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='offers', verbose_name='الدورة')
+    manual_course_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الدورة (يدوي)')
+    manual_course_hours = models.PositiveIntegerField(null=True, blank=True, verbose_name='عدد ساعات الدورة (يدوي)')
     price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name='السعر')
     price_description = models.CharField(max_length=255, blank=True, verbose_name='وصف السعر')
     start_date = models.DateField(null=True, blank=True, verbose_name='تاريخ بداية العرض')

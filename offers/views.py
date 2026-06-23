@@ -316,13 +316,15 @@ def build_offer_pdf(offer, recipient=None):
     course_hours = ''
     if offer.course and offer.course.hours:
         course_hours = f"{offer.course.hours} ساعة"
+    elif offer.manual_course_hours:
+        course_hours = f"{offer.manual_course_hours} ساعة"
     elif offer.master and offer.master.hours:
         course_hours = f"{offer.master.hours} ساعة"
 
     detail_rows = [
         [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), field_style), Paragraph(_prepare_arabic('الفرع'), section_label_style)],
-        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else '-'), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
+        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else (offer.manual_course_name or '-')), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
         [Paragraph(_prepare_arabic(course_hours or '-'), field_style), Paragraph(_prepare_arabic('عدد الساعات'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), field_style), Paragraph(_prepare_arabic('تاريخ العرض'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.get_status_display()), field_style), Paragraph(_prepare_arabic('الحالة'), section_label_style)],
@@ -490,6 +492,8 @@ def _get_recipient_context(offer, recipient):
     course_hours = None
     if offer.course and offer.course.hours:
         course_hours = f"{offer.course.hours} ساعة"
+    elif offer.manual_course_hours:
+        course_hours = f"{offer.manual_course_hours} ساعة"
     elif offer.master and offer.master.hours:
         course_hours = f"{offer.master.hours} ساعة"
 
@@ -497,7 +501,7 @@ def _get_recipient_context(offer, recipient):
         'offer': offer,
         'recipient_name': recipient_name,
         'branch_name': branch.name if branch else '-',
-        'course_name': str(offer.course) if offer.course else None,
+        'course_name': str(offer.course) if offer.course else (offer.manual_course_name or None),
         'master_name': str(offer.master) if offer.master else None,
         'course_hours': course_hours,
         'currency_name': currency_name,
@@ -776,19 +780,18 @@ def root_offer_ajax(request):
         if master.offer_type == 'program':
             title = master.name
             course_for_offer = None
+            manual_course_name = ''
+            manual_course_hours = None
         else:
             if not cd.get('course_name'):
                 return JsonResponse({
                     'success': False,
                     'errors': {'course_name': ['يجب كتابة اسم الدورة.']}
                 }, status=400)
-            course_for_offer = Course.objects.create(
-                master=master,
-                name=cd['course_name'],
-                hours=cd.get('course_hours'),
-                last_person=request.user,
-            )
-            title = course_for_offer.name
+            title = cd['course_name']
+            course_for_offer = None
+            manual_course_name = cd['course_name']
+            manual_course_hours = cd.get('course_hours')
 
         offer = StudentOffer.objects.create(
             title=title,
@@ -796,6 +799,8 @@ def root_offer_ajax(request):
             branch=branch,
             master=master,
             course=course_for_offer,
+            manual_course_name=manual_course_name,
+            manual_course_hours=manual_course_hours,
             price=cd['price'],
             price_description=cd['price_description'],
             created_by=request.user,

@@ -13,7 +13,7 @@ class StudentOfferForm(forms.ModelForm):
 
     class Meta:
         model = StudentOffer
-        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master']
+        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master', 'manual_course_name', 'manual_course_hours']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
