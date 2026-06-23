@@ -952,8 +952,11 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
         # Determine if user belongs to Root company (custom offer flow)
         user_branch_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
         context['is_root_user'] = Branch.objects.filter(
-            pk__in=user_branch_ids,
-            company__name__icontains='root'
+            pk__in=user_branch_ids
+        ).filter(
+            Q(name__icontains='root') |
+            Q(company__name__icontains='جذور') |
+            Q(company__name__icontains='root')
         ).exists()
         return context
 
