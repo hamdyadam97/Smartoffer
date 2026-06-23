@@ -352,17 +352,9 @@
                             <div id="rootCourseSection" class="d-none">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">الدورة</label>
-                                        <select name="course" id="rootOfferCourse" class="form-select">
-                                            <option value="">---------</option>
-                                        </select>
+                                        <label class="form-label">اسم الدورة <span class="text-danger" id="rootCourseNameRequired">*</span></label>
+                                        <input type="text" name="course_name" id="rootOfferCourseName" class="form-control" placeholder="اكتب اسم الدورة" required>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">أو اسم الدورة (يدوي) <span class="text-danger" id="rootCourseNameRequired">*</span></label>
-                                        <input type="text" name="course_name" id="rootOfferCourseName" class="form-control" placeholder="اكتب اسم الدورة إذا لم تختر من القائمة">
-                                    </div>
-                                </div>
-                                <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">عدد ساعات الدورة</label>
                                         <input type="number" name="course_hours" id="rootOfferCourseHours" class="form-control">
@@ -430,7 +422,6 @@
     const offerTypeSelect = document.getElementById('rootOfferType');
     const masterSelect = document.getElementById('rootOfferMaster');
     const courseSection = document.getElementById('rootCourseSection');
-    const courseSelect = document.getElementById('rootOfferCourse');
     const courseNameInput = document.getElementById('rootOfferCourseName');
     const courseHoursInput = document.getElementById('rootOfferCourseHours');
     const courseNameRequired = document.getElementById('rootCourseNameRequired');
@@ -450,7 +441,6 @@
 
     function resetCourseSection() {
         courseSection.classList.add('d-none');
-        courseSelect.value = '';
         courseNameInput.value = '';
         courseHoursInput.value = '';
         courseNameInput.required = false;
@@ -483,24 +473,6 @@
             .catch(() => {});
     }
 
-    function loadCourses(masterId) {
-        courseSelect.innerHTML = '<option value="">---------</option>';
-        if (!masterId) return;
-        fetch('{% url "master-courses-ajax" 0 %}'.replace('0', masterId))
-            .then(r => r.json())
-            .then(data => {
-                if (data.success && data.courses) {
-                    data.courses.forEach(c => {
-                        const option = document.createElement('option');
-                        option.value = c.id;
-                        option.textContent = (c.code || '-') + ' - ' + (c.name || c.master__name);
-                        courseSelect.appendChild(option);
-                    });
-                }
-            })
-            .catch(() => {});
-    }
-
     function onMasterChange(masterId) {
         resetCourseSection();
         if (!masterId) return;
@@ -510,7 +482,6 @@
             courseSection.classList.remove('d-none');
             courseNameInput.required = true;
             courseNameRequired.classList.remove('d-none');
-            loadCourses(masterId);
         } else {
             const h = selected ? selected.dataset.hours : '';
             hoursDisplay.textContent = h ? 'عدد الساعات: ' + h : '';
@@ -532,18 +503,6 @@
     if (masterSelect) {
         masterSelect.addEventListener('change', function() {
             onMasterChange(this.value);
-        });
-    }
-
-    if (courseSelect) {
-        courseSelect.addEventListener('change', function() {
-            if (this.value) {
-                courseNameInput.required = false;
-                courseNameRequired.classList.add('d-none');
-            } else {
-                courseNameInput.required = true;
-                courseNameRequired.classList.remove('d-none');
-            }
         });
     }
 

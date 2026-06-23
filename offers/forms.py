@@ -116,8 +116,7 @@ class RootQuickOfferForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
     master = forms.ModelChoiceField(queryset=None, label='التخصص', widget=forms.Select(attrs={'class': 'form-select'}))
-    course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
-    course_name = forms.CharField(max_length=255, required=False, label='اسم الدورة (يدوي)', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اكتب اسم الدورة إذا لم تختر من القائمة'}))
+    course_name = forms.CharField(max_length=255, required=False, label='اسم الدورة', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اكتب اسم الدورة'}))
     course_hours = forms.IntegerField(required=False, label='عدد ساعات الدورة', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
@@ -131,31 +130,26 @@ class RootQuickOfferForm(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         from core.models import Branch
-        from courses.models import Master, Course
+        from courses.models import Master
         super().__init__(*args, **kwargs)
         if user is not None:
             branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
             self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
             self.fields['master'].queryset = Master.objects.select_related('branch').filter(branch__in=branch_ids)
-            self.fields['course'].queryset = Course.objects.select_related('master').filter(master__branch__in=branch_ids)
         else:
             self.fields['branch'].queryset = Branch.objects.all()
             self.fields['master'].queryset = Master.objects.select_related('branch').all()
-            self.fields['course'].queryset = Course.objects.select_related('master').all()
 
     def clean(self):
         cleaned_data = super().clean()
         master = cleaned_data.get('master')
-        course = cleaned_data.get('course')
-        course_name = cleaned_data.get('course_name')
         offer_type = cleaned_data.get('offer_type')
 
         if master and offer_type and master.offer_type != offer_type:
             self.add_error('master', 'التخصص المختار لا يطابق نوع الاشتراك.')
 
-        if offer_type == 'course':
-            if not course and not course_name:
-                self.add_error('course_name', 'يجب اختيار دورة أو كتابة اسم دورة يدويًا.')
+        if offer_type == 'course' and not cleaned_data.get('course_name'):
+            self.add_error('course_name', 'يجب كتابة اسم الدورة.')
 
         return cleaned_data
 

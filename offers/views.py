@@ -770,7 +770,6 @@ def root_offer_ajax(request):
     if form.is_valid():
         cd = form.cleaned_data
         master = cd['master']
-        course = cd['course']
         branch = cd['branch']
 
         # Build title and course based on master type
@@ -778,31 +777,18 @@ def root_offer_ajax(request):
             title = master.name
             course_for_offer = None
         else:
-            if course:
-                # Update selected course with manual overrides if provided
-                if cd.get('course_name'):
-                    course.name = cd['course_name']
-                if cd.get('course_hours') is not None:
-                    course.hours = cd['course_hours']
-                if cd.get('course_name') or cd.get('course_hours') is not None:
-                    course.last_person = request.user
-                    course.save()
-                course_for_offer = course
-                title = course.name or str(course)
-            elif cd.get('course_name'):
-                # Create a new standalone course for this offer
-                course_for_offer = Course.objects.create(
-                    master=master,
-                    name=cd['course_name'],
-                    hours=cd.get('course_hours'),
-                    last_person=request.user,
-                )
-                title = course_for_offer.name
-            else:
+            if not cd.get('course_name'):
                 return JsonResponse({
                     'success': False,
-                    'errors': {'course_name': ['يجب اختيار دورة أو كتابة اسم دورة يدويًا.']}
+                    'errors': {'course_name': ['يجب كتابة اسم الدورة.']}
                 }, status=400)
+            course_for_offer = Course.objects.create(
+                master=master,
+                name=cd['course_name'],
+                hours=cd.get('course_hours'),
+                last_person=request.user,
+            )
+            title = course_for_offer.name
 
         offer = StudentOffer.objects.create(
             title=title,
