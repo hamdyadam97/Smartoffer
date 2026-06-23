@@ -108,6 +108,35 @@ class QuickOfferForm(forms.Form):
             self.fields['course'].queryset = Course.objects.select_related('master').all()
 
 
+class RootQuickOfferForm(forms.Form):
+    """Form for Root company to create program/course offers quickly."""
+    master = forms.ModelChoiceField(queryset=None, label='نوع الاشتراك (التخصص)', widget=forms.Select(attrs={'class': 'form-select'}))
+    course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
+    branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
+    price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    content = forms.CharField(label='البيان ووصف العرض', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
+    # Recipient fields
+    contact_name = forms.CharField(max_length=255, label='اسم المستلم', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    contact_phone = forms.CharField(max_length=20, label='جوال المستلم', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
+    contact_email = forms.EmailField(required=False, label='بريد المستلم', widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    channel = forms.ChoiceField(choices=OfferRecipient.CHANNEL_CHOICES, initial='whatsapp', label='قناة الإرسال', widget=forms.Select(attrs={'class': 'form-select'}))
+
+    def __init__(self, *args, user=None, **kwargs):
+        from core.models import Branch
+        from courses.models import Master, Course
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
+            self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
+            self.fields['master'].queryset = Master.objects.select_related('branch').filter(branch__in=branch_ids)
+            self.fields['course'].queryset = Course.objects.select_related('master').filter(master__branch__in=branch_ids)
+        else:
+            self.fields['branch'].queryset = Branch.objects.all()
+            self.fields['master'].queryset = Master.objects.select_related('branch').all()
+            self.fields['course'].queryset = Course.objects.select_related('master').all()
+
+
 class OfferNoteForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)

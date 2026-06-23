@@ -22,13 +22,15 @@ class MasterForm(forms.ModelForm):
 
     class Meta:
         model = Master
-        fields = ['branch', 'master_category', 'code', 'name', 'period']
+        fields = ['branch', 'master_category', 'code', 'name', 'period', 'hours', 'offer_type']
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'master_category': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'period': forms.TextInput(attrs={'class': 'form-control'}),
+            'hours': forms.NumberInput(attrs={'class': 'form-control'}),
+            'offer_type': forms.Select(attrs={'class': 'form-select'}),
         }
 
 

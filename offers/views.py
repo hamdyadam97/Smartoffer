@@ -17,7 +17,7 @@ from core.models import Branch
 from courses.models import Course
 from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
-from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm
+from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm, RootQuickOfferForm
 from .whatsapp import send_whatsapp_message, send_whatsapp_pdf
 
 
@@ -756,6 +756,123 @@ def master_courses_ajax(request, master_id):
 
 @require_POST
 @login_required
+def root_offer_ajax(request):
+    """AJAX endpoint for Root company to create a program/course offer and send it."""
+    if not request.user.has_perm_on_any_branch('add_studentoffer'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+
+    form = RootQuickOfferForm(request.POST, user=request.user)
+    if form.is_valid():
+        cd = form.cleaned_data
+        master = cd['master']
+        course = cd['course']
+        branch = cd['branch']
+
+        # Validation: if master is course-type, a course must be selected
+        if master.offer_type == 'course' and not course:
+            return JsonResponse({
+                'success': False,
+                'errors': {'course': ['يجب اختيار الدورة لهذا النوع من الاشتراك.']}
+            }, status=400)
+
+        # Build title and content based on master type
+        if master.offer_type == 'program':
+            title = master.name
+            hours = master.hours
+            course_for_offer = None
+        else:
+            title = f"{master.name} - {course.name}" if course.name else str(course)
+            hours = course.hours if course else None
+            course_for_offer = course
+
+        offer = StudentOffer.objects.create(
+            title=title,
+            content=cd['content'],
+            branch=branch,
+            course=course_for_offer,
+            price=cd['price'],
+            price_description=cd['price_description'],
+            created_by=request.user,
+            status='مسودة',
+        )
+
+        recipient = OfferRecipient.objects.create(
+            offer=offer,
+            student=None,
+            contact_name=cd['contact_name'],
+            contact_phone=cd['contact_phone'],
+            contact_email=cd['contact_email'],
+            channel=cd['channel'],
+            status='مرسل',
+        )
+
+        # Send immediately
+        channel = cd['channel']
+        recipient_name = cd['contact_name'] or cd['contact_phone'] or 'مستلم سريع'
+        body = f"{offer.title}\n\n{offer.content}"
+        send_error = None
+
+        if channel == 'whatsapp':
+            phone = cd['contact_phone']
+            if phone:
+                try:
+                    pdf_buffer = build_offer_pdf(offer, recipient.pk)
+                    result = send_whatsapp_pdf(
+                        phone,
+                        filename=f'offer-{offer.slug}.pdf',
+                        pdf_bytes=pdf_buffer.getvalue(),
+                        caption=body,
+                    )
+                    if result.get('success'):
+                        recipient.status = 'مرسل'
+                        recipient.sent_at = timezone.now()
+                        recipient.save()
+                        offer.status = 'مرسلة'
+                        offer.sent_at = timezone.now()
+                        offer.save()
+                    else:
+                        send_error = result.get('error', 'فشل إرسال واتساب')
+                except Exception as e:
+                    logger.exception('Failed to send Root offer WhatsApp to %s', phone)
+                    send_error = str(e)
+            else:
+                send_error = 'لا يوجد رقم محمول مسجل.'
+        elif channel == 'email':
+            email = cd['contact_email']
+            if email:
+                try:
+                    send_offer_email(offer, recipient, email)
+                    recipient.status = 'مرسل'
+                    recipient.sent_at = timezone.now()
+                    recipient.save()
+                    offer.status = 'مرسلة'
+                    offer.sent_at = timezone.now()
+                    offer.save()
+                except Exception as e:
+                    logger.exception('Failed to send Root offer email to %s', email)
+                    send_error = str(e)
+            else:
+                send_error = 'لا يوجد بريد إلكتروني مسجل.'
+        elif channel == 'app':
+            send_error = 'قناة إشعار التطبيق غير مفعلة حالياً.'
+
+        if send_error:
+            return JsonResponse({
+                'success': False,
+                'error': send_error,
+                'slug': offer.slug,
+            }, status=400)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء العرض وإرساله بنجاح.',
+            'slug': offer.slug,
+        })
+    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+@require_POST
+@login_required
 def quick_offer_ajax(request):
     """AJAX endpoint to create a quick offer with a manual recipient in one step."""
     if not request.user.has_perm_on_any_branch('add_studentoffer'):
@@ -832,6 +949,12 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
             context['courses'] = filter_by_branch(
                 Course.objects.select_related('master'), self.request.user, 'master__branch', perm='view_course'
             )
+        # Determine if user belongs to Root company (custom offer flow)
+        user_branch_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+        context['is_root_user'] = Branch.objects.filter(
+            pk__in=user_branch_ids,
+            company__name__icontains='root'
+        ).exists()
         return context
 
 

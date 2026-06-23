@@ -318,10 +318,14 @@ def master_info_ajax(request, pk):
         'success': True,
         'company_name': company_name,
         'next_code': next_code,
+        'offer_type': master.offer_type,
+        'master_hours': master.hours,
         'master': {
             'id': master.id,
             'name': master.name,
             'code': master.code,
+            'offer_type': master.offer_type,
+            'hours': master.hours,
         }
     })
 
