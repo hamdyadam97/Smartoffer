@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     MasterListView, MasterDetailView, MasterCreateView, MasterUpdateView, MasterDeleteView,
-    master_create_ajax, master_info_ajax, master_next_code_ajax,
+    master_create_ajax, master_info_ajax, master_next_code_ajax, masters_by_offer_type_ajax,
     course_create_ajax, course_next_code_ajax,
     CourseListView, CourseDetailView, CourseUpdateView, CourseDeleteView,
 )
@@ -11,6 +11,7 @@ urlpatterns = [
     path('masters/create/', MasterCreateView.as_view(), name='master-create'),
     path('masters/ajax/create/', master_create_ajax, name='master-create-ajax'),
     path('masters/ajax/info/<int:pk>/', master_info_ajax, name='master-info-ajax'),
+    path('masters/ajax/by-offer-type/<str:offer_type>/', masters_by_offer_type_ajax, name='masters-by-offer-type-ajax'),
     path('masters/ajax/next-code/<int:branch_id>/', master_next_code_ajax, name='master-next-code-ajax'),
     path('masters/<str:slug>/', MasterDetailView.as_view(), name='master-detail'),
     path('masters/<str:slug>/update/', MasterUpdateView.as_view(), name='master-update'),

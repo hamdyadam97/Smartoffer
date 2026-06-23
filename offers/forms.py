@@ -13,7 +13,7 @@ class StudentOfferForm(forms.ModelForm):
 
     class Meta:
         model = StudentOffer
-        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at']
+        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -110,8 +110,15 @@ class QuickOfferForm(forms.Form):
 
 class RootQuickOfferForm(forms.Form):
     """Form for Root company to create program/course offers quickly."""
-    master = forms.ModelChoiceField(queryset=None, label='نوع الاشتراك (التخصص)', widget=forms.Select(attrs={'class': 'form-select'}))
+    offer_type = forms.ChoiceField(
+        choices=[('program', 'بكج / برنامج'), ('course', 'انفرادي / دورة')],
+        label='نوع الاشتراك',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    master = forms.ModelChoiceField(queryset=None, label='التخصص', widget=forms.Select(attrs={'class': 'form-select'}))
     course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
+    course_name = forms.CharField(max_length=255, required=False, label='اسم الدورة (يدوي)', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اكتب اسم الدورة إذا لم تختر من القائمة'}))
+    course_hours = forms.IntegerField(required=False, label='عدد ساعات الدورة', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
     price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -135,6 +142,22 @@ class RootQuickOfferForm(forms.Form):
             self.fields['branch'].queryset = Branch.objects.all()
             self.fields['master'].queryset = Master.objects.select_related('branch').all()
             self.fields['course'].queryset = Course.objects.select_related('master').all()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        master = cleaned_data.get('master')
+        course = cleaned_data.get('course')
+        course_name = cleaned_data.get('course_name')
+        offer_type = cleaned_data.get('offer_type')
+
+        if master and offer_type and master.offer_type != offer_type:
+            self.add_error('master', 'التخصص المختار لا يطابق نوع الاشتراك.')
+
+        if offer_type == 'course':
+            if not course and not course_name:
+                self.add_error('course_name', 'يجب اختيار دورة أو كتابة اسم دورة يدويًا.')
+
+        return cleaned_data
 
 
 class OfferNoteForm(forms.ModelForm):

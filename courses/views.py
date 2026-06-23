@@ -301,6 +301,27 @@ def course_next_code_ajax(request, master_id):
 
 
 @login_required
+def masters_by_offer_type_ajax(request, offer_type):
+    """جلب التخصصات حسب نوع العرض (program/course) لعرض Root."""
+    if offer_type not in ('program', 'course'):
+        return JsonResponse({'success': False, 'error': 'نوع العرض غير صحيح'}, status=400)
+    if not request.user.is_executive():
+        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_studentoffer')]
+        qs = Master.objects.filter(branch__in=allowed_ids, offer_type=offer_type)
+    else:
+        qs = Master.objects.filter(offer_type=offer_type)
+    branch_id = request.GET.get('branch')
+    if branch_id:
+        qs = qs.filter(branch_id=branch_id)
+    masters = list(
+        qs.select_related('branch')
+        .order_by('branch__name', 'name')
+        .values('id', 'name', 'code', 'offer_type', 'hours', 'branch__name')
+    )
+    return JsonResponse({'success': True, 'masters': masters})
+
+
+@login_required
 def master_info_ajax(request, pk):
     """جلب معلومات التخصص لإنشاء دورة (الشركة + الكود التالي)"""
     master = get_object_or_404(Master, pk=pk)

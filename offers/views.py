@@ -316,6 +316,8 @@ def build_offer_pdf(offer, recipient=None):
     course_hours = ''
     if offer.course and offer.course.hours:
         course_hours = f"{offer.course.hours} ساعة"
+    elif offer.master and offer.master.hours:
+        course_hours = f"{offer.master.hours} ساعة"
 
     detail_rows = [
         [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
@@ -488,12 +490,15 @@ def _get_recipient_context(offer, recipient):
     course_hours = None
     if offer.course and offer.course.hours:
         course_hours = f"{offer.course.hours} ساعة"
+    elif offer.master and offer.master.hours:
+        course_hours = f"{offer.master.hours} ساعة"
 
     return {
         'offer': offer,
         'recipient_name': recipient_name,
         'branch_name': branch.name if branch else '-',
         'course_name': str(offer.course) if offer.course else None,
+        'master_name': str(offer.master) if offer.master else None,
         'course_hours': course_hours,
         'currency_name': currency_name,
         'creator_name': offer.created_by.get_full_name() or offer.created_by.email,
@@ -747,7 +752,7 @@ def master_courses_ajax(request, master_id):
         allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_studentoffer')]
         if master.branch_id not in allowed_ids:
             raise PermissionDenied('غير مسموح لك دخول هنا')
-    courses = Course.objects.filter(master=master).values('id', 'code', 'master__name').order_by('-created_at')
+    courses = Course.objects.filter(master=master).values('id', 'code', 'name', 'master__name').order_by('-created_at')
     return JsonResponse({
         'success': True,
         'courses': list(courses),
@@ -768,27 +773,42 @@ def root_offer_ajax(request):
         course = cd['course']
         branch = cd['branch']
 
-        # Validation: if master is course-type, a course must be selected
-        if master.offer_type == 'course' and not course:
-            return JsonResponse({
-                'success': False,
-                'errors': {'course': ['يجب اختيار الدورة لهذا النوع من الاشتراك.']}
-            }, status=400)
-
-        # Build title and content based on master type
+        # Build title and course based on master type
         if master.offer_type == 'program':
             title = master.name
-            hours = master.hours
             course_for_offer = None
         else:
-            title = f"{master.name} - {course.name}" if course.name else str(course)
-            hours = course.hours if course else None
-            course_for_offer = course
+            if course:
+                # Update selected course with manual overrides if provided
+                if cd.get('course_name'):
+                    course.name = cd['course_name']
+                if cd.get('course_hours') is not None:
+                    course.hours = cd['course_hours']
+                if cd.get('course_name') or cd.get('course_hours') is not None:
+                    course.last_person = request.user
+                    course.save()
+                course_for_offer = course
+                title = course.name or str(course)
+            elif cd.get('course_name'):
+                # Create a new standalone course for this offer
+                course_for_offer = Course.objects.create(
+                    master=master,
+                    name=cd['course_name'],
+                    hours=cd.get('course_hours'),
+                    last_person=request.user,
+                )
+                title = course_for_offer.name
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'course_name': ['يجب اختيار دورة أو كتابة اسم دورة يدويًا.']}
+                }, status=400)
 
         offer = StudentOffer.objects.create(
             title=title,
             content=cd['content'],
             branch=branch,
+            master=master,
             course=course_for_offer,
             price=cd['price'],
             price_description=cd['price_description'],
@@ -816,7 +836,7 @@ def root_offer_ajax(request):
             phone = cd['contact_phone']
             if phone:
                 try:
-                    pdf_buffer = build_offer_pdf(offer, recipient.pk)
+                    pdf_buffer = build_offer_pdf(offer, recipient)
                     result = send_whatsapp_pdf(
                         phone,
                         filename=f'offer-{offer.slug}.pdf',

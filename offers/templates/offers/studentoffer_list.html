@@ -319,6 +319,14 @@
                         <div class="tab-pane fade show active" id="r-offer-pane" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
+                                    <label class="form-label">نوع الاشتراك <span class="text-danger">*</span></label>
+                                    <select name="offer_type" id="rootOfferType" class="form-select" required>
+                                        <option value="">اختر النوع...</option>
+                                        <option value="program">بكج / برنامج</option>
+                                        <option value="course">انفرادي / دورة</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label">الفرع <span class="text-danger">*</span></label>
                                     <select name="branch" id="rootOfferBranch" class="form-select" required>
                                         <option value="">اختر الفرع...</option>
@@ -327,27 +335,38 @@
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">نوع الاشتراك (التخصص) <span class="text-danger">*</span></label>
-                                    <select name="master" id="rootOfferMaster" class="form-select" required>
-                                        <option value="">اختر التخصص...</option>
-                                        {% for m in masters %}
-                                        <option value="{{ m.id }}">{{ m.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <small id="rootOfferHours" class="text-muted"></small>
-                                </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-6 mb-3 d-none" id="rootCourseWrapper">
-                                    <label class="form-label">الدورة <span class="text-danger">*</span></label>
-                                    <select name="course" id="rootOfferCourse" class="form-select">
-                                        <option value="">---------</option>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">التخصص <span class="text-danger">*</span></label>
+                                    <select name="master" id="rootOfferMaster" class="form-select" required>
+                                        <option value="">اختر التخصص...</option>
                                     </select>
+                                    <small id="rootOfferHours" class="text-muted"></small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">السعر</label>
                                     <input type="number" name="price" class="form-control" step="0.01" value="0">
+                                </div>
+                            </div>
+                            <div id="rootCourseSection" class="d-none">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">الدورة</label>
+                                        <select name="course" id="rootOfferCourse" class="form-select">
+                                            <option value="">---------</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">أو اسم الدورة (يدوي) <span class="text-danger" id="rootCourseNameRequired">*</span></label>
+                                        <input type="text" name="course_name" id="rootOfferCourseName" class="form-control" placeholder="اكتب اسم الدورة إذا لم تختر من القائمة">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">عدد ساعات الدورة</label>
+                                        <input type="number" name="course_hours" id="rootOfferCourseHours" class="form-control">
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -408,9 +427,13 @@
     const saveBtn = document.getElementById('saveRootOfferBtn');
     const spinner = document.getElementById('rootOfferSpinner');
     const btnText = document.getElementById('rootOfferBtnText');
+    const offerTypeSelect = document.getElementById('rootOfferType');
     const masterSelect = document.getElementById('rootOfferMaster');
-    const courseWrapper = document.getElementById('rootCourseWrapper');
+    const courseSection = document.getElementById('rootCourseSection');
     const courseSelect = document.getElementById('rootOfferCourse');
+    const courseNameInput = document.getElementById('rootOfferCourseName');
+    const courseHoursInput = document.getElementById('rootOfferCourseHours');
+    const courseNameRequired = document.getElementById('rootCourseNameRequired');
     const branchSelect = document.getElementById('rootOfferBranch');
     const contentArea = document.getElementById('rootOfferContent');
     const hoursDisplay = document.getElementById('rootOfferHours');
@@ -425,6 +448,41 @@
         btnText.textContent = loading ? 'جاري الإرسال...' : 'إنشاء العرض والإرسال';
     }
 
+    function resetCourseSection() {
+        courseSection.classList.add('d-none');
+        courseSelect.value = '';
+        courseNameInput.value = '';
+        courseHoursInput.value = '';
+        courseNameInput.required = false;
+        courseNameRequired.classList.add('d-none');
+        hoursDisplay.textContent = '';
+    }
+
+    function loadMasters(offerType, branchId) {
+        masterSelect.innerHTML = '<option value="">اختر التخصص...</option>';
+        resetCourseSection();
+        if (!offerType) return;
+        let url = '{% url "masters-by-offer-type-ajax" "PROGRAM" %}'.replace('PROGRAM', offerType);
+        if (branchId) {
+            url += '?branch=' + encodeURIComponent(branchId);
+        }
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.masters) {
+                    data.masters.forEach(m => {
+                        const option = document.createElement('option');
+                        option.value = m.id;
+                        option.textContent = (m.branch__name ? m.branch__name + ' - ' : '') + m.name;
+                        option.dataset.offerType = m.offer_type;
+                        option.dataset.hours = m.hours || '';
+                        masterSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
     function loadCourses(masterId) {
         courseSelect.innerHTML = '<option value="">---------</option>';
         if (!masterId) return;
@@ -435,7 +493,7 @@
                     data.courses.forEach(c => {
                         const option = document.createElement('option');
                         option.value = c.id;
-                        option.textContent = (c.code || '-') + ' - ' + c.master__name;
+                        option.textContent = (c.code || '-') + ' - ' + (c.name || c.master__name);
                         courseSelect.appendChild(option);
                     });
                 }
@@ -444,26 +502,31 @@
     }
 
     function onMasterChange(masterId) {
-        courseWrapper.classList.add('d-none');
-        courseSelect.required = false;
-        courseSelect.value = '';
-        hoursDisplay.textContent = '';
+        resetCourseSection();
         if (!masterId) return;
-        fetch('{% url "master-info-ajax" 0 %}'.replace('0', masterId))
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    if (data.offer_type === 'course') {
-                        courseWrapper.classList.remove('d-none');
-                        courseSelect.required = true;
-                        loadCourses(masterId);
-                    } else {
-                        const h = data.master_hours || '-';
-                        hoursDisplay.textContent = 'عدد الساعات: ' + h;
-                    }
-                }
-            })
-            .catch(() => {});
+        const selected = masterSelect.options[masterSelect.selectedIndex];
+        const offerType = selected ? selected.dataset.offerType : '';
+        if (offerType === 'course') {
+            courseSection.classList.remove('d-none');
+            courseNameInput.required = true;
+            courseNameRequired.classList.remove('d-none');
+            loadCourses(masterId);
+        } else {
+            const h = selected ? selected.dataset.hours : '';
+            hoursDisplay.textContent = h ? 'عدد الساعات: ' + h : '';
+        }
+    }
+
+    if (offerTypeSelect) {
+        offerTypeSelect.addEventListener('change', function() {
+            loadMasters(this.value, branchSelect ? branchSelect.value : '');
+        });
+    }
+
+    if (branchSelect) {
+        branchSelect.addEventListener('change', function() {
+            loadMasters(offerTypeSelect ? offerTypeSelect.value : '', this.value);
+        });
     }
 
     if (masterSelect) {
@@ -472,12 +535,22 @@
         });
     }
 
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            if (this.value) {
+                courseNameInput.required = false;
+                courseNameRequired.classList.add('d-none');
+            } else {
+                courseNameInput.required = true;
+                courseNameRequired.classList.remove('d-none');
+            }
+        });
+    }
+
     window.openRootOfferModal = function() {
         alertBox.innerHTML = '';
         form.reset();
-        courseWrapper.classList.add('d-none');
-        courseSelect.required = false;
-        hoursDisplay.textContent = '';
+        resetCourseSection();
         new bootstrap.Modal(modal).show();
     };
 
