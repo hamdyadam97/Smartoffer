@@ -520,7 +520,20 @@
             if (offerTypeSelect && offerTypeSelect.value === 'program') {
                 loadMasters('program', this.value);
             }
+            loadBranchTemplate(this.value);
         });
+    }
+
+    function loadBranchTemplate(branchId) {
+        if (!branchId || !contentArea) return;
+        fetch('{% url "branch-offer-template-ajax" 0 %}'.replace('0', branchId))
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.template && !contentArea.value.trim()) {
+                    contentArea.value = data.template;
+                }
+            })
+            .catch(() => {});
     }
 
     window.openRootOfferModal = function() {
