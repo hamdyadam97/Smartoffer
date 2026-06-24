@@ -115,7 +115,7 @@ class RootQuickOfferForm(forms.Form):
         label='نوع الاشتراك',
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
-    master = forms.ModelChoiceField(queryset=None, label='التخصص', widget=forms.Select(attrs={'class': 'form-select'}))
+    master = forms.ModelChoiceField(queryset=None, required=False, label='التخصص', widget=forms.Select(attrs={'class': 'form-select'}))
     course_name = forms.CharField(max_length=255, required=False, label='اسم الدورة', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اكتب اسم الدورة'}))
     course_hours = forms.IntegerField(required=False, label='عدد ساعات الدورة', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
@@ -145,8 +145,11 @@ class RootQuickOfferForm(forms.Form):
         master = cleaned_data.get('master')
         offer_type = cleaned_data.get('offer_type')
 
-        if master and offer_type and master.offer_type != offer_type:
-            self.add_error('master', 'التخصص المختار لا يطابق نوع الاشتراك.')
+        if offer_type == 'program' and not master:
+            self.add_error('master', 'يجب اختيار التخصص للبكج / البرنامج.')
+
+        if offer_type == 'program' and master and master.offer_type != 'program':
+            self.add_error('master', 'التخصص المختار ليس من نوع بكج / برنامج.')
 
         if offer_type == 'course' and not cleaned_data.get('course_name'):
             self.add_error('course_name', 'يجب كتابة اسم الدورة.')

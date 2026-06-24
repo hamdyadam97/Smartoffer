@@ -336,17 +336,13 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">التخصص <span class="text-danger">*</span></label>
+                            <div class="row" id="rootMasterSection">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">التخصص <span class="text-danger" id="rootMasterRequired">*</span></label>
                                     <select name="master" id="rootOfferMaster" class="form-select" required>
                                         <option value="">اختر التخصص...</option>
                                     </select>
                                     <small id="rootOfferHours" class="text-muted"></small>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">السعر</label>
-                                    <input type="number" name="price" class="form-control" step="0.01" value="0">
                                 </div>
                             </div>
                             <div id="rootCourseSection" class="d-none">
@@ -359,6 +355,12 @@
                                         <label class="form-label">عدد ساعات الدورة</label>
                                         <input type="number" name="course_hours" id="rootOfferCourseHours" class="form-control">
                                     </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">السعر</label>
+                                    <input type="number" name="price" class="form-control" step="0.01" value="0">
                                 </div>
                             </div>
                             <div class="mb-3">
@@ -420,7 +422,9 @@
     const spinner = document.getElementById('rootOfferSpinner');
     const btnText = document.getElementById('rootOfferBtnText');
     const offerTypeSelect = document.getElementById('rootOfferType');
+    const masterSection = document.getElementById('rootMasterSection');
     const masterSelect = document.getElementById('rootOfferMaster');
+    const masterRequired = document.getElementById('rootMasterRequired');
     const courseSection = document.getElementById('rootCourseSection');
     const courseNameInput = document.getElementById('rootOfferCourseName');
     const courseHoursInput = document.getElementById('rootOfferCourseHours');
@@ -439,18 +443,37 @@
         btnText.textContent = loading ? 'جاري الإرسال...' : 'إنشاء العرض والإرسال';
     }
 
-    function resetCourseSection() {
+    function resetFormState() {
+        masterSelect.innerHTML = '<option value="">اختر التخصص...</option>';
+        masterSelect.value = '';
+        masterSelect.required = false;
+        masterRequired.classList.add('d-none');
+        masterSection.classList.add('d-none');
+        hoursDisplay.textContent = '';
         courseSection.classList.add('d-none');
         courseNameInput.value = '';
         courseHoursInput.value = '';
         courseNameInput.required = false;
         courseNameRequired.classList.add('d-none');
-        hoursDisplay.textContent = '';
+    }
+
+    function showProgramMode() {
+        resetFormState();
+        masterSection.classList.remove('d-none');
+        masterSelect.required = true;
+        masterRequired.classList.remove('d-none');
+        loadMasters('program', branchSelect ? branchSelect.value : '');
+    }
+
+    function showCourseMode() {
+        resetFormState();
+        courseSection.classList.remove('d-none');
+        courseNameInput.required = true;
+        courseNameRequired.classList.remove('d-none');
     }
 
     function loadMasters(offerType, branchId) {
         masterSelect.innerHTML = '<option value="">اختر التخصص...</option>';
-        resetCourseSection();
         if (!offerType) return;
         let url = '{% url "masters-by-offer-type-ajax" "PROGRAM" %}'.replace('PROGRAM', offerType);
         if (branchId) {
@@ -464,7 +487,6 @@
                         const option = document.createElement('option');
                         option.value = m.id;
                         option.textContent = (m.branch__name ? m.branch__name + ' - ' : '') + m.name;
-                        option.dataset.offerType = m.offer_type;
                         option.dataset.hours = m.hours || '';
                         masterSelect.appendChild(option);
                     });
@@ -473,43 +495,42 @@
             .catch(() => {});
     }
 
-    function onMasterChange(masterId) {
-        resetCourseSection();
-        if (!masterId) return;
-        const selected = masterSelect.options[masterSelect.selectedIndex];
-        const offerType = selected ? selected.dataset.offerType : '';
-        if (offerType === 'course') {
-            courseSection.classList.remove('d-none');
-            courseNameInput.required = true;
-            courseNameRequired.classList.remove('d-none');
+    function onOfferTypeChange(offerType) {
+        if (offerType === 'program') {
+            showProgramMode();
+        } else if (offerType === 'course') {
+            showCourseMode();
         } else {
-            const h = selected ? selected.dataset.hours : '';
-            hoursDisplay.textContent = h ? 'عدد الساعات: ' + h : '';
+            resetFormState();
         }
     }
 
     if (offerTypeSelect) {
         offerTypeSelect.addEventListener('change', function() {
-            loadMasters(this.value, branchSelect ? branchSelect.value : '');
+            onOfferTypeChange(this.value);
         });
     }
 
     if (branchSelect) {
         branchSelect.addEventListener('change', function() {
-            loadMasters(offerTypeSelect ? offerTypeSelect.value : '', this.value);
+            if (offerTypeSelect && offerTypeSelect.value === 'program') {
+                loadMasters('program', this.value);
+            }
         });
     }
 
     if (masterSelect) {
         masterSelect.addEventListener('change', function() {
-            onMasterChange(this.value);
+            const selected = masterSelect.options[masterSelect.selectedIndex];
+            const h = selected ? selected.dataset.hours : '';
+            hoursDisplay.textContent = h ? 'عدد الساعات: ' + h : '';
         });
     }
 
     window.openRootOfferModal = function() {
         alertBox.innerHTML = '';
         form.reset();
-        resetCourseSection();
+        resetFormState();
         new bootstrap.Modal(modal).show();
     };
 

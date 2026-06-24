@@ -776,8 +776,8 @@ def root_offer_ajax(request):
         master = cd['master']
         branch = cd['branch']
 
-        # Build title and course based on master type
-        if master.offer_type == 'program':
+        # Build title and course based on offer type
+        if cd['offer_type'] == 'program':
             title = master.name
             course_for_offer = None
             manual_course_name = ''
