@@ -13,7 +13,7 @@ class StudentOfferForm(forms.ModelForm):
 
     class Meta:
         model = StudentOffer
-        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master', 'manual_course_name', 'manual_course_hours']
+        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master', 'manual_course_name', 'manual_course_hours', 'manual_program_hours']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -116,6 +116,7 @@ class RootQuickOfferForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
     master = forms.ModelChoiceField(queryset=None, required=False, label='التخصص', widget=forms.Select(attrs={'class': 'form-select'}))
+    program_hours = forms.IntegerField(required=False, label='عدد ساعات البرنامج', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     course_name = forms.CharField(max_length=255, required=False, label='اسم الدورة', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اكتب اسم الدورة'}))
     course_hours = forms.IntegerField(required=False, label='عدد ساعات الدورة', widget=forms.NumberInput(attrs={'class': 'form-control'}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))

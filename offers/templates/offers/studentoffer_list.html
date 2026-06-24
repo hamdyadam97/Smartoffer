@@ -336,13 +336,18 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="row" id="rootMasterSection">
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">التخصص <span class="text-danger" id="rootMasterRequired">*</span></label>
-                                    <select name="master" id="rootOfferMaster" class="form-select" required>
-                                        <option value="">اختر التخصص...</option>
-                                    </select>
-                                    <small id="rootOfferHours" class="text-muted"></small>
+                            <div id="rootMasterSection" class="d-none">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">التخصص <span class="text-danger" id="rootMasterRequired">*</span></label>
+                                        <select name="master" id="rootOfferMaster" class="form-select" required>
+                                            <option value="">اختر التخصص...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">عدد ساعات البرنامج</label>
+                                        <input type="number" name="program_hours" id="rootProgramHours" class="form-control" placeholder="عدد الساعات لهذا العرض">
+                                    </div>
                                 </div>
                             </div>
                             <div id="rootCourseSection" class="d-none">
@@ -425,13 +430,13 @@
     const masterSection = document.getElementById('rootMasterSection');
     const masterSelect = document.getElementById('rootOfferMaster');
     const masterRequired = document.getElementById('rootMasterRequired');
+    const programHoursInput = document.getElementById('rootProgramHours');
     const courseSection = document.getElementById('rootCourseSection');
     const courseNameInput = document.getElementById('rootOfferCourseName');
     const courseHoursInput = document.getElementById('rootOfferCourseHours');
     const courseNameRequired = document.getElementById('rootCourseNameRequired');
     const branchSelect = document.getElementById('rootOfferBranch');
     const contentArea = document.getElementById('rootOfferContent');
-    const hoursDisplay = document.getElementById('rootOfferHours');
 
     function showAlert(message, type) {
         alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
@@ -449,7 +454,7 @@
         masterSelect.required = false;
         masterRequired.classList.add('d-none');
         masterSection.classList.add('d-none');
-        hoursDisplay.textContent = '';
+        programHoursInput.value = '';
         courseSection.classList.add('d-none');
         courseNameInput.value = '';
         courseHoursInput.value = '';
@@ -487,7 +492,6 @@
                         const option = document.createElement('option');
                         option.value = m.id;
                         option.textContent = (m.branch__name ? m.branch__name + ' - ' : '') + m.name;
-                        option.dataset.hours = m.hours || '';
                         masterSelect.appendChild(option);
                     });
                 }
@@ -516,14 +520,6 @@
             if (offerTypeSelect && offerTypeSelect.value === 'program') {
                 loadMasters('program', this.value);
             }
-        });
-    }
-
-    if (masterSelect) {
-        masterSelect.addEventListener('change', function() {
-            const selected = masterSelect.options[masterSelect.selectedIndex];
-            const h = selected ? selected.dataset.hours : '';
-            hoursDisplay.textContent = h ? 'عدد الساعات: ' + h : '';
         });
     }
 

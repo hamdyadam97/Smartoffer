@@ -318,6 +318,8 @@ def build_offer_pdf(offer, recipient=None):
         course_hours = f"{offer.course.hours} ساعة"
     elif offer.manual_course_hours:
         course_hours = f"{offer.manual_course_hours} ساعة"
+    elif offer.manual_program_hours:
+        course_hours = f"{offer.manual_program_hours} ساعة"
     elif offer.master and offer.master.hours:
         course_hours = f"{offer.master.hours} ساعة"
 
@@ -494,6 +496,8 @@ def _get_recipient_context(offer, recipient):
         course_hours = f"{offer.course.hours} ساعة"
     elif offer.manual_course_hours:
         course_hours = f"{offer.manual_course_hours} ساعة"
+    elif offer.manual_program_hours:
+        course_hours = f"{offer.manual_program_hours} ساعة"
     elif offer.master and offer.master.hours:
         course_hours = f"{offer.master.hours} ساعة"
 
@@ -782,6 +786,7 @@ def root_offer_ajax(request):
             course_for_offer = None
             manual_course_name = ''
             manual_course_hours = None
+            manual_program_hours = cd.get('program_hours')
         else:
             if not cd.get('course_name'):
                 return JsonResponse({
@@ -792,6 +797,7 @@ def root_offer_ajax(request):
             course_for_offer = None
             manual_course_name = cd['course_name']
             manual_course_hours = cd.get('course_hours')
+            manual_program_hours = None
 
         offer = StudentOffer.objects.create(
             title=title,
@@ -801,6 +807,7 @@ def root_offer_ajax(request):
             course=course_for_offer,
             manual_course_name=manual_course_name,
             manual_course_hours=manual_course_hours,
+            manual_program_hours=manual_program_hours,
             price=cd['price'],
             price_description=cd['price_description'],
             created_by=request.user,
