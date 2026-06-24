@@ -323,8 +323,9 @@ def build_offer_pdf(offer, recipient=None):
     elif offer.master and offer.master.hours:
         course_hours = f"{offer.master.hours} ساعة"
 
+    subscription_display = 'دورة انفرادية' if offer.manual_course_name else offer.title
     detail_rows = [
-        [Paragraph(_prepare_arabic(offer.title), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
+        [Paragraph(_prepare_arabic(subscription_display), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), field_style), Paragraph(_prepare_arabic('الفرع'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.course) if offer.course else (offer.manual_course_name or '-')), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
         [Paragraph(_prepare_arabic(course_hours or '-'), field_style), Paragraph(_prepare_arabic('عدد الساعات'), section_label_style)],
@@ -787,6 +788,7 @@ def root_offer_ajax(request):
             manual_course_name = ''
             manual_course_hours = None
             manual_program_hours = cd.get('program_hours')
+            content = cd['content']
         else:
             if not cd.get('course_name'):
                 return JsonResponse({
@@ -798,10 +800,14 @@ def root_offer_ajax(request):
             manual_course_name = cd['course_name']
             manual_course_hours = cd.get('course_hours')
             manual_program_hours = None
+            renewal_note = 'سيتم تجديد دورات بناء على عدد الساعات والحاجة طبقا لتخصصكم.'
+            content = cd['content'].strip()
+            if renewal_note not in content:
+                content = (content + '\n\n' + renewal_note).strip()
 
         offer = StudentOffer.objects.create(
             title=title,
-            content=cd['content'],
+            content=content,
             branch=branch,
             master=master,
             course=course_for_offer,

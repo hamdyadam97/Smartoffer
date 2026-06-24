@@ -99,7 +99,7 @@
             <p>مرحباً {{ recipient_name }}،</p>
             <p>نرفق لكم عرض السعر المقدم من <strong>{{ branch_name }}</strong>.</p>
 
-            <h2>{{ offer.title }}</h2>
+            <h2>{% if offer.manual_course_name %}دورة انفرادية - {{ offer.manual_course_name }}{% else %}{{ offer.title }}{% endif %}</h2>
             <p>{{ offer.content|linebreaksbr }}</p>
 
             <div class="details">
