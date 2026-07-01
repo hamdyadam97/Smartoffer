@@ -152,6 +152,10 @@ WHATSAPP_TWILIO_FROM = os.environ.get('WHATSAPP_TWILIO_FROM', '')
 ULTRAMSG_INSTANCE_ID = os.environ.get('ULTRAMSG_INSTANCE_ID', '') or os.environ.get('WHATSAPP_INSTANCE_ID', '')
 ULTRAMSG_TOKEN = os.environ.get('ULTRAMSG_TOKEN', '') or os.environ.get('WHATSAPP_API_TOKEN', '')
 
+# Ultramsg for Root company (rootexam / rootacademy / الجذور الرقمية)
+ULTRAMSG_INSTANCE_ID_ROOT = os.environ.get('ULTRAMSG_INSTANCE_ID_ROOT', '') or os.environ.get('WHATSAPP_INSTANCE_ID_ROOT', '')
+ULTRAMSG_TOKEN_ROOT = os.environ.get('ULTRAMSG_TOKEN_ROOT', '') or os.environ.get('WHATSAPP_API_TOKEN_ROOT', '')
+
 import logging
 logging.info('WhatsApp provider loaded: %s', WHATSAPP_PROVIDER)
 

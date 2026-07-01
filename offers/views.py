@@ -578,6 +578,7 @@ def send_offer_to_recipient(request, slug, recipient_pk):
                 filename=f"offer-{offer.slug}.pdf",
                 pdf_bytes=pdf_buffer.getvalue(),
                 caption=body,
+                branch=offer.branch,
             )
             if result.get('success'):
                 messages.success(request, f'تم إرسال العرض عبر واتساب إلى {recipient_name}.')
@@ -690,6 +691,7 @@ def send_offer_to_all(request, slug):
                         filename=f"offer-{offer.slug}.pdf",
                         pdf_bytes=pdf_buffer.getvalue(),
                         caption=body,
+                        branch=offer.branch,
                     )
                     if result.get('success'):
                         recipient.status = 'مرسل'
@@ -846,6 +848,7 @@ def root_offer_ajax(request):
                         filename=f'offer-{offer.slug}.pdf',
                         pdf_bytes=pdf_buffer.getvalue(),
                         caption=body,
+                        branch=offer.branch,
                     )
                     if result.get('success'):
                         recipient.status = 'مرسل'
