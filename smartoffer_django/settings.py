@@ -31,6 +31,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'whitenoise.runserver_nostatic',
+    'import_export',
 ]
 
 LOCAL_APPS = [

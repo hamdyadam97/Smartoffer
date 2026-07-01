@@ -54,6 +54,15 @@ class MasterListView(BranchPermissionMixin, ListView):
             context['categories'] = MasterCategory.objects.filter(
                 Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
             ).order_by('name')
+        # Root company flag (rootexam / rootacademy / الجذور الرقمية)
+        user_branch_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+        context['is_root_user'] = Branch.objects.filter(
+            pk__in=user_branch_ids
+        ).filter(
+            Q(name__icontains='root') |
+            Q(company__name__icontains='جذور') |
+            Q(company__name__icontains='root')
+        ).exists()
         return context
 
 

@@ -116,6 +116,7 @@
                             <label class="form-label">عدد الساعات</label>
                             <input type="number" name="hours" class="form-control">
                         </div>
+                        {% if is_root_user %}
                         <div class="col-md-6">
                             <label class="form-label">نوع العرض <span class="text-danger">*</span></label>
                             <select name="offer_type" class="form-select" required>
@@ -123,6 +124,9 @@
                                 <option value="course">انفرادي / دورة</option>
                             </select>
                         </div>
+                        {% else %}
+                        <input type="hidden" name="offer_type" value="program">
+                        {% endif %}
                     </div>
                 </form>
             </div>

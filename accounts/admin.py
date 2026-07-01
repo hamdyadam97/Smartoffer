@@ -1,6 +1,33 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from import_export.admin import ImportExportMixin
+from import_export import resources, fields
 from .models import Team, Person, BranchAccess, Role, Permission, EmployeeRole, EmployeePerformance
+
+
+class PersonResource(resources.ModelResource):
+    class Meta:
+        model = Person
+        fields = ('email', 'first_name', 'second_name', 'third_name', 'forth_name',
+                  'mobile', 'phone', 'address', 'is_staff', 'is_active', 'is_superuser',
+                  'password')
+        import_id_fields = ('email',)
+        skip_unchanged = True
+        report_skipped = True
+
+    def before_import_row(self, row, **kwargs):
+        # Set a default unusable password if not provided
+        if not row.get('password'):
+            row['password'] = '!defaultpassword123'
+        return super().before_import_row(row, **kwargs)
+
+    def save_instance(self, instance, using_transactions=True, dry_run=False):
+        # Ensure imported users get a usable password hash
+        if instance.password and not instance.password.startswith('pbkdf2'):
+            instance.set_password(instance.password)
+        elif not instance.password or instance.password.startswith('!'):
+            instance.set_unusable_password()
+        super().save_instance(instance, using_transactions, dry_run)
 
 
 @admin.register(Team)
@@ -15,7 +42,8 @@ class BranchAccessInline(admin.TabularInline):
 
 
 @admin.register(Person)
-class PersonAdmin(UserAdmin):
+class PersonAdmin(ImportExportMixin, UserAdmin):
+    resource_class = PersonResource
     list_display = ['email', 'get_full_name', 'team', 'branch', 'is_active', 'is_staff', 'created_at']
     list_filter = ['is_staff', 'is_active', 'team', 'branch']
     search_fields = ['email', 'first_name', 'forth_name', 'mobile']
