@@ -1,15 +1,22 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from import_export.admin import ImportExportMixin
-from import_export import resources, fields
+from import_export import resources, fields, widgets
+from core.models import Branch
 from .models import Team, Person, BranchAccess, Role, Permission, EmployeeRole, EmployeePerformance
 
 
 class PersonResource(resources.ModelResource):
+    branch = fields.Field(
+        column_name='branch',
+        attribute='branch',
+        widget=widgets.ForeignKeyWidget(Branch, 'name')
+    )
+
     class Meta:
         model = Person
         fields = ('email', 'first_name', 'second_name', 'third_name', 'forth_name',
-                  'mobile', 'phone', 'address', 'is_staff', 'is_active', 'is_superuser',
+                  'mobile', 'phone', 'address', 'branch', 'is_staff', 'is_active', 'is_superuser',
                   'password')
         import_id_fields = ('email',)
         skip_unchanged = True
