@@ -10,7 +10,12 @@ class PersonResource(resources.ModelResource):
     branch = fields.Field(
         column_name='branch',
         attribute='branch',
-        widget=widgets.ForeignKeyWidget(Branch, 'name')
+        widget=widgets.ForeignKeyWidget(Branch, 'code')
+    )
+    address = fields.Field(
+        column_name='address',
+        attribute='address',
+        default=''
     )
 
     class Meta:
@@ -28,13 +33,13 @@ class PersonResource(resources.ModelResource):
             row['password'] = '!defaultpassword123'
         return super().before_import_row(row, **kwargs)
 
-    def save_instance(self, instance, using_transactions=True, dry_run=False):
+    def save_instance(self, instance, is_create, row, **kwargs):
         # Ensure imported users get a usable password hash
         if instance.password and not instance.password.startswith('pbkdf2'):
             instance.set_password(instance.password)
         elif not instance.password or instance.password.startswith('!'):
             instance.set_unusable_password()
-        super().save_instance(instance, using_transactions, dry_run)
+        super().save_instance(instance, is_create, row, **kwargs)
 
 
 @admin.register(Team)
