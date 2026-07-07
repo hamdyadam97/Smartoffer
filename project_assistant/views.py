@@ -4,17 +4,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 
 from .engine import process_chat_message, get_chat_history, create_session
 
 
-ASSISTANT_PERM = 'project_assistant.view_knowledgesnippet'
-
-
 def _check_assistant_perm(user):
-    if not user.has_perm(ASSISTANT_PERM):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
+    # Assistant is open to all logged-in users
+    return
 
 
 @login_required
