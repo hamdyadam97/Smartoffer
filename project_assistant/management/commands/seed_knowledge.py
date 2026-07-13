@@ -66,18 +66,21 @@ KNOWLEDGE_DATA = [
         'order': 1,
     },
     {
-        'title': 'الإعدادات الأساسية في settings.py',
-        'category': 'architecture',
+        'title': 'كيف أغير إعدادات النظام الأساسية؟',
+        'category': 'howto',
         'content': (
-            "• LANGUAGE_CODE = 'ar' (اللغة العربية)\n"
-            "• TIME_ZONE = 'Africa/Cairo'\n"
-            "• AUTH_USER_MODEL = 'accounts.Person' (موديل المستخدم مخصص)\n"
-            "• الـ DB الافتراضي PostgreSQL لكن SQLite يعمل للتطوير\n"
-            "• Static files via WhiteNoise\n"
-            "• Sentry متكامل للتتبع\n"
-            "• إعدادات WhatsApp عبر Twilio موجودة"
+            "لتعديل إعدادات النظام الأساسية اتبع الخطوات التالية:\n"
+            "1. سجّل دخولك بصلاحية مدير (Superuser).\n"
+            "2. من القائمة الجانبية اذهب إلى **الإعدادات الأساسية**.\n"
+            "3. يمكنك تعديل:\n"
+            "   • اسم النظام واللغة الافتراضية.\n"
+            "   • المنطقة الزمنية (التوقيت).\n"
+            "   • نموذج المستخدم الافتراضي.\n"
+            "4. اضغط **حفظ** بعد إجراء التعديلات.\n"
+            "\n"
+            "ملاحظة: بعض الإعدادات تحتاج إعادة تشغيل الخادم (Server) لتطبيقها."
         ),
-        'keywords': 'settings إعدادات configuration language zone user model database',
+        'keywords': 'إعدادات settings نظام أساسية تعديل اللغة التوقيت مدير',
         'order': 2,
     },
 
@@ -653,6 +656,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         created = 0
         updated = 0
+        current_titles = {item['title'] for item in KNOWLEDGE_DATA}
+
         for item in KNOWLEDGE_DATA:
             snippet, was_created = KnowledgeSnippet.objects.update_or_create(
                 title=item['title'],
@@ -669,6 +674,9 @@ class Command(BaseCommand):
             else:
                 updated += 1
 
+        # Remove snippets whose titles are no longer in the seed data
+        deleted, _ = KnowledgeSnippet.objects.exclude(title__in=current_titles).delete()
+
         self.stdout.write(self.style.SUCCESS(
-            f"تم إنشاء {created} مقطع وتحديث {updated} مقطع."
+            f"تم إنشاء {created} مقطع وتحديث {updated} مقطع وحذف {deleted} مقطع قديم."
         ))
