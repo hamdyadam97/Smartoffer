@@ -106,6 +106,8 @@ class QuickOfferForm(forms.Form):
             self.fields['branch'].queryset = Branch.objects.all()
             self.fields['master'].queryset = Master.objects.select_related('branch').all()
             self.fields['course'].queryset = Course.objects.select_related('master').all()
+        # Display course name only in the dropdown
+        self.fields['course'].label_from_instance = lambda obj: obj.name or obj.code
 
 
 class RootQuickOfferForm(forms.Form):
