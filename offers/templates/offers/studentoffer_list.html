@@ -217,7 +217,7 @@
                     data.courses.forEach(c => {
                         const option = document.createElement('option');
                         option.value = c.id;
-                        option.textContent = (c.code || '-') + ' - ' + c.master__name;
+                        option.textContent = c.name || c.master__name || '-';
                         courseSelect.appendChild(option);
                     });
                 }
