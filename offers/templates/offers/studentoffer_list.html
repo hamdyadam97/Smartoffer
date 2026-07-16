@@ -379,23 +379,64 @@
                             </div>
                         </div>
                         <div class="tab-pane fade" id="r-recipient-pane" role="tabpanel">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">الاسم <span class="text-danger">*</span></label>
-                                    <input type="text" name="contact_name" class="form-control" required>
+                            <ul class="nav nav-pills mb-3" id="rootRecipientType" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="rr-registered-tab" data-bs-toggle="tab" data-bs-target="#rr-registered-pane" type="button" role="tab">مستفسر مسجل</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="rr-new-tab" data-bs-toggle="tab" data-bs-target="#rr-new-pane" type="button" role="tab">مستفسر جديد</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="rootRecipientTabContent">
+                                <div class="tab-pane fade show active" id="rr-registered-pane" role="tabpanel">
+                                    <div class="mb-3">
+                                        <label class="form-label">المستفسر المسجل <span class="text-danger">*</span></label>
+                                        <select name="prospect" id="rootOfferProspect" class="form-select">
+                                            <option value="">اختر المستفسر...</option>
+                                            {% for p in all_prospects %}
+                                            <option value="{{ p.id }}" data-name="{{ p.name|escapejs }}" data-mobile="{{ p.mobile|escapejs }}" data-workplace="{{ p.workplace|escapejs }}" data-ministry="{{ p.ministry|escapejs }}" data-governorate="{{ p.governorate|escapejs }}" data-notes="{{ p.notes|escapejs }}">{{ p.name }}{% if p.mobile %} ({{ p.mobile }}){% endif %}</option>
+                                            {% empty %}
+                                            <option value="" disabled>لا يوجد مستفسرون مسجلون</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">الجوال <span class="text-danger">*</span></label>
-                                    <input type="text" name="contact_phone" class="form-control" placeholder="مثال: 966501234567" required>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">البريد الإلكتروني</label>
-                                    <input type="email" name="contact_email" class="form-control">
+                                <div class="tab-pane fade" id="rr-new-pane" role="tabpanel">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                            <input type="text" name="contact_name" id="rootNewContactName" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الجوال <span class="text-danger">*</span></label>
+                                            <input type="text" name="contact_phone" id="rootNewContactPhone" class="form-control" placeholder="مثال: 966501234567">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">البريد الإلكتروني</label>
+                                            <input type="email" name="contact_email" id="rootNewContactEmail" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">جهة العمل</label>
+                                            <input type="text" name="workplace" id="rootNewWorkplace" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الوزارة / المؤسسة</label>
+                                            <input type="text" name="ministry" id="rootNewMinistry" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">المحافظة</label>
+                                            <input type="text" name="governorate" id="rootNewGovernorate" class="form-control">
+                                        </div>
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label">ملاحظات</label>
+                                            <textarea name="notes" id="rootNewNotes" class="form-control" rows="2"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">قناة الإرسال <span class="text-danger">*</span></label>
-                                <select name="channel" class="form-select" required>
+                                <select name="channel" id="rootOfferChannel" class="form-select" required>
                                     <option value="whatsapp">واتساب</option>
                                     <option value="email">البريد الإلكتروني</option>
                                     <option value="app">إشعار التطبيق</option>
@@ -537,10 +578,61 @@
             .catch(() => {});
     }
 
+    const prospectSelect = document.getElementById('rootOfferProspect');
+    const registeredPane = document.getElementById('rr-registered-pane');
+    const newPane = document.getElementById('rr-new-pane');
+    const newContactName = document.getElementById('rootNewContactName');
+    const newContactPhone = document.getElementById('rootNewContactPhone');
+    const newContactEmail = document.getElementById('rootNewContactEmail');
+    const newWorkplace = document.getElementById('rootNewWorkplace');
+    const newMinistry = document.getElementById('rootNewMinistry');
+    const newGovernorate = document.getElementById('rootNewGovernorate');
+    const newNotes = document.getElementById('rootNewNotes');
+    const newFields = [newContactName, newContactPhone, newContactEmail, newWorkplace, newMinistry, newGovernorate, newNotes];
+
+    function setRecipientMode(isNew) {
+        if (prospectSelect) {
+            prospectSelect.required = !isNew;
+            prospectSelect.disabled = isNew;
+        }
+        newFields.forEach(f => {
+            if (f) {
+                f.required = isNew;
+                f.disabled = !isNew;
+            }
+        });
+    }
+
+    if (prospectSelect) {
+        prospectSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt && opt.value) {
+                if (newContactName) newContactName.value = opt.dataset.name || '';
+                if (newContactPhone) newContactPhone.value = opt.dataset.mobile || '';
+                if (newWorkplace) newWorkplace.value = opt.dataset.workplace || '';
+                if (newMinistry) newMinistry.value = opt.dataset.ministry || '';
+                if (newGovernorate) newGovernorate.value = opt.dataset.governorate || '';
+                if (newNotes) newNotes.value = opt.dataset.notes || '';
+            }
+        });
+    }
+
+    document.querySelectorAll('#rootRecipientType button[data-bs-toggle="tab"]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            const isNew = e.target.id === 'rr-new-tab';
+            setRecipientMode(isNew);
+            if (!isNew && prospectSelect) prospectSelect.value = '';
+            if (isNew) {
+                newFields.forEach(f => { if (f) f.value = ''; });
+            }
+        });
+    });
+
     window.openRootOfferModal = function() {
         alertBox.innerHTML = '';
         form.reset();
         resetFormState();
+        setRecipientMode(false);
         new bootstrap.Modal(modal).show();
     };
 

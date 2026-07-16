@@ -132,28 +132,40 @@ class RootQuickOfferForm(forms.Form):
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
     price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
     content = forms.CharField(label='البيان ووصف العرض', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
-    # Recipient fields
-    contact_name = forms.CharField(max_length=255, label='اسم المستلم', widget=forms.TextInput(attrs={'class': 'form-control'}))
-    contact_phone = forms.CharField(max_length=20, label='جوال المستلم', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
+    # Prospect selection
+    prospect = forms.ModelChoiceField(queryset=None, required=False, label='المستفسر المسجل', widget=forms.Select(attrs={'class': 'form-select'}))
+    # New prospect fields
+    contact_name = forms.CharField(max_length=255, required=False, label='اسم المستلم', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    contact_phone = forms.CharField(max_length=20, required=False, label='جوال المستلم', widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: 966501234567'}))
     contact_email = forms.EmailField(required=False, label='بريد المستلم', widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    workplace = forms.CharField(max_length=255, required=False, label='جهة العمل', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    ministry = forms.CharField(max_length=255, required=False, label='الوزارة / المؤسسة', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    governorate = forms.CharField(max_length=255, required=False, label='المحافظة', widget=forms.TextInput(attrs={'class': 'form-control'}))
+    notes = forms.CharField(required=False, label='ملاحظات', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}))
     channel = forms.ChoiceField(choices=OfferRecipient.CHANNEL_CHOICES, initial='whatsapp', label='قناة الإرسال', widget=forms.Select(attrs={'class': 'form-select'}))
 
     def __init__(self, *args, user=None, **kwargs):
         from core.models import Branch
         from courses.models import Master
+        from prospects.models import Prospect
         super().__init__(*args, **kwargs)
         if user is not None:
             branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
             self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
             self.fields['master'].queryset = Master.objects.select_related('branch').filter(branch__in=branch_ids)
+            self.fields['prospect'].queryset = Prospect.objects.filter(branch__in=branch_ids).order_by('-created_at')
         else:
             self.fields['branch'].queryset = Branch.objects.all()
             self.fields['master'].queryset = Master.objects.select_related('branch').all()
+            self.fields['prospect'].queryset = Prospect.objects.all().order_by('-created_at')
 
     def clean(self):
         cleaned_data = super().clean()
         master = cleaned_data.get('master')
         offer_type = cleaned_data.get('offer_type')
+        prospect = cleaned_data.get('prospect')
+        contact_name = cleaned_data.get('contact_name')
+        contact_phone = cleaned_data.get('contact_phone')
 
         if offer_type == 'program' and not master:
             self.add_error('master', 'يجب اختيار التخصص للبكج / البرنامج.')
@@ -163,6 +175,9 @@ class RootQuickOfferForm(forms.Form):
 
         if offer_type == 'course' and not cleaned_data.get('course_name'):
             self.add_error('course_name', 'يجب كتابة اسم الدورة.')
+
+        if not prospect and not (contact_name and contact_phone):
+            self.add_error('contact_name', 'يجب اختيار مستفسر مسجل أو إدخال اسم وجوال مستفسر جديد.')
 
         return cleaned_data
 

@@ -655,6 +655,25 @@ def _create_prospect_from_recipient(offer, recipient, user):
     return prospect
 
 
+def _create_prospect_from_root_offer(offer, recipient, user, cd):
+    """Create a Prospect record from Root offer form data (with extra fields)."""
+    prospect = Prospect.objects.create(
+        branch=offer.branch,
+        name=recipient.contact_name or recipient.contact_phone or 'مستلم سريع',
+        mobile=recipient.contact_phone,
+        master=offer.master,
+        workplace=cd.get('workplace', ''),
+        ministry=cd.get('ministry', ''),
+        governorate=cd.get('governorate', ''),
+        communication_method=_channel_to_prospect_method(recipient.channel),
+        notes=cd.get('notes', ''),
+        status='interested',
+        contact_date=timezone.now().date(),
+        contacted_by=user if hasattr(user, 'pk') else None,
+    )
+    return prospect
+
+
 @require_POST
 @login_required
 def studentoffer_add_recipient_ajax(request, slug):
@@ -858,25 +877,37 @@ def root_offer_ajax(request):
             status='مسودة',
         )
 
-        recipient = OfferRecipient.objects.create(
-            offer=offer,
-            student=None,
-            contact_name=cd['contact_name'],
-            contact_phone=cd['contact_phone'],
-            contact_email=cd['contact_email'],
-            channel=cd['channel'],
-            status='مرسل',
-        )
-
-        # في شركة الجذور، المستلم يتحول لمستفسر
-        if _is_root_branch(offer.branch):
-            prospect = _create_prospect_from_recipient(offer, recipient, request.user)
+        # في شركة الجذور: إما مستفسر مسجل أو مستفسر جديد
+        if cd.get('prospect'):
+            prospect = cd['prospect']
+            recipient = OfferRecipient.objects.create(
+                offer=offer,
+                student=None,
+                prospect=prospect,
+                contact_name=prospect.name,
+                contact_phone=prospect.mobile,
+                contact_email=cd.get('contact_email', ''),
+                channel=cd['channel'],
+                status='مرسل',
+            )
+        else:
+            recipient = OfferRecipient.objects.create(
+                offer=offer,
+                student=None,
+                contact_name=cd['contact_name'],
+                contact_phone=cd['contact_phone'],
+                contact_email=cd['contact_email'],
+                channel=cd['channel'],
+                status='مرسل',
+            )
+            # إنشاء مستفسر جديد من بيانات المستلم
+            prospect = _create_prospect_from_root_offer(offer, recipient, request.user, cd)
             recipient.prospect = prospect
             recipient.save(update_fields=['prospect'])
 
         # Send immediately
         channel = cd['channel']
-        recipient_name = cd['contact_name'] or cd['contact_phone'] or 'مستلم سريع'
+        recipient_name = recipient.contact_name or recipient.contact_phone or 'مستلم سريع'
         body = f"{offer.title}\n\n{offer.content}"
         send_error = None
 
@@ -1034,6 +1065,16 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
             Q(company__name__icontains='جذور') |
             Q(company__name__icontains='root')
         ).exists()
+        # المستفسرين المسجلين لعرض Root
+        if context['is_root_user']:
+            root_ids = [b.pk for b in Branch.objects.filter(
+                pk__in=user_branch_ids
+            ).filter(
+                Q(name__icontains='root') |
+                Q(company__name__icontains='جذور') |
+                Q(company__name__icontains='root')
+            )]
+            context['all_prospects'] = Prospect.objects.filter(branch__in=root_ids).order_by('-created_at')
         return context
 
 
