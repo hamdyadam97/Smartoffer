@@ -50,11 +50,17 @@ class OfferRecipientForm(forms.ModelForm):
 
 class OfferRecipientAddForm(forms.ModelForm):
     """Form to add a recipient directly from an offer detail page (offer is preset)."""
+    prospect = forms.ModelChoiceField(queryset=None, required=False, label='المستفسر', widget=forms.Select(attrs={'class': 'form-select'}))
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        from prospects.models import Prospect
         if user is not None:
             branch_ids = [b.pk for b in user.get_branches_for_perm('change_studentoffer')]
             self.fields['student'].queryset = self.fields['student'].queryset.filter(branch__in=branch_ids)
+            self.fields['prospect'].queryset = Prospect.objects.filter(branch__in=branch_ids).order_by('-created_at')
+        else:
+            self.fields['prospect'].queryset = Prospect.objects.all().order_by('-created_at')
 
     class Meta:
         model = OfferRecipient
@@ -71,10 +77,11 @@ class OfferRecipientAddForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         student = cleaned_data.get('student')
+        prospect = cleaned_data.get('prospect')
         contact_phone = cleaned_data.get('contact_phone')
         contact_name = cleaned_data.get('contact_name')
-        if not student and not contact_phone and not contact_name:
-            raise forms.ValidationError('يجب اختيار طالب مسجل أو إدخال بيانات المستلم (اسم + جوال).')
+        if not student and not prospect and not contact_phone and not contact_name:
+            raise forms.ValidationError('يجب اختيار طالب مسجل أو مستفسر أو إدخال بيانات المستلم (اسم + جوال).')
         return cleaned_data
 
 

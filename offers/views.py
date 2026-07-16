@@ -19,6 +19,7 @@ from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
 from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm, RootQuickOfferForm
 from .whatsapp import send_whatsapp_message, send_whatsapp_pdf, _is_root_branch
+from prospects.models import Prospect
 
 
 import logging
@@ -641,7 +642,6 @@ def _channel_to_prospect_method(channel):
 
 def _create_prospect_from_recipient(offer, recipient, user):
     """Create a Prospect record from a quick/manual offer recipient (Root company only)."""
-    from prospects.models import Prospect
     prospect = Prospect.objects.create(
         branch=offer.branch,
         name=recipient.contact_name or recipient.contact_phone or 'مستلم سريع',
@@ -668,12 +668,22 @@ def studentoffer_add_recipient_ajax(request, slug):
         recipient.offer = offer
         try:
             recipient.save()
-            # في شركة الجذور، المستلم السريع يتحول لمستفسر
+            # في شركة الجذور، المستلم يتحول لمستفسر (مخزن أو جديد)
             if _is_root_branch(offer.branch) and not recipient.student:
-                prospect = _create_prospect_from_recipient(offer, recipient, request.user)
-                recipient.prospect = prospect
-                recipient.save(update_fields=['prospect'])
-            name = str(recipient.student) if recipient.student else (recipient.contact_name or recipient.contact_phone or 'مستلم سريع')
+                if recipient.prospect:
+                    recipient.contact_name = recipient.prospect.name
+                    recipient.contact_phone = recipient.prospect.mobile
+                    recipient.save(update_fields=['contact_name', 'contact_phone'])
+                elif recipient.contact_name or recipient.contact_phone:
+                    prospect = _create_prospect_from_recipient(offer, recipient, request.user)
+                    recipient.prospect = prospect
+                    recipient.save(update_fields=['prospect'])
+            if recipient.student:
+                name = str(recipient.student)
+            elif recipient.prospect:
+                name = recipient.prospect.name
+            else:
+                name = recipient.contact_name or recipient.contact_phone or 'مستلم سريع'
             return JsonResponse({
                 'success': True,
                 'message': f'تم إضافة المستلم {name} بنجاح.',
@@ -1056,6 +1066,11 @@ class StudentOfferDetailView(BranchPermissionMixin, DetailView):
             context['all_offers'] = filter_by_branch(
                 StudentOffer.objects.select_related('branch', 'course__master'), self.request.user, 'branch', perm='view_studentoffer'
             )
+        # في الجذور نعرض المستفسرين المخزنين عشان نختار منهم
+        if _is_root_branch(self.object.branch):
+            context['all_prospects'] = Prospect.objects.filter(branch=self.object.branch).order_by('-created_at')
+        else:
+            context['all_prospects'] = Prospect.objects.none()
         return context
 
 
