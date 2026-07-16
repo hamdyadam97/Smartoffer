@@ -48,6 +48,7 @@ LOCAL_APPS = [
     # 'notifications_new',  # Removed: empty unused app
     'assistant',
     'project_assistant',
+    'prospects',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

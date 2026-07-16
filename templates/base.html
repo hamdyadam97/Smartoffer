@@ -805,6 +805,8 @@
                         </div>
                     </li>
 
+                    {% load prospects_tags %}
+                    {% if user|has_root_prospect_perm %}<li class="nav-item"><a class="nav-link {% if '/prospects/' in request.path %}active{% endif %}" href="{% url 'prospect-list' %}"><i class="bi bi-person-lines-fill"></i> المستفسرون</a></li>{% endif %}
                     {% if user|has_perm:'view_student' %}<li class="nav-item"><a class="nav-link {% if '/students/' in request.path %}active{% endif %}" href="{% url 'student-list' %}"><i class="bi bi-mortarboard"></i> الطلاب</a></li>{% endif %}
                     {% if user|has_perm:'view_master' %}<li class="nav-item"><a class="nav-link {% if '/masters/' in request.path %}active{% endif %}" href="{% url 'master-list' %}"><i class="bi bi-journal-bookmark"></i> التخصصات</a></li>{% endif %}
                     {% if user|has_perm:'view_course' %}<li class="nav-item"><a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'course-list' %}"><i class="bi bi-book"></i> الدورات</a></li>{% endif %}
