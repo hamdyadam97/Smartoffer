@@ -10,6 +10,8 @@ from django.views.decorators.http import require_POST
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from courses.models import Course
 from students.models import Student
+from prospects.models import Prospect
+from prospects.utils import get_user_root_branch_ids, is_root_branch, do_convert_prospect_to_student
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
 from .forms import (
     AccountForm, AttachTypeForm, AttachForm,
@@ -53,6 +55,11 @@ class AccountListView(BranchPermissionMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['courses'] = Course.objects.select_related('master').all()
         context['students'] = Student.objects.select_related('contact').all()
+        root_ids = get_user_root_branch_ids(self.request.user, 'add_registration')
+        context['prospects'] = Prospect.objects.filter(
+            student__isnull=True, branch_id__in=root_ids
+        ).order_by('-created_at')
+        context['is_root_company'] = bool(root_ids)
         return context
 
 
@@ -90,6 +97,11 @@ class AccountCreateView(BranchPermissionMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.last_person = self.request.user
+        prospect = form.cleaned_data.get('prospect')
+        course = form.cleaned_data.get('course')
+        if prospect and course and course.master and course.master.branch and is_root_branch(course.master.branch):
+            student = do_convert_prospect_to_student(prospect, self.request.user)
+            form.instance.student = student
         return super().form_valid(form)
 
 
@@ -139,6 +151,14 @@ def account_create_ajax(request):
     if form.is_valid():
         account = form.save(commit=False)
         account.last_person = request.user
+
+        # في شركة الجذور، المستفسر بيتحول لطالب قبل التسجيل
+        prospect = form.cleaned_data.get('prospect')
+        course = form.cleaned_data.get('course')
+        if prospect and course and course.master and course.master.branch and is_root_branch(course.master.branch):
+            student = do_convert_prospect_to_student(prospect, request.user)
+            account.student = student
+
         account.save()
         return JsonResponse({'success': True, 'message': 'تم إنشاء التسجيل بنجاح', 'id': account.id, 'slug': account.slug})
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)

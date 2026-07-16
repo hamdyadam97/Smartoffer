@@ -15,7 +15,7 @@ from accounts.models import Person
 
 from .models import Prospect, ProspectOffer
 from .forms import ProspectForm, ProspectOfferForm
-from .utils import get_user_root_branch_ids, is_root_branch
+from .utils import get_user_root_branch_ids, is_root_branch, do_convert_prospect_to_student
 
 
 class ProspectListView(BranchPermissionMixin, ListView):
@@ -261,19 +261,6 @@ class ProspectOfferDeleteView(BranchPermissionMixin, DeleteView):
 # Convert Prospect to Student
 # ---------------------------------------------------------------------------
 
-def _split_name(full_name):
-    parts = (full_name or '').strip().split()
-    if not parts:
-        return '', '', '', ''
-    if len(parts) == 1:
-        return parts[0], '', '', ''
-    if len(parts) == 2:
-        return parts[0], '', '', parts[1]
-    if len(parts) == 3:
-        return parts[0], parts[1], '', parts[2]
-    return parts[0], parts[1], parts[2], ' '.join(parts[3:])
-
-
 @require_POST
 def convert_prospect_to_student(request, slug):
     prospect = get_object_or_404(Prospect, slug=slug)
@@ -290,34 +277,7 @@ def convert_prospect_to_student(request, slug):
         messages.warning(request, 'هذا المستفسر محول إلى طالب بالفعل')
         return redirect('student-detail', slug=prospect.student.slug)
 
-    first, second, third, forth = _split_name(prospect.name)
-
-    contact = Contact.objects.create(
-        first_name=first,
-        second_name=second,
-        third_name=third,
-        forth_name=forth,
-        mobile=prospect.mobile,
-        address=prospect.governorate,
-    )
-
-    preferred = 'whatsapp'
-    if prospect.communication_method == 'email':
-        preferred = 'email'
-    elif prospect.communication_method in ('visit', 'other'):
-        preferred = 'app'
-
-    student = Student.objects.create(
-        contact=contact,
-        branch=prospect.branch,
-        level='مبتدئ',
-        preferred_contact=preferred,
-    )
-
-    prospect.student = student
-    prospect.converted_at = timezone.now()
-    prospect.converted_by = request.user if isinstance(request.user, Person) else None
-    prospect.save(update_fields=['student', 'converted_at', 'converted_by'])
+    student = do_convert_prospect_to_student(prospect, request.user)
 
     messages.success(request, 'تم تحويل المستفسر إلى طالب بنجاح')
     return redirect('student-detail', slug=student.slug)
