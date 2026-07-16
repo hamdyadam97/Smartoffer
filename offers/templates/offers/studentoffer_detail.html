@@ -86,6 +86,9 @@
                             <span>
                                 {% if recipient.student %}
                                     {{ recipient.student }}
+                                {% elif recipient.prospect %}
+                                    <a href="{% url 'prospect-detail' recipient.prospect.slug %}">{{ recipient.prospect.name }}</a>
+                                    {% if recipient.prospect.mobile %}<small class="text-muted">({{ recipient.prospect.mobile }})</small>{% endif %}
                                 {% else %}
                                     {{ recipient.contact_name|default:"مستلم سريع" }}
                                     {% if recipient.contact_phone %}<small class="text-muted">({{ recipient.contact_phone }})</small>{% endif %}
@@ -134,15 +137,18 @@
                 <form id="addRecipientForm">
                     {% csrf_token %}
                     <ul class="nav nav-tabs mb-3" id="recipientTab" role="tablist">
+                        {% if 'جذور' not in offer.branch.company.name %}
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link {% if 'جذور' not in offer.branch.company.name %}active{% endif %}" id="registered-tab" data-bs-toggle="tab" data-bs-target="#registered-pane" type="button" role="tab">طالب مسجل</button>
+                            <button class="nav-link active" id="registered-tab" data-bs-toggle="tab" data-bs-target="#registered-pane" type="button" role="tab">طالب مسجل</button>
                         </li>
+                        {% endif %}
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link {% if 'جذور' in offer.branch.company.name %}active{% endif %}" id="quick-tab" data-bs-toggle="tab" data-bs-target="#quick-pane" type="button" role="tab">مستلم سريع</button>
+                            <button class="nav-link {% if 'جذور' in offer.branch.company.name %}active{% endif %}" id="quick-tab" data-bs-toggle="tab" data-bs-target="#quick-pane" type="button" role="tab">{% if 'جذور' in offer.branch.company.name %}مستفسر{% else %}مستلم سريع{% endif %}</button>
                         </li>
                     </ul>
                     <div class="tab-content" id="recipientTabContent">
-                        <div class="tab-pane fade {% if 'جذور' not in offer.branch.company.name %}show active{% endif %}" id="registered-pane" role="tabpanel">
+                        {% if 'جذور' not in offer.branch.company.name %}
+                        <div class="tab-pane fade show active" id="registered-pane" role="tabpanel">
                             <div class="mb-3">
                                 <label class="form-label">الطالب</label>
                                 <select name="student" id="ar_student" class="form-select">
@@ -155,6 +161,7 @@
                                 </select>
                             </div>
                         </div>
+                        {% endif %}
                         <div class="tab-pane fade {% if 'جذور' in offer.branch.company.name %}show active{% endif %}" id="quick-pane" role="tabpanel">
                             <div class="mb-3">
                                 <label class="form-label">الاسم</label>

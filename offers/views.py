@@ -18,7 +18,7 @@ from courses.models import Course
 from students.models import Student
 from .models import StudentOffer, OfferRecipient, OfferNote
 from .forms import StudentOfferForm, OfferRecipientForm, OfferRecipientAddForm, OfferNoteForm, QuickOfferForm, RootQuickOfferForm
-from .whatsapp import send_whatsapp_message, send_whatsapp_pdf
+from .whatsapp import send_whatsapp_message, send_whatsapp_pdf, _is_root_branch
 
 
 import logging
@@ -634,6 +634,27 @@ def add_recipient_to_offer(request, slug):
     return render(request, 'offers/add_recipient_form.html', {'form': form, 'offer': offer})
 
 
+def _channel_to_prospect_method(channel):
+    mapping = {'whatsapp': 'whatsapp', 'email': 'email'}
+    return mapping.get(channel, 'other')
+
+
+def _create_prospect_from_recipient(offer, recipient, user):
+    """Create a Prospect record from a quick/manual offer recipient (Root company only)."""
+    from prospects.models import Prospect
+    prospect = Prospect.objects.create(
+        branch=offer.branch,
+        name=recipient.contact_name or recipient.contact_phone or 'مستلم سريع',
+        mobile=recipient.contact_phone,
+        master=offer.master,
+        communication_method=_channel_to_prospect_method(recipient.channel),
+        status='interested',
+        contact_date=timezone.now().date(),
+        contacted_by=user if hasattr(user, 'pk') else None,
+    )
+    return prospect
+
+
 @require_POST
 @login_required
 def studentoffer_add_recipient_ajax(request, slug):
@@ -647,6 +668,11 @@ def studentoffer_add_recipient_ajax(request, slug):
         recipient.offer = offer
         try:
             recipient.save()
+            # في شركة الجذور، المستلم السريع يتحول لمستفسر
+            if _is_root_branch(offer.branch) and not recipient.student:
+                prospect = _create_prospect_from_recipient(offer, recipient, request.user)
+                recipient.prospect = prospect
+                recipient.save(update_fields=['prospect'])
             name = str(recipient.student) if recipient.student else (recipient.contact_name or recipient.contact_phone or 'مستلم سريع')
             return JsonResponse({
                 'success': True,
@@ -832,6 +858,12 @@ def root_offer_ajax(request):
             status='مرسل',
         )
 
+        # في شركة الجذور، المستلم يتحول لمستفسر
+        if _is_root_branch(offer.branch):
+            prospect = _create_prospect_from_recipient(offer, recipient, request.user)
+            recipient.prospect = prospect
+            recipient.save(update_fields=['prospect'])
+
         # Send immediately
         channel = cd['channel']
         recipient_name = cd['contact_name'] or cd['contact_phone'] or 'مستلم سريع'
@@ -917,7 +949,7 @@ def quick_offer_ajax(request):
             created_by=request.user,
             status='مسودة',
         )
-        OfferRecipient.objects.create(
+        recipient = OfferRecipient.objects.create(
             offer=offer,
             student=None,
             contact_name=cd['contact_name'],
@@ -926,6 +958,13 @@ def quick_offer_ajax(request):
             channel=cd['channel'],
             status='مرسل',
         )
+
+        # في شركة الجذور، المستلم يتحول لمستفسر
+        if _is_root_branch(offer.branch):
+            prospect = _create_prospect_from_recipient(offer, recipient, request.user)
+            recipient.prospect = prospect
+            recipient.save(update_fields=['prospect'])
+
         return JsonResponse({
             'success': True,
             'message': 'تم إنشاء العرض السريع وإضافة المستلم بنجاح.',

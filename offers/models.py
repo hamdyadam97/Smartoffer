@@ -76,6 +76,7 @@ class OfferRecipient(models.Model):
 
     offer = models.ForeignKey(StudentOffer, on_delete=models.CASCADE, db_index=True, related_name='recipients', verbose_name='العرض')
     student = models.ForeignKey('students.Student', on_delete=models.PROTECT, null=True, blank=True, db_index=True, related_name='offer_recipients', verbose_name='الطالب')
+    prospect = models.ForeignKey('prospects.Prospect', on_delete=models.PROTECT, null=True, blank=True, db_index=True, related_name='offer_recipients', verbose_name='المستفسر')
     contact_name = models.CharField(max_length=255, blank=True, verbose_name='اسم المستلم')
     contact_phone = models.CharField(max_length=20, blank=True, verbose_name='جوال المستلم')
     contact_email = models.EmailField(blank=True, verbose_name='بريد المستلم')
@@ -93,6 +94,8 @@ class OfferRecipient(models.Model):
     def __str__(self):
         if self.student:
             return f"{self.student.get_full_name()} - {self.offer.title}"
+        if self.prospect:
+            return f"{self.prospect.name} - {self.offer.title}"
         return f"{self.contact_name or self.contact_phone or 'مستلم سريع'} - {self.offer.title}"
 
 
