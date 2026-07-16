@@ -9,8 +9,15 @@ def is_root_branch(branch):
     """Return True if the branch belongs to Root/Digital Roots company."""
     if not branch:
         return False
-    company_name = getattr(branch.company, 'name', '') or ''
-    return ROOT_COMPANY_NAME_MATCH in company_name
+    branch_name = str(getattr(branch, 'name', '') or '').lower()
+    company_name = str(getattr(branch.company, 'name', '') or '').lower()
+    checks = [
+        'root' in branch_name,
+        'root' in company_name,
+        'جذور' in company_name,
+        'جذور' in branch_name,
+    ]
+    return any(checks)
 
 
 def get_root_branch_queryset():
