@@ -242,8 +242,36 @@
         btnText.textContent = loading ? 'جاري الإنشاء...' : 'إنشاء العرض والمستلم';
     }
 
+    function clearFieldErrors() {
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    }
+
+    function showFieldErrors(errors) {
+        clearFieldErrors();
+        for (const [field, msgs] of Object.entries(errors)) {
+            if (field === '__all__') continue;
+            const input = form.querySelector('[name="' + field + '"]');
+            if (!input) continue;
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback d-block';
+            feedback.textContent = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+            input.parentNode.appendChild(feedback);
+        }
+    }
+
+    function formatErrors(errors) {
+        let html = '';
+        for (const [field, msgs] of Object.entries(errors)) {
+            html += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + (Array.isArray(msgs) ? msgs.join(', ') : String(msgs)) + '</div>';
+        }
+        return html;
+    }
+
     window.openQuickOfferModal = function() {
         alertBox.innerHTML = '';
+        clearFieldErrors();
         form.reset();
         const offerTab = document.getElementById('q-offer-tab');
         new bootstrap.Tab(offerTab).show();
@@ -256,6 +284,7 @@
             return;
         }
         setLoading(true);
+        clearFieldErrors();
         const formData = new FormData(form);
 
         fetch('{% url "quick-offer-ajax" %}', {
@@ -265,9 +294,13 @@
             },
             body: formData
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(async r => {
+            const data = await r.json().catch(() => null);
             setLoading(false);
+            if (!data) {
+                showAlert('حدث خطأ غير متوقع: ' + r.status + ' ' + r.statusText, 'danger');
+                return;
+            }
             if (data.success) {
                 showAlert(data.message, 'success');
                 setTimeout(() => {
@@ -276,20 +309,17 @@
                     window.location.href = '/student-offers/' + data.slug + '/';
                 }, 1200);
             } else {
-                let errors = '';
                 if (data.errors) {
-                    for (const [field, msgs] of Object.entries(data.errors)) {
-                        errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
-                    }
+                    showAlert(formatErrors(data.errors), 'danger');
+                    showFieldErrors(data.errors);
                 } else {
-                    errors = data.error || 'حدث خطأ أثناء الإنشاء';
+                    showAlert(data.error || 'حدث خطأ أثناء الإنشاء', 'danger');
                 }
-                showAlert(errors, 'danger');
             }
         })
-        .catch(() => {
+        .catch(err => {
             setLoading(false);
-            showAlert('حدث خطأ في الاتصال', 'danger');
+            showAlert('حدث خطأ في الاتصال: ' + (err.message || ''), 'danger');
         });
     });
 })();
@@ -484,6 +514,33 @@
         alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
     }
 
+    function clearFieldErrors() {
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    }
+
+    function showFieldErrors(errors) {
+        clearFieldErrors();
+        for (const [field, msgs] of Object.entries(errors)) {
+            if (field === '__all__') continue;
+            const input = form.querySelector('[name="' + field + '"]');
+            if (!input) continue;
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback d-block';
+            feedback.textContent = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+            input.parentNode.appendChild(feedback);
+        }
+    }
+
+    function formatErrors(errors) {
+        let html = '';
+        for (const [field, msgs] of Object.entries(errors)) {
+            html += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + (Array.isArray(msgs) ? msgs.join(', ') : String(msgs)) + '</div>';
+        }
+        return html;
+    }
+
     function setLoading(loading) {
         saveBtn.disabled = loading;
         spinner.classList.toggle('d-none', !loading);
@@ -630,6 +687,7 @@
 
     window.openRootOfferModal = function() {
         alertBox.innerHTML = '';
+        clearFieldErrors();
         form.reset();
         resetFormState();
         setRecipientMode(false);
@@ -642,6 +700,7 @@
             return;
         }
         setLoading(true);
+        clearFieldErrors();
         const formData = new FormData(form);
 
         fetch('{% url "root-offer-ajax" %}', {
@@ -651,9 +710,13 @@
             },
             body: formData
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(async r => {
+            const data = await r.json().catch(() => null);
             setLoading(false);
+            if (!data) {
+                showAlert('حدث خطأ غير متوقع: ' + r.status + ' ' + r.statusText, 'danger');
+                return;
+            }
             if (data.success) {
                 showAlert(data.message, 'success');
                 setTimeout(() => {
@@ -662,20 +725,17 @@
                     window.location.href = '/student-offers/' + data.slug + '/';
                 }, 1200);
             } else {
-                let errors = '';
                 if (data.errors) {
-                    for (const [field, msgs] of Object.entries(data.errors)) {
-                        errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
-                    }
+                    showAlert(formatErrors(data.errors), 'danger');
+                    showFieldErrors(data.errors);
                 } else {
-                    errors = data.error || 'حدث خطأ أثناء الإنشاء';
+                    showAlert(data.error || 'حدث خطأ أثناء الإنشاء', 'danger');
                 }
-                showAlert(errors, 'danger');
             }
         })
-        .catch(() => {
+        .catch(err => {
             setLoading(false);
-            showAlert('حدث خطأ في الاتصال', 'danger');
+            showAlert('حدث خطأ في الاتصال: ' + (err.message || ''), 'danger');
         });
     });
 })();
