@@ -1,17 +1,28 @@
 from django import forms
+from students.models import Student
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
 
 
 class AccountForm(forms.ModelForm):
+    prospect = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label='المستفسر',
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         from courses.models import Course
-        from students.models import Student
+        from prospects.models import Prospect
+        from prospects.utils import get_user_root_branch_ids
+        self.fields['student'].required = False
         perm = 'change_registration' if self.instance and self.instance.pk else 'add_registration'
         if user is not None:
             if user.is_executive():
                 self.fields['course'].queryset = Course.objects.all().order_by('-created_at')
                 self.fields['student'].queryset = Student.objects.all().order_by('-created_at')
+                self.fields['prospect'].queryset = Prospect.objects.filter(student__isnull=True).order_by('-created_at')
             else:
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
@@ -21,11 +32,37 @@ class AccountForm(forms.ModelForm):
                 self.fields['student'].queryset = Student.objects.filter(
                     branch_id__in=allowed_ids
                 ).order_by('-created_at')
+                root_ids = get_user_root_branch_ids(user, perm)
+                self.fields['prospect'].queryset = Prospect.objects.filter(
+                    student__isnull=True, branch_id__in=root_ids
+                ).order_by('-created_at')
+        else:
+            self.fields['prospect'].queryset = Prospect.objects.filter(student__isnull=True).order_by('-created_at')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        student = cleaned_data.get('student')
+        prospect = cleaned_data.get('prospect')
+
+        # في شركة الجذور، المستفسر بديل عن الطالب
+        if course and course.master and course.master.branch and self._is_root_branch(course.master.branch):
+            if not prospect and not student:
+                self.add_error('prospect', 'يرجى اختيار مستفسر')
+        else:
+            if not student:
+                self.add_error('student', 'يرجى اختيار طالب')
+
+        return cleaned_data
+
+    def _is_root_branch(self, branch):
+        from prospects.utils import is_root_branch
+        return is_root_branch(branch)
 
     class Meta:
         model = Account
         fields = [
-            'course', 'student', 'code', 'register_date',
+            'course', 'student', 'prospect', 'code', 'register_date',
             'course_payment_type', 'course_price', 'course_discount_amount',
             'course_profit_amount', 'course_credit_amount', 'note',
         ]

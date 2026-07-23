@@ -7,11 +7,12 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tag"></i> عروض الطلاب</h2>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-success" onclick="openQuickOfferModal()"><i class="bi bi-lightning"></i> عرض سريع</button>
         {% if is_root_user %}
         <button type="button" class="btn btn-info" onclick="openRootOfferModal()"><i class="bi bi-lightning-charge"></i> عرض Root</button>
-        {% endif %}
+        {% else %}
+        <button type="button" class="btn btn-success" onclick="openQuickOfferModal()"><i class="bi bi-lightning"></i> عرض سريع</button>
         <button type="button" class="btn btn-primary" onclick="openStudentOfferModal()"><i class="bi bi-plus-lg"></i> عرض جديد</button>
+        {% endif %}
     </div>
 </div>
 
@@ -217,7 +218,7 @@
                     data.courses.forEach(c => {
                         const option = document.createElement('option');
                         option.value = c.id;
-                        option.textContent = (c.code || '-') + ' - ' + c.master__name;
+                        option.textContent = c.name || c.master__name || '-';
                         courseSelect.appendChild(option);
                     });
                 }
@@ -241,8 +242,36 @@
         btnText.textContent = loading ? 'جاري الإنشاء...' : 'إنشاء العرض والمستلم';
     }
 
+    function clearFieldErrors() {
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    }
+
+    function showFieldErrors(errors) {
+        clearFieldErrors();
+        for (const [field, msgs] of Object.entries(errors)) {
+            if (field === '__all__') continue;
+            const input = form.querySelector('[name="' + field + '"]');
+            if (!input) continue;
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback d-block';
+            feedback.textContent = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+            input.parentNode.appendChild(feedback);
+        }
+    }
+
+    function formatErrors(errors) {
+        let html = '';
+        for (const [field, msgs] of Object.entries(errors)) {
+            html += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + (Array.isArray(msgs) ? msgs.join(', ') : String(msgs)) + '</div>';
+        }
+        return html;
+    }
+
     window.openQuickOfferModal = function() {
         alertBox.innerHTML = '';
+        clearFieldErrors();
         form.reset();
         const offerTab = document.getElementById('q-offer-tab');
         new bootstrap.Tab(offerTab).show();
@@ -255,6 +284,7 @@
             return;
         }
         setLoading(true);
+        clearFieldErrors();
         const formData = new FormData(form);
 
         fetch('{% url "quick-offer-ajax" %}', {
@@ -264,9 +294,13 @@
             },
             body: formData
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(async r => {
+            const data = await r.json().catch(() => null);
             setLoading(false);
+            if (!data) {
+                showAlert('حدث خطأ غير متوقع: ' + r.status + ' ' + r.statusText, 'danger');
+                return;
+            }
             if (data.success) {
                 showAlert(data.message, 'success');
                 setTimeout(() => {
@@ -275,20 +309,17 @@
                     window.location.href = '/student-offers/' + data.slug + '/';
                 }, 1200);
             } else {
-                let errors = '';
                 if (data.errors) {
-                    for (const [field, msgs] of Object.entries(data.errors)) {
-                        errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
-                    }
+                    showAlert(formatErrors(data.errors), 'danger');
+                    showFieldErrors(data.errors);
                 } else {
-                    errors = data.error || 'حدث خطأ أثناء الإنشاء';
+                    showAlert(data.error || 'حدث خطأ أثناء الإنشاء', 'danger');
                 }
-                showAlert(errors, 'danger');
             }
         })
-        .catch(() => {
+        .catch(err => {
             setLoading(false);
-            showAlert('حدث خطأ في الاتصال', 'danger');
+            showAlert('حدث خطأ في الاتصال: ' + (err.message || ''), 'danger');
         });
     });
 })();
@@ -378,23 +409,64 @@
                             </div>
                         </div>
                         <div class="tab-pane fade" id="r-recipient-pane" role="tabpanel">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">الاسم <span class="text-danger">*</span></label>
-                                    <input type="text" name="contact_name" class="form-control" required>
+                            <ul class="nav nav-pills mb-3" id="rootRecipientType" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="rr-registered-tab" data-bs-toggle="tab" data-bs-target="#rr-registered-pane" type="button" role="tab">مستفسر مسجل</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="rr-new-tab" data-bs-toggle="tab" data-bs-target="#rr-new-pane" type="button" role="tab">مستفسر جديد</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="rootRecipientTabContent">
+                                <div class="tab-pane fade show active" id="rr-registered-pane" role="tabpanel">
+                                    <div class="mb-3">
+                                        <label class="form-label">المستفسر المسجل <span class="text-danger">*</span></label>
+                                        <select name="prospect" id="rootOfferProspect" class="form-select">
+                                            <option value="">اختر المستفسر...</option>
+                                            {% for p in all_prospects %}
+                                            <option value="{{ p.id }}" data-name="{{ p.name|escapejs }}" data-mobile="{{ p.mobile|escapejs }}" data-workplace="{{ p.workplace|escapejs }}" data-ministry="{{ p.ministry|escapejs }}" data-governorate="{{ p.governorate|escapejs }}" data-notes="{{ p.notes|escapejs }}">{{ p.name }}{% if p.mobile %} ({{ p.mobile }}){% endif %}</option>
+                                            {% empty %}
+                                            <option value="" disabled>لا يوجد مستفسرون مسجلون</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">الجوال <span class="text-danger">*</span></label>
-                                    <input type="text" name="contact_phone" class="form-control" placeholder="مثال: 966501234567" required>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">البريد الإلكتروني</label>
-                                    <input type="email" name="contact_email" class="form-control">
+                                <div class="tab-pane fade" id="rr-new-pane" role="tabpanel">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الاسم <span class="text-danger">*</span></label>
+                                            <input type="text" name="contact_name" id="rootNewContactName" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الجوال <span class="text-danger">*</span></label>
+                                            <input type="text" name="contact_phone" id="rootNewContactPhone" class="form-control" placeholder="مثال: 966501234567">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">البريد الإلكتروني</label>
+                                            <input type="email" name="contact_email" id="rootNewContactEmail" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">جهة العمل</label>
+                                            <input type="text" name="workplace" id="rootNewWorkplace" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">الوزارة / المؤسسة</label>
+                                            <input type="text" name="ministry" id="rootNewMinistry" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">المحافظة</label>
+                                            <input type="text" name="governorate" id="rootNewGovernorate" class="form-control">
+                                        </div>
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label">ملاحظات</label>
+                                            <textarea name="notes" id="rootNewNotes" class="form-control" rows="2"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">قناة الإرسال <span class="text-danger">*</span></label>
-                                <select name="channel" class="form-select" required>
+                                <select name="channel" id="rootOfferChannel" class="form-select" required>
                                     <option value="whatsapp">واتساب</option>
                                     <option value="email">البريد الإلكتروني</option>
                                     <option value="app">إشعار التطبيق</option>
@@ -440,6 +512,33 @@
 
     function showAlert(message, type) {
         alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+
+    function clearFieldErrors() {
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    }
+
+    function showFieldErrors(errors) {
+        clearFieldErrors();
+        for (const [field, msgs] of Object.entries(errors)) {
+            if (field === '__all__') continue;
+            const input = form.querySelector('[name="' + field + '"]');
+            if (!input) continue;
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback d-block';
+            feedback.textContent = Array.isArray(msgs) ? msgs.join(' ') : String(msgs);
+            input.parentNode.appendChild(feedback);
+        }
+    }
+
+    function formatErrors(errors) {
+        let html = '';
+        for (const [field, msgs] of Object.entries(errors)) {
+            html += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + (Array.isArray(msgs) ? msgs.join(', ') : String(msgs)) + '</div>';
+        }
+        return html;
     }
 
     function setLoading(loading) {
@@ -536,10 +635,62 @@
             .catch(() => {});
     }
 
+    const prospectSelect = document.getElementById('rootOfferProspect');
+    const registeredPane = document.getElementById('rr-registered-pane');
+    const newPane = document.getElementById('rr-new-pane');
+    const newContactName = document.getElementById('rootNewContactName');
+    const newContactPhone = document.getElementById('rootNewContactPhone');
+    const newContactEmail = document.getElementById('rootNewContactEmail');
+    const newWorkplace = document.getElementById('rootNewWorkplace');
+    const newMinistry = document.getElementById('rootNewMinistry');
+    const newGovernorate = document.getElementById('rootNewGovernorate');
+    const newNotes = document.getElementById('rootNewNotes');
+    const newFields = [newContactName, newContactPhone, newContactEmail, newWorkplace, newMinistry, newGovernorate, newNotes];
+
+    function setRecipientMode(isNew) {
+        if (prospectSelect) {
+            prospectSelect.required = !isNew;
+            prospectSelect.disabled = isNew;
+        }
+        newFields.forEach(f => {
+            if (f) {
+                f.required = isNew;
+                f.disabled = !isNew;
+            }
+        });
+    }
+
+    if (prospectSelect) {
+        prospectSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt && opt.value) {
+                if (newContactName) newContactName.value = opt.dataset.name || '';
+                if (newContactPhone) newContactPhone.value = opt.dataset.mobile || '';
+                if (newWorkplace) newWorkplace.value = opt.dataset.workplace || '';
+                if (newMinistry) newMinistry.value = opt.dataset.ministry || '';
+                if (newGovernorate) newGovernorate.value = opt.dataset.governorate || '';
+                if (newNotes) newNotes.value = opt.dataset.notes || '';
+            }
+        });
+    }
+
+    document.querySelectorAll('#rootRecipientType button[data-bs-toggle="tab"]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            const isNew = e.target.id === 'rr-new-tab';
+            setRecipientMode(isNew);
+            if (!isNew && prospectSelect) prospectSelect.value = '';
+            if (isNew) {
+                newFields.forEach(f => { if (f) f.value = ''; });
+            }
+        });
+    });
+
     window.openRootOfferModal = function() {
         alertBox.innerHTML = '';
+        clearFieldErrors();
         form.reset();
         resetFormState();
+        setRecipientMode(false);
         new bootstrap.Modal(modal).show();
     };
 
@@ -549,6 +700,7 @@
             return;
         }
         setLoading(true);
+        clearFieldErrors();
         const formData = new FormData(form);
 
         fetch('{% url "root-offer-ajax" %}', {
@@ -558,9 +710,13 @@
             },
             body: formData
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(async r => {
+            const data = await r.json().catch(() => null);
             setLoading(false);
+            if (!data) {
+                showAlert('حدث خطأ غير متوقع: ' + r.status + ' ' + r.statusText, 'danger');
+                return;
+            }
             if (data.success) {
                 showAlert(data.message, 'success');
                 setTimeout(() => {
@@ -569,20 +725,17 @@
                     window.location.href = '/student-offers/' + data.slug + '/';
                 }, 1200);
             } else {
-                let errors = '';
                 if (data.errors) {
-                    for (const [field, msgs] of Object.entries(data.errors)) {
-                        errors += '<div><strong>' + (field === '__all__' ? '' : field + ': ') + '</strong>' + msgs.join(', ') + '</div>';
-                    }
+                    showAlert(formatErrors(data.errors), 'danger');
+                    showFieldErrors(data.errors);
                 } else {
-                    errors = data.error || 'حدث خطأ أثناء الإنشاء';
+                    showAlert(data.error || 'حدث خطأ أثناء الإنشاء', 'danger');
                 }
-                showAlert(errors, 'danger');
             }
         })
-        .catch(() => {
+        .catch(err => {
             setLoading(false);
-            showAlert('حدث خطأ في الاتصال', 'danger');
+            showAlert('حدث خطأ في الاتصال: ' + (err.message || ''), 'danger');
         });
     });
 })();

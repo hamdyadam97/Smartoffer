@@ -143,12 +143,22 @@ PERMISSIONS_DATA = [
     ('change_accountnote', 'تعديل ملاحظة تسجيل', 'registrations', 'accountnote', 'change'),
     ('delete_accountnote', 'حذف ملاحظة تسجيل', 'registrations', 'accountnote', 'delete'),
 
+    # --- prospects (المستفسرون) ---
+    ('view_prospect', 'عرض المستفسرين', 'prospects', 'prospect', 'view'),
+    ('add_prospect', 'إضافة مستفسر', 'prospects', 'prospect', 'add'),
+    ('change_prospect', 'تعديل مستفسر', 'prospects', 'prospect', 'change'),
+    ('delete_prospect', 'حذف مستفسر', 'prospects', 'prospect', 'delete'),
+
+    ('view_prospectoffer', 'عرض عروض المستفسرين', 'prospects', 'prospectoffer', 'view'),
+    ('add_prospectoffer', 'إضافة عرض مستفسر', 'prospects', 'prospectoffer', 'add'),
+    ('change_prospectoffer', 'تعديل عرض مستفسر', 'prospects', 'prospectoffer', 'change'),
+    ('delete_prospectoffer', 'حذف عرض مستفسر', 'prospects', 'prospectoffer', 'delete'),
+
     # --- offers (عروض الطلاب) ---
     ('view_studentoffer', 'عرض عروض الطلاب', 'offers', 'studentoffer', 'view'),
     ('add_studentoffer', 'إضافة عرض طالب', 'offers', 'studentoffer', 'add'),
     ('change_studentoffer', 'تعديل عرض طالب', 'offers', 'studentoffer', 'change'),
     ('delete_studentoffer', 'حذف عرض طالب', 'offers', 'studentoffer', 'delete'),
-    ('send_studentoffer', 'إرسال عروض الطلاب', 'offers', 'studentoffer', 'change'),
 
     ('view_offernote', 'عرض ملاحظات العروض', 'offers', 'offernote', 'view'),
     ('add_offernote', 'إضافة ملاحظة عرض', 'offers', 'offernote', 'add'),

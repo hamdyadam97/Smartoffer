@@ -86,6 +86,9 @@
                             <span>
                                 {% if recipient.student %}
                                     {{ recipient.student }}
+                                {% elif recipient.prospect %}
+                                    <a href="{% url 'prospect-detail' recipient.prospect.slug %}">{{ recipient.prospect.name }}</a>
+                                    {% if recipient.prospect.mobile %}<small class="text-muted">({{ recipient.prospect.mobile }})</small>{% endif %}
                                 {% else %}
                                     {{ recipient.contact_name|default:"مستلم سريع" }}
                                     {% if recipient.contact_phone %}<small class="text-muted">({{ recipient.contact_phone }})</small>{% endif %}
@@ -133,6 +136,45 @@
                 <div id="addRecipientAlert"></div>
                 <form id="addRecipientForm">
                     {% csrf_token %}
+                    {% if 'جذور' in offer.branch.company.name %}
+                    <ul class="nav nav-tabs mb-3" id="recipientTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="prospect-tab" data-bs-toggle="tab" data-bs-target="#prospect-pane" type="button" role="tab">مستفسر مسجل</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="quick-tab" data-bs-toggle="tab" data-bs-target="#quick-pane" type="button" role="tab">مستفسر جديد</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="recipientTabContent">
+                        <div class="tab-pane fade show active" id="prospect-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">المستفسر</label>
+                                <select name="prospect" id="ar_prospect" class="form-select">
+                                    <option value="">اختر المستفسر...</option>
+                                    {% for p in all_prospects %}
+                                    <option value="{{ p.id }}">{{ p.name }}{% if p.mobile %} ({{ p.mobile }}){% endif %}</option>
+                                    {% empty %}
+                                    <option value="" disabled>لا يوجد مستفسرون مسجلون</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="quick-pane" role="tabpanel">
+                            <div class="mb-3">
+                                <label class="form-label">الاسم</label>
+                                <input type="text" name="contact_name" id="ar_contact_name" class="form-control" placeholder="اسم المستفسر">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الجوال</label>
+                                <input type="text" name="contact_phone" id="ar_contact_phone" class="form-control" placeholder="مثال: 966501234567">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">البريد الإلكتروني</label>
+                                <input type="email" name="contact_email" id="ar_contact_email" class="form-control" placeholder="email@example.com">
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
                     <ul class="nav nav-tabs mb-3" id="recipientTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="registered-tab" data-bs-toggle="tab" data-bs-target="#registered-pane" type="button" role="tab">طالب مسجل</button>
@@ -170,6 +212,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label">قناة الإرسال <span class="text-danger">*</span></label>
                         <select name="channel" id="ar_channel" class="form-select" required>
