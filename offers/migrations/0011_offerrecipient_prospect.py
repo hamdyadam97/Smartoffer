@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('offers', '0010_studentoffer_manual_program_hours'),
-        ('prospects', '0001_initial'),
     ]
 
     operations = [

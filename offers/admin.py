@@ -18,17 +18,14 @@ class OfferRecipientAdmin(admin.ModelAdmin):
     list_display = ('get_recipient_name', 'offer', 'channel', 'status', 'sent_at')
     list_filter = ('channel', 'status', 'sent_at', 'offer__branch')
     search_fields = ('student__contact__first_name', 'student__contact__forth_name',
-                     'prospect__name', 'prospect__mobile',
                      'contact_name', 'contact_phone', 'contact_email', 'offer__title')
-    autocomplete_fields = ('offer', 'student', 'prospect')
+    autocomplete_fields = ('offer', 'student')
     readonly_fields = ('sent_at',)
 
     @admin.display(description='المستلم')
     def get_recipient_name(self, obj):
         if obj.student:
             return obj.student.get_full_name()
-        if obj.prospect:
-            return obj.prospect.name
         return obj.contact_name or obj.contact_phone or obj.contact_email or 'مستلم سريع'
 
 

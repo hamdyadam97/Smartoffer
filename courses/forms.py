@@ -22,7 +22,7 @@ class MasterForm(forms.ModelForm):
 
     class Meta:
         model = Master
-        fields = ['branch', 'master_category', 'code', 'name', 'period', 'hours', 'offer_type']
+        fields = ['branch', 'master_category', 'code', 'name', 'period', 'hours']
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'master_category': forms.Select(attrs={'class': 'form-select'}),
@@ -30,7 +30,6 @@ class MasterForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'period': forms.TextInput(attrs={'class': 'form-control'}),
             'hours': forms.NumberInput(attrs={'class': 'form-control'}),
-            'offer_type': forms.Select(attrs={'class': 'form-select'}),
         }
 
 
