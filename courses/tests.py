@@ -90,6 +90,31 @@ class CourseFormAjaxTests(TestCase):
         self.assertTrue(data['success'])
         self.assertTrue(Course.objects.filter(pk=data['course']['id']).exists())
 
+    def test_delete_course_deletes_registrations_and_payments(self):
+        from finance.models import Payment
+        from registrations.models import Account
+        from students.models import Contact, Student
+        course = Course.objects.create(master=self.master, code=1, target_level='الكل')
+        student = Student.objects.create(
+            contact=Contact.objects.create(first_name='Ali', forth_name='Omar'),
+            branch=self.branch,
+        )
+        account = Account.objects.create(course=course, student=student, code=1)
+        Payment.objects.create(account=account, code=1, amount_number=100)
+        self.user.is_superuser = True
+        self.user.save()
+
+        confirm = self.client.get(reverse('course-delete', args=[course.pk]))
+        self.assertEqual(confirm.context['accounts_count'], 1)
+        self.assertEqual(confirm.context['payments_count'], 1)
+
+        response = self.client.post(reverse('course-delete', args=[course.pk]))
+
+        self.assertRedirects(response, reverse('course-list'))
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+        self.assertFalse(Account.objects.filter(pk=account.pk).exists())
+        self.assertFalse(Payment.objects.filter(account_id=account.pk).exists())
+
     def test_course_create_ajax_requires_permission(self):
         # مستخدم بدون صلاحية
         other = Person.objects.create_user(

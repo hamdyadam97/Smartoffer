@@ -11,6 +11,14 @@
             </div>
             <div class="card-body">
                 <h5 class="card-title">هل أنت متأكد من حذف الدورة <strong>{{ object.master.name }} - {{ object.code }}</strong>؟</h5>
+                {% if accounts_count %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    سيتم أيضًا حذف <strong>{{ accounts_count }}</strong> تسجيل
+                    {% if payments_count %}و<strong>{{ payments_count }}</strong> سند قبض{% endif %}
+                    مرتبطين بهذه الدورة.
+                </div>
+                {% endif %}
                 <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه.</p>
                 <form method="post">
                     {% csrf_token %}

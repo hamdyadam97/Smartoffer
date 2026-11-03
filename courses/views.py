@@ -1,4 +1,4 @@
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -218,6 +218,24 @@ class CourseDeleteView(BranchPermissionMixin, DeleteView):
     model = Course
     template_name = 'courses/course_confirm_delete.html'
     success_url = reverse_lazy('course-list')
+
+    def get_context_data(self, **kwargs):
+        from finance.models import Payment
+        context = super().get_context_data(**kwargs)
+        context['accounts_count'] = self.object.accounts.count()
+        context['payments_count'] = Payment.objects.filter(account__course=self.object).count()
+        return context
+
+    def form_valid(self, form):
+        """حذف الدورة بكل اللي مرتبط بيها: المدفوعات ثم التسجيلات (ومرفقاتها وشروطها وملاحظاتها)."""
+        from finance.models import Payment
+        from registrations.models import Account
+        with transaction.atomic():
+            Payment.objects.filter(account__course=self.object).delete()
+            Account.objects.filter(course=self.object).delete()
+            response = super().form_valid(form)
+        messages.success(self.request, 'تم حذف الدورة وكل البيانات المرتبطة بها.')
+        return response
 
 
 # ============================================================

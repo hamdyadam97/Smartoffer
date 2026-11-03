@@ -1,5 +1,17 @@
+from collections import Counter
+
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db.models import ProtectedError
+from django.shortcuts import redirect
+
+
+def protected_error_message(exc):
+    """رسالة عربية بتوضح السجل مرتبط بإيه ومينفعش يتحذف."""
+    counts = Counter(obj._meta.verbose_name_plural for obj in exc.protected_objects)
+    details = '، '.join(f'{count} من {name}' for name, count in counts.items())
+    return f'لا يمكن الحذف لأنه مرتبط بـ: {details}. احذف أو انقل البيانات المرتبطة أولاً.'
 
 
 class BranchPermissionMixin(LoginRequiredMixin):
@@ -47,7 +59,12 @@ class BranchPermissionMixin(LoginRequiredMixin):
             branch = self.get_branch()
             if branch and branch.pk not in allowed_ids:
                 raise PermissionDenied('غير مسموح لك دخول هنا')
-        return super().dispatch(request, *args, **kwargs)
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except ProtectedError as exc:
+            # الحذف ممنوع لأن السجل مرتبط ببيانات تانية (مثلاً دورة عليها تسجيلات)
+            messages.error(request, protected_error_message(exc))
+            return redirect(getattr(self, 'success_url', None) or request.META.get('HTTP_REFERER') or '/')
 
     def get_queryset(self):
         qs = super().get_queryset()
