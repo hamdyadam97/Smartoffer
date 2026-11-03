@@ -111,15 +111,30 @@ class MasterDeleteView(BranchPermissionMixin, DeleteView):
     template_name = 'courses/master_confirm_delete.html'
     success_url = reverse_lazy('master-list')
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        if self.object.courses.exists():
-            messages.error(
-                request,
-                f'لا يمكن حذف التخصص "{self.object.name}" لأنه مرتبط بـ {self.object.courses.count()} دورة/دورات. يجب حذف أو نقل الدورات أولاً.'
-            )
-            return redirect(self.success_url)
-        return super().post(request, *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        from finance.models import Payment, Offer, Call
+        from registrations.models import Account
+        context = super().get_context_data(**kwargs)
+        context['courses_count'] = self.object.courses.count()
+        context['accounts_count'] = Account.objects.filter(course__master=self.object).count()
+        context['payments_count'] = Payment.objects.filter(account__course__master=self.object).count()
+        context['offers_count'] = Offer.objects.filter(master=self.object).count()
+        context['calls_count'] = Call.objects.filter(offer__master=self.object).count()
+        return context
+
+    def form_valid(self, form):
+        """حذف التخصص بكل اللي مرتبط بيه: الدورات وتسجيلاتها ومدفوعاتها، وعروض الأسعار ومكالماتها."""
+        from finance.models import Payment, Offer, Call
+        from registrations.models import Account
+        with transaction.atomic():
+            Payment.objects.filter(account__course__master=self.object).delete()
+            Account.objects.filter(course__master=self.object).delete()
+            self.object.courses.all().delete()
+            Call.objects.filter(offer__master=self.object).delete()
+            Offer.objects.filter(master=self.object).delete()
+            response = super().form_valid(form)
+        messages.success(self.request, 'تم حذف التخصص وكل البيانات المرتبطة به.')
+        return response
 
 
 class CourseListView(BranchPermissionMixin, ListView):

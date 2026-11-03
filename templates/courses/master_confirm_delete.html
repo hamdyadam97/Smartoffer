@@ -11,6 +11,18 @@
             </div>
             <div class="card-body">
                 <h5 class="card-title">هل أنت متأكد من حذف التخصص <strong>{{ object.name }}</strong>؟</h5>
+                {% if courses_count or offers_count %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> سيتم أيضًا حذف كل البيانات المرتبطة بهذا التخصص:
+                    <ul class="mb-0 mt-2">
+                        {% if courses_count %}<li><strong>{{ courses_count }}</strong> دورة</li>{% endif %}
+                        {% if accounts_count %}<li><strong>{{ accounts_count }}</strong> تسجيل</li>{% endif %}
+                        {% if payments_count %}<li><strong>{{ payments_count }}</strong> سند قبض</li>{% endif %}
+                        {% if offers_count %}<li><strong>{{ offers_count }}</strong> عرض سعر</li>{% endif %}
+                        {% if calls_count %}<li><strong>{{ calls_count }}</strong> مكالمة</li>{% endif %}
+                    </ul>
+                </div>
+                {% endif %}
                 <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه.</p>
                 <form method="post">
                     {% csrf_token %}
