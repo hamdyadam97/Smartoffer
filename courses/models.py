@@ -3,13 +3,17 @@ from django.utils.text import slugify
 
 
 class Master(models.Model):
-    """التخصص / الدبلوم"""
+    """التخصص: نوعه (دبلوم أو دورة) + اسمه"""
+    PROGRAM_TYPE_CHOICES = [
+        ('دبلوم', 'دبلوم'),
+        ('دورة', 'دورة'),
+    ]
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
     branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='masters', verbose_name='الفرع')
-    master_category = models.ForeignKey('core.MasterCategory', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='masters', verbose_name='التصنيف')
+    program_type = models.CharField(max_length=20, choices=PROGRAM_TYPE_CHOICES, default='دبلوم', db_index=True, verbose_name='النوع')
 
     code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
-    name = models.CharField(max_length=255, db_index=True, verbose_name='اسم التخصص')
+    name = models.CharField(max_length=255, db_index=True, verbose_name='اسم الدبلوم / الدورة')
     period = models.CharField(max_length=100, blank=True, verbose_name='الفترة')
     hours = models.PositiveIntegerField(null=True, blank=True, db_index=True, verbose_name='عدد الساعات (للبرامج)')
 

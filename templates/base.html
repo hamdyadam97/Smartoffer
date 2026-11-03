@@ -790,12 +790,11 @@
                             <span><i class="bi bi-shield-gear"></i> الإدارة</span>
                             <i class="bi bi-chevron-down small chevron-icon"></i>
                         </a>
-                        <div class="collapse {% if '/companies/' in request.path or '/branches/' in request.path or '/banks/' in request.path or '/master-categories/' in request.path or '/persons/' in request.path or '/teams/' in request.path or '/roles/' in request.path or '/employee' in request.path %}show{% endif %}" id="adminCollapse">
+                        <div class="collapse {% if '/companies/' in request.path or '/branches/' in request.path or '/banks/' in request.path or '/persons/' in request.path or '/teams/' in request.path or '/roles/' in request.path or '/employee' in request.path %}show{% endif %}" id="adminCollapse">
                             <ul class="nav flex-column sidebar-submenu">
                                 {% if user|has_perm:'view_company' %}<li class="nav-item"><a class="nav-link {% if '/companies/' in request.path %}active{% endif %}" href="{% url 'company-list' %}"><i class="bi bi-building"></i> الشركات</a></li>{% endif %}
                                 {% if user|has_perm:'view_branch' %}<li class="nav-item"><a class="nav-link {% if '/branches/' in request.path and '/branches/create/' not in request.path %}active{% endif %}" href="{% url 'branch-list' %}"><i class="bi bi-diagram-3"></i> الفروع</a></li>{% endif %}
                                 {% if user|has_perm:'view_bank' %}<li class="nav-item"><a class="nav-link {% if '/banks/' in request.path %}active{% endif %}" href="{% url 'bank-list' %}"><i class="bi bi-bank"></i> البنوك</a></li>{% endif %}
-                                {% if user|has_perm:'view_mastercategory' %}<li class="nav-item"><a class="nav-link {% if '/master-categories/' in request.path %}active{% endif %}" href="{% url 'mastercategory-list' %}"><i class="bi bi-tags"></i> تصنيفات التخصصات</a></li>{% endif %}
                                 {% if user|has_perm:'view_person' %}<li class="nav-item"><a class="nav-link {% if '/persons/' in request.path %}active{% endif %}" href="{% url 'person-list' %}"><i class="bi bi-person-badge"></i> الموظفين</a></li>{% endif %}
                                 {% if user|has_perm:'view_team' %}<li class="nav-item"><a class="nav-link {% if '/teams/' in request.path %}active{% endif %}" href="{% url 'team-list' %}"><i class="bi bi-people-fill"></i> الفرق</a></li>{% endif %}
                                 {% if user|has_perm:'view_role' %}<li class="nav-item"><a class="nav-link {% if '/roles/' in request.path %}active{% endif %}" href="{% url 'role-list' %}"><i class="bi bi-shield-lock"></i> الأدوار</a></li>{% endif %}

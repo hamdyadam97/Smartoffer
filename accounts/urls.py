@@ -18,8 +18,8 @@ from .views import (
 urlpatterns = [
     # Person URLs
     path('persons/', PersonListView.as_view(), name='person-list'),
-    path('persons/<str:slug>/', PersonDetailView.as_view(), name='person-detail'),
     path('persons/create/', PersonCreateView.as_view(), name='person-create'),
+    path('persons/<str:slug>/', PersonDetailView.as_view(), name='person-detail'),
     path('persons/<str:slug>/update/', PersonUpdateView.as_view(), name='person-update'),
     path('persons/<str:slug>/delete/', PersonDeleteView.as_view(), name='person-delete'),
     path('persons/ajax/create/', person_create_ajax, name='person-create-ajax'),
@@ -27,8 +27,8 @@ urlpatterns = [
 
     # Team URLs
     path('teams/', TeamListView.as_view(), name='team-list'),
-    path('teams/<str:slug>/', TeamDetailView.as_view(), name='team-detail'),
     path('teams/create/', TeamCreateView.as_view(), name='team-create'),
+    path('teams/<str:slug>/', TeamDetailView.as_view(), name='team-detail'),
     path('teams/<str:slug>/update/', TeamUpdateView.as_view(), name='team-update'),
     path('teams/<str:slug>/delete/', TeamDeleteView.as_view(), name='team-delete'),
     path('teams/ajax/create/', team_create_ajax, name='team-create-ajax'),
@@ -42,8 +42,8 @@ urlpatterns = [
 
     # Role URLs
     path('roles/', RoleListView.as_view(), name='role-list'),
-    path('roles/<str:slug>/', RoleDetailView.as_view(), name='role-detail'),
     path('roles/create/', RoleCreateView.as_view(), name='role-create'),
+    path('roles/<str:slug>/', RoleDetailView.as_view(), name='role-detail'),
     path('roles/<str:slug>/update/', RoleUpdateView.as_view(), name='role-update'),
     path('roles/<str:slug>/delete/', RoleDeleteView.as_view(), name='role-delete'),
     path('roles/ajax/create/', role_create_ajax, name='role-create-ajax'),

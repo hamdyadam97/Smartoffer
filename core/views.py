@@ -21,8 +21,8 @@ from courses.models import Course
 from registrations.models import Account
 from finance.models import Payment, Offer, Call
 from offers.models import StudentOffer
-from core.models import Branch, Company, Bank, MasterCategory
-from .forms import CompanyForm, BranchForm, BankForm, MasterCategoryForm
+from core.models import Branch, Company, Bank
+from .forms import CompanyForm, BranchForm, BankForm
 
 
 def custom_page_not_found_view(request, exception):
@@ -669,93 +669,6 @@ class BankDeleteView(BranchPermissionMixin, DeleteView):
 
 
 # ============================================================
-# MasterCategory Views
-# ============================================================
-
-class MasterCategoryListView(BranchPermissionMixin, ListView):
-    model = MasterCategory
-    template_name = 'core/mastercategory_list.html'
-    context_object_name = 'categories'
-    paginate_by = 20
-    required_perm = 'view_mastercategory'
-    branch_field = 'branch'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['branches'] = _allowed_branches_queryset(
-            self.request.user, ['view_mastercategory']
-        )
-        return context
-
-
-class MasterCategoryDetailView(BranchPermissionMixin, DetailView):
-    model = MasterCategory
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'core/mastercategory_detail.html'
-    context_object_name = 'category'
-    required_perm = 'view_mastercategory'
-    branch_field = 'branch'
-
-
-class MasterCategoryCreateView(BranchPermissionMixin, CreateView):
-    model = MasterCategory
-    form_class = MasterCategoryForm
-    template_name = 'core/mastercategory_form.html'
-    success_url = reverse_lazy('mastercategory-list')
-    required_perm = 'add_mastercategory'
-    branch_field = 'branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم إنشاء التصنيف بنجاح')
-        return super().form_valid(form)
-
-
-class MasterCategoryUpdateView(BranchPermissionMixin, UpdateView):
-    model = MasterCategory
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    form_class = MasterCategoryForm
-    template_name = 'core/mastercategory_form.html'
-    success_url = reverse_lazy('mastercategory-list')
-    required_perm = 'change_mastercategory'
-    branch_field = 'branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم تحديث التصنيف بنجاح')
-        return super().form_valid(form)
-
-
-class MasterCategoryDeleteView(BranchPermissionMixin, DeleteView):
-    model = MasterCategory
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'core/mastercategory_confirm_delete.html'
-    success_url = reverse_lazy('mastercategory-list')
-    required_perm = 'delete_mastercategory'
-    branch_field = 'branch'
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف التصنيف بنجاح')
-        return super().delete(request, *args, **kwargs)
-
-
-# ============================================================
 # AJAX Views
 # ============================================================
 
@@ -808,49 +721,6 @@ def branch_update_ajax(request, pk):
         return JsonResponse({
             'success': True,
             'message': 'تم تحديث الفرع بنجاح',
-        })
-    return JsonResponse({
-        'success': False,
-        'errors': form.errors
-    }, status=400)
-
-
-@login_required
-@require_POST
-def mastercategory_create_ajax(request):
-    """إنشاء تصنيف جديد عبر AJAX (للـ Modal العائم)"""
-    branch_id = request.POST.get('branch')
-    branch = get_object_or_404(Branch, pk=branch_id) if branch_id else None
-    _check_branch_perm(request.user, 'add_mastercategory', branch)
-    form = MasterCategoryForm(request.POST, user=request.user)
-    if form.is_valid():
-        category = form.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'تم إنشاء التصنيف بنجاح',
-            'category': {
-                'id': category.id,
-                'name': category.name,
-            }
-        })
-    return JsonResponse({
-        'success': False,
-        'errors': form.errors
-    }, status=400)
-
-
-@login_required
-@require_POST
-def mastercategory_update_ajax(request, pk):
-    """تحديث تصنيف عبر AJAX (للـ Modal العائم)"""
-    category = get_object_or_404(MasterCategory, pk=pk)
-    _check_branch_perm(request.user, 'change_mastercategory', category.branch)
-    form = MasterCategoryForm(request.POST, instance=category, user=request.user)
-    if form.is_valid():
-        form.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'تم تحديث التصنيف بنجاح',
         })
     return JsonResponse({
         'success': False,

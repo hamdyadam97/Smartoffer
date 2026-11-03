@@ -37,13 +37,6 @@ data = [
         ]
     },
     {
-        'name': 'شركة الجذور الرقمية',
-        'branches': [
-            'Root Exam',
-            'Root Academy',
-        ]
-    },
-    {
         'name': 'شركة الثقة الدائمة',
         'branches': [
             'الثقة الدائمة',

@@ -15,8 +15,8 @@ from .views import (
 urlpatterns = [
     # Payment
     path('payments/', PaymentListView.as_view(), name='payment-list'),
-    path('payments/<str:slug>/', PaymentDetailView.as_view(), name='payment-detail'),
     path('payments/create/', PaymentCreateView.as_view(), name='payment-create'),
+    path('payments/<str:slug>/', PaymentDetailView.as_view(), name='payment-detail'),
     path('payments/<str:slug>/update/', PaymentUpdateView.as_view(), name='payment-update'),
     path('payments/<str:slug>/delete/', PaymentDeleteView.as_view(), name='payment-delete'),
     path('payments/ajax/create/', payment_create_ajax, name='payment-create-ajax'),
@@ -66,8 +66,8 @@ urlpatterns = [
 
     # Call
     path('calls/', CallListView.as_view(), name='call-list'),
-    path('calls/<str:slug>/', CallDetailView.as_view(), name='call-detail'),
     path('calls/create/', CallCreateView.as_view(), name='call-create'),
+    path('calls/<str:slug>/', CallDetailView.as_view(), name='call-detail'),
     path('calls/<str:slug>/update/', CallUpdateView.as_view(), name='call-update'),
     path('calls/<str:slug>/delete/', CallDeleteView.as_view(), name='call-delete'),
     path('calls/ajax/create/', call_create_ajax, name='call-create-ajax'),

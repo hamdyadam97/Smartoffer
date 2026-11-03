@@ -4,29 +4,10 @@ from urllib import request, error, parse
 from django.conf import settings
 
 
-def _is_root_branch(branch) -> bool:
-    """Return True if branch belongs to Root company (rootexam / rootacademy / الجذور الرقمية)."""
-    if not branch:
-        return False
-    branch_name = str(branch.name or '').lower()
-    company_name = str(branch.company.name if branch.company else '').lower()
-    checks = [
-        'root' in branch_name,
-        'root' in company_name,
-        'جذور' in company_name,
-        'جذور' in branch_name,
-    ]
-    return any(checks)
-
-
-def _get_ultramsg_credentials(branch=None):
-    """Return (instance_id, token) based on branch company."""
-    if _is_root_branch(branch):
-        instance_id = getattr(settings, 'ULTRAMSG_INSTANCE_ID_ROOT', '') or getattr(settings, 'ULTRAMSG_INSTANCE_ID', '')
-        token = getattr(settings, 'ULTRAMSG_TOKEN_ROOT', '') or getattr(settings, 'ULTRAMSG_TOKEN', '')
-    else:
-        instance_id = getattr(settings, 'ULTRAMSG_INSTANCE_ID', '')
-        token = getattr(settings, 'ULTRAMSG_TOKEN', '')
+def _get_ultramsg_credentials():
+    """Return (instance_id, token)."""
+    instance_id = getattr(settings, 'ULTRAMSG_INSTANCE_ID', '')
+    token = getattr(settings, 'ULTRAMSG_TOKEN', '')
     return instance_id, token
 
 
@@ -66,8 +47,8 @@ def _send_twilio(to_number: str, body: str) -> dict:
         return {'success': False, 'error': str(e), 'provider': 'twilio'}
 
 
-def _send_ultramsg_text(to_number: str, body: str, branch=None) -> dict:
-    instance_id, token = _get_ultramsg_credentials(branch)
+def _send_ultramsg_text(to_number: str, body: str) -> dict:
+    instance_id, token = _get_ultramsg_credentials()
 
     url = f"https://api.ultramsg.com/{instance_id}/messages/chat"
     data = {
@@ -95,8 +76,8 @@ def _send_ultramsg_text(to_number: str, body: str, branch=None) -> dict:
         return {'success': False, 'error': str(e), 'provider': 'ultramsg'}
 
 
-def _send_ultramsg_document(to_number: str, filename: str, pdf_bytes: bytes, caption: str = '', branch=None) -> dict:
-    instance_id, token = _get_ultramsg_credentials(branch)
+def _send_ultramsg_document(to_number: str, filename: str, pdf_bytes: bytes, caption: str = '') -> dict:
+    instance_id, token = _get_ultramsg_credentials()
 
     url = f"https://api.ultramsg.com/{instance_id}/messages/document"
     data = {
@@ -126,7 +107,7 @@ def _send_ultramsg_document(to_number: str, filename: str, pdf_bytes: bytes, cap
         return {'success': False, 'error': str(e), 'provider': 'ultramsg'}
 
 
-def send_whatsapp_message(to_number: str, body: str, branch=None) -> dict:
+def send_whatsapp_message(to_number: str, body: str) -> dict:
     """
     Send a WhatsApp text message using the configured provider.
     In development (or when credentials are missing), logs to console.
@@ -135,11 +116,11 @@ def send_whatsapp_message(to_number: str, body: str, branch=None) -> dict:
     provider = getattr(settings, 'WHATSAPP_PROVIDER', 'twilio').lower()
 
     if provider == 'ultramsg':
-        instance_id, token = _get_ultramsg_credentials(branch)
+        instance_id, token = _get_ultramsg_credentials()
         if not instance_id or not token:
             print(f"[WhatsApp DEV - Ultramsg] To: {to_number}\nBody: {body}\n")
             return {'success': True, 'sid': None, 'provider': 'ultramsg-dev'}
-        return _send_ultramsg_text(to_number, body, branch=branch)
+        return _send_ultramsg_text(to_number, body)
 
     # Default Twilio
     sid = getattr(settings, 'WHATSAPP_TWILIO_SID', None)
@@ -153,21 +134,20 @@ def send_whatsapp_message(to_number: str, body: str, branch=None) -> dict:
     return _send_twilio(to_number, body)
 
 
-def send_whatsapp_pdf(to_number: str, filename: str, pdf_bytes: bytes, caption: str = '', branch=None) -> dict:
+def send_whatsapp_pdf(to_number: str, filename: str, pdf_bytes: bytes, caption: str = '') -> dict:
     """
     Send a PDF document via WhatsApp using the configured provider.
     Currently supported: ultramsg (document endpoint).
     Falls back to text message for Twilio/dev mode.
     """
     provider = getattr(settings, 'WHATSAPP_PROVIDER', 'twilio').lower()
-    instance_id, token = _get_ultramsg_credentials(branch)
-    print(f"[WhatsApp DEBUG] provider={provider}, instance={instance_id[:6]}..., token_present={bool(token)}, is_root={_is_root_branch(branch)}")
 
     if provider == 'ultramsg':
+        instance_id, token = _get_ultramsg_credentials()
         if not instance_id or not token:
             print(f"[WhatsApp DEV - Ultramsg PDF] To: {to_number}\nFilename: {filename}\n")
             return {'success': True, 'sid': None, 'provider': 'ultramsg-dev'}
-        return _send_ultramsg_document(to_number, filename, pdf_bytes, caption, branch=branch)
+        return _send_ultramsg_document(to_number, filename, pdf_bytes, caption)
 
     # Twilio / dev: send a text with notice
-    return send_whatsapp_message(to_number, f"{caption}\n[PDF attachment: {filename}]", branch=branch)
+    return send_whatsapp_message(to_number, f"{caption}\n[PDF attachment: {filename}]")

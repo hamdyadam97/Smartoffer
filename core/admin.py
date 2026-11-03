@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Branch, Bank, MasterCategory
+from .models import Company, Branch, Bank
 
 
 @admin.register(Company)
@@ -30,10 +30,3 @@ class BankAdmin(admin.ModelAdmin):
     list_display = ['name', 'branch', 'account_number', 'created_at']
     list_filter = ['branch']
     search_fields = ['name', 'account_number', 'iban']
-
-
-@admin.register(MasterCategory)
-class MasterCategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'branch', 'created_at']
-    list_filter = ['branch']
-    search_fields = ['name']

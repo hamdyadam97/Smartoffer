@@ -115,31 +115,3 @@ class Bank(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class MasterCategory(models.Model):
-    """تصنيف التخصص"""
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
-    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name='categories', verbose_name='الفرع', null=True, blank=True)
-    name = models.CharField(max_length=255, verbose_name='اسم التصنيف')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'تصنيف التخصص'
-        verbose_name_plural = 'تصنيفات التخصصات'
-        ordering = ['name']
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.name, allow_unicode=True)
-            slug = base_slug
-            counter = 1
-            while MasterCategory.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f'{base_slug}-{counter}'
-                counter += 1
-            self.slug = slug
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name

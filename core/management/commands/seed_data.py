@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from accounts.models import Team, Person, BranchAccess, Role, EmployeeRole, EmployeePerformance
-from core.models import Company, Branch, Bank, MasterCategory
+from core.models import Company, Branch, Bank
 from courses.models import Master, Course
 from finance.models import Payment, PaymentOut, Deposit, Withdraw, BillBuyType, BillBuy, Offer as FinanceOffer, Call
 from messaging.models import InternalMessage
@@ -133,7 +133,6 @@ class Command(BaseCommand):
         Bank.objects.all().delete()
         Branch.objects.all().delete()
         Company.objects.all().delete()
-        MasterCategory.objects.all().delete()
 
     def create_core(self):
         # ========== الشركات الحقيقية ==========
@@ -163,16 +162,6 @@ class Command(BaseCommand):
                     'القصيم - رجال', 'القصيم - سيدات'
                 ]
             },
-            {
-                'name': 'شركة روت',
-                'sub_name': 'Root Company',
-                'address': 'المملكة العربية السعودية',
-                'phone1': '0119998888',
-                'email': 'info@root.example',
-                'branches': [
-                    'Root Exam', 'Root Academy'
-                ]
-            }
         ]
 
         self.companies = []
@@ -214,11 +203,6 @@ class Command(BaseCommand):
                 swift='SARISARI'
             )
             self.banks.append(bank)
-
-        self.master_categories = []
-        cat_names = ['تقنية المعلومات', 'إدارة الأعمال', 'اللغات', 'التسويق', 'المحاسبة']
-        for name in cat_names:
-            self.master_categories.append(MasterCategory.objects.create(name=name))
 
     def create_accounts(self):
         self.teams = []
@@ -312,6 +296,7 @@ class Command(BaseCommand):
             self.contacts.append(c)
             st = Student.objects.create(
                 contact=c,
+                branch=random.choice(self.branches),
                 level=random.choice(['مبتدئ', 'متوسط', 'متقدم']),
                 preferred_contact=random.choice(['email', 'whatsapp', 'app'])
             )
@@ -322,7 +307,7 @@ class Command(BaseCommand):
         for i in range(10):
             m = Master.objects.create(
                 branch=random.choice(self.branches),
-                master_category=random.choice(self.master_categories),
+                program_type=random.choice(['دبلوم', 'دورة']),
                 code=i + 1,
                 name=f'تخصص {random_string(4)}',
                 period=f'{random.randint(1, 12)} شهر',

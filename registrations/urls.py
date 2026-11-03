@@ -12,8 +12,8 @@ from .views import (
 urlpatterns = [
     # Account (Registration)
     path('registrations/', AccountListView.as_view(), name='registration-list'),
-    path('registrations/<str:slug>/', AccountDetailView.as_view(), name='registration-detail'),
     path('registrations/create/', AccountCreateView.as_view(), name='registration-create'),
+    path('registrations/<str:slug>/', AccountDetailView.as_view(), name='registration-detail'),
     path('registrations/<str:slug>/update/', AccountUpdateView.as_view(), name='registration-update'),
     path('registrations/<str:slug>/delete/', AccountDeleteView.as_view(), name='registration-delete'),
     path('registrations/ajax/create/', account_create_ajax, name='registration-create-ajax'),

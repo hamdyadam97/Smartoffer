@@ -6,7 +6,6 @@ MODEL_NAMES_AR = {
     'company': 'الشركات',
     'branch': 'الفروع',
     'bank': 'البنوك',
-    'mastercategory': 'فئات التخصصات',
     'team': 'الفرق',
     'person': 'الموظفين',
     'branchaccess': 'صلاحيات الفروع',

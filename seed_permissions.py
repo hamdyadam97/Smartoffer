@@ -49,11 +49,6 @@ PERMISSIONS_DATA = [
     ('change_bank', 'تعديل بنك', 'core', 'bank', 'change'),
     ('delete_bank', 'حذف بنك', 'core', 'bank', 'delete'),
 
-    ('view_mastercategory', 'عرض تصنيفات التخصصات', 'core', 'mastercategory', 'view'),
-    ('add_mastercategory', 'إضافة تصنيف تخصص', 'core', 'mastercategory', 'add'),
-    ('change_mastercategory', 'تعديل تصنيف تخصص', 'core', 'mastercategory', 'change'),
-    ('delete_mastercategory', 'حذف تصنيف تخصص', 'core', 'mastercategory', 'delete'),
-
     # --- students ---
     ('view_contact', 'عرض جهات الاتصال', 'students', 'contact', 'view'),
     ('add_contact', 'إضافة جهة اتصال', 'students', 'contact', 'add'),

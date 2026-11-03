@@ -1,5 +1,4 @@
 from django import forms
-from django.db.models import Q
 
 from accounts.mixins import filter_by_branch
 
@@ -16,16 +15,13 @@ class MasterForm(forms.ModelForm):
             self.fields['branch'].queryset = self.fields['branch'].queryset.filter(
                 pk__in=allowed_ids
             )
-            self.fields['master_category'].queryset = self.fields['master_category'].queryset.filter(
-                Q(branch__in=allowed_ids) | Q(branch__isnull=True)
-            )
 
     class Meta:
         model = Master
-        fields = ['branch', 'master_category', 'code', 'name', 'period', 'hours']
+        fields = ['branch', 'program_type', 'code', 'name', 'period', 'hours']
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
-            'master_category': forms.Select(attrs={'class': 'form-select'}),
+            'program_type': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'period': forms.TextInput(attrs={'class': 'form-control'}),

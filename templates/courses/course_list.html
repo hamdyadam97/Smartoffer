@@ -194,11 +194,10 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">التصنيف</label>
-                            <select name="master_category" class="form-select">
-                                <option value="">اختر التصنيف...</option>
-                                {% for cat in categories %}
-                                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            <label class="form-label">النوع <span class="text-danger">*</span></label>
+                            <select name="program_type" class="form-select" required>
+                                {% for value, label in program_types %}
+                                <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -207,7 +206,7 @@
                             <input type="number" name="code" id="masterCode" class="form-control" placeholder="يتم التوليد تلقائيًا">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">اسم التخصص <span class="text-danger">*</span></label>
+                            <label class="form-label">اسم الدبلوم / الدورة <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-3">

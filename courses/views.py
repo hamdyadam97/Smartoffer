@@ -24,7 +24,7 @@ class MasterListView(BranchPermissionMixin, ListView):
     branch_field = 'branch'
 
     def get_queryset(self):
-        queryset = Master.objects.select_related('branch', 'master_category').all()
+        queryset = Master.objects.select_related('branch').all()
         queryset = filter_by_branch(
             queryset,
             self.request.user,
@@ -37,23 +37,20 @@ class MasterListView(BranchPermissionMixin, ListView):
         branch = self.request.GET.get('branch')
         if branch:
             queryset = queryset.filter(branch_id=branch)
-        category = self.request.GET.get('category')
-        if category:
-            queryset = queryset.filter(master_category_id=category)
+        program_type = self.request.GET.get('program_type')
+        if program_type:
+            queryset = queryset.filter(program_type=program_type)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from core.models import Branch, MasterCategory
+        from core.models import Branch
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.all().order_by('name')
         else:
-            allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
+            allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm('add_master')]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.filter(
-                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
-            ).order_by('name')
+        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
         return context
 
 
@@ -161,18 +158,15 @@ class CourseListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from core.models import Branch, MasterCategory
+        from core.models import Branch
         user = self.request.user
+        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
         if user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.all().order_by('name')
             context['form_master_queryset'] = Master.objects.select_related('branch').order_by('branch__name', 'code', 'name')
         else:
             allowed_master_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
             context['branches'] = Branch.objects.filter(pk__in=allowed_master_ids).order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.filter(
-                Q(branch__pk__in=allowed_master_ids) | Q(branch__isnull=True)
-            ).order_by('name')
             allowed_course_ids = [b.pk for b in user.get_branches_for_perm('add_course')]
             context['form_master_queryset'] = Master.objects.select_related('branch').filter(
                 branch__pk__in=allowed_course_ids
@@ -203,17 +197,14 @@ class CourseUpdateView(BranchPermissionMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from core.models import Branch, MasterCategory
+        from core.models import Branch
         user = self.request.user
+        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
         if user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.all().order_by('name')
         else:
             allowed_ids = [b.pk for b in user.get_branches_for_perm('add_master')]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['categories'] = MasterCategory.objects.filter(
-                Q(branch__pk__in=allowed_ids) | Q(branch__isnull=True)
-            ).order_by('name')
         return context
 
     def form_valid(self, form):

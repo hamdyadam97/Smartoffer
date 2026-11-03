@@ -3,6 +3,17 @@
 from django.db import migrations
 
 
+def drop_prospect_column(apps, schema_editor):
+    """يشيل عمود prospect_id لو موجود (على قواعد البيانات اللي طبقت 0011 القديمة)."""
+    connection = schema_editor.connection
+    table = 'offers_offerrecipient'
+    with connection.cursor() as cursor:
+        columns = [c.name for c in connection.introspection.get_table_description(cursor, table)]
+    if 'prospect_id' in columns:
+        qn = schema_editor.quote_name
+        schema_editor.execute(f'ALTER TABLE {qn(table)} DROP COLUMN {qn("prospect_id")}')
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,8 +21,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='offerrecipient',
-            name='prospect',
-        ),
+        migrations.RunPython(drop_prospect_column, migrations.RunPython.noop),
     ]

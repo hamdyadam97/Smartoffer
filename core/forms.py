@@ -1,5 +1,5 @@
 from django import forms
-from .models import Company, Branch, Bank, MasterCategory
+from .models import Company, Branch, Bank
 
 
 class CompanyForm(forms.ModelForm):
@@ -80,27 +80,4 @@ class BankForm(forms.ModelForm):
             'account_number': forms.TextInput(attrs={'class': 'form-control'}),
             'iban': forms.TextInput(attrs={'class': 'form-control'}),
             'swift': forms.TextInput(attrs={'class': 'form-control'}),
-        }
-
-
-class MasterCategoryForm(forms.ModelForm):
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        from core.models import Branch
-        if user is not None:
-            if user.is_executive():
-                self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            else:
-                perm = 'add_mastercategory' if not self.instance.pk else 'change_mastercategory'
-                allowed = user.get_branches_for_perm(perm)
-                self.fields['branch'].queryset = Branch.objects.filter(pk__in=[b.pk for b in allowed]).order_by('code', 'name')
-        else:
-            self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-
-    class Meta:
-        model = MasterCategory
-        fields = ['branch', 'name']
-        widgets = {
-            'branch': forms.Select(attrs={'class': 'form-select'}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
         }

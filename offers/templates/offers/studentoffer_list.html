@@ -96,11 +96,11 @@
                         <div class="tab-pane fade show active" id="q-offer-pane" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">نوع الاشتراك (التخصص) <span class="text-danger">*</span></label>
+                                    <label class="form-label">التخصص (دبلوم / دورة) <span class="text-danger">*</span></label>
                                     <select name="master" id="quickOfferMaster" class="form-select" required>
                                         <option value="">اختر التخصص...</option>
                                         {% for m in masters %}
-                                        <option value="{{ m.id }}">{{ m.name }}</option>
+                                        <option value="{{ m.id }}">{{ m.get_program_type_display }} - {{ m.name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
