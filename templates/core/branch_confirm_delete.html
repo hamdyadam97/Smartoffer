@@ -11,6 +11,17 @@
             </div>
             <div class="card-body">
                 <h5 class="card-title">هل أنت متأكد من حذف الفرع <strong>{{ object.name }}</strong>؟</h5>
+                {% if related_counts %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> سيتم أيضًا حذف كل البيانات المرتبطة بهذا الفرع:
+                    <ul class="mb-0 mt-2">
+                        {% for label, count in related_counts %}
+                        <li><strong>{{ count }}</strong> {{ label }}</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-2 small">الموظفين اللي فرعهم الرئيسي هو الفرع ده هيتمسحوا مع كل شغلهم (مكالمات، عروض، تقارير، رسائل) حتى في الفروع التانية. مديري النظام وحسابك مش هيتمسحوا.</div>
+                </div>
+                {% endif %}
                 <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه.</p>
                 <form method="post">
                     {% csrf_token %}

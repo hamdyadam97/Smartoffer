@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Q
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
@@ -581,6 +581,34 @@ class BranchUpdateView(BranchPermissionMixin, UpdateView):
         return super().form_valid(form)
 
 
+def branch_related_data(branch, user):
+    """كل البيانات المرتبطة بالفرع بترتيب الحذف الصحيح: [(الاسم, queryset), ...].
+
+    الموظفين اللي فرعهم الرئيسي هو الفرع ده بيتمسحوا، ما عدا المستخدم الحالي ومديري النظام.
+    """
+    from courses.models import Master
+    from finance.models import Call, Deposit, Offer, Withdraw
+    from offers.models import OfferRecipient
+    from students.models import Contact
+    branch_accounts = Q(course__master__branch=branch) | Q(student__branch=branch)
+    return [
+        ('سند قبض', Payment.objects.filter(
+            Q(account__course__master__branch=branch) | Q(account__student__branch=branch))),
+        ('تسجيل', Account.objects.filter(branch_accounts)),
+        ('دورة', Course.objects.filter(master__branch=branch)),
+        ('مكالمة', Call.objects.filter(offer__master__branch=branch)),
+        ('عرض سعر', Offer.objects.filter(master__branch=branch)),
+        ('تخصص', Master.objects.filter(branch=branch)),
+        ('مستلم عرض', OfferRecipient.objects.filter(Q(offer__branch=branch) | Q(student__branch=branch))),
+        ('عرض طالب', StudentOffer.objects.filter(branch=branch)),
+        ('طالب', Contact.objects.filter(student__branch=branch)),
+        ('إيداع', Deposit.objects.filter(bank__branch=branch)),
+        ('سحب', Withdraw.objects.filter(bank__branch=branch)),
+        ('بنك', Bank.objects.filter(branch=branch)),
+        ('موظف', Person.objects.filter(branch=branch).exclude(is_superuser=True).exclude(pk=user.pk)),
+    ]
+
+
 class BranchDeleteView(BranchPermissionMixin, DeleteView):
     model = Branch
     slug_field = 'slug'
@@ -589,9 +617,20 @@ class BranchDeleteView(BranchPermissionMixin, DeleteView):
     success_url = reverse_lazy('branch-list')
     required_perm = 'delete_branch'
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف الفرع بنجاح')
-        return super().delete(request, *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        counts = [(label, qs.count()) for label, qs in branch_related_data(self.object, self.request.user)]
+        context['related_counts'] = [(label, n) for label, n in counts if n]
+        return context
+
+    def form_valid(self, form):
+        """حذف الفرع بكل البيانات المرتبطة بيه في عملية واحدة."""
+        with transaction.atomic():
+            for _label, qs in branch_related_data(self.object, self.request.user):
+                qs.delete()
+            response = super().form_valid(form)
+        messages.success(self.request, 'تم حذف الفرع وكل البيانات المرتبطة به.')
+        return response
 
 
 # ============================================================
