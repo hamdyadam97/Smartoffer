@@ -27,11 +27,11 @@ class BaseTestCase(TestCase):
 
         self.company = Company.objects.create(name='Test Company')
         self.branch = Branch.objects.create(company=self.company, code=1, name='Main Branch')
-        self.master = Master.objects.create(branch=self.branch, code=10, name='Test Master')
-        self.course = Course.objects.create(master=self.master, code=100)
+        self.master = Master.objects.create(code=10, name='Test Master')
+        self.course = Course.objects.create(master=self.master, branch=self.branch, code=100)
 
         self.contact = Contact.objects.create(first_name='Ali', forth_name='Ahmed')
-        self.student = Student.objects.create(contact=self.contact)
+        self.student = Student.objects.create(contact=self.contact, branch=self.branch)
 
 
 class StudentOfferModelTests(BaseTestCase):
@@ -367,7 +367,7 @@ class OfferRecipientViewTests(BaseTestCase):
 
     def test_create_post_authenticated(self):
         contact2 = Contact.objects.create(first_name='Omar', forth_name='Khaled')
-        student2 = Student.objects.create(contact=contact2)
+        student2 = Student.objects.create(contact=contact2, branch=self.branch)
         data = {
             'offer': self.offer.id,
             'student': student2.id,

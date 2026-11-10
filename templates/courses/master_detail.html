@@ -20,7 +20,6 @@
                 <li class="list-group-item"><strong>الكود:</strong> {{ master.code }}</li>
                 <li class="list-group-item"><strong>النوع:</strong> {{ master.get_program_type_display }}</li>
                 <li class="list-group-item"><strong>الاسم:</strong> {{ master.name }}</li>
-                <li class="list-group-item"><strong>الفرع:</strong> {{ master.branch }}</li>
                 <li class="list-group-item"><strong>الفترة:</strong> {{ master.period|default:'-' }}</li>
                 <li class="list-group-item"><strong>آخر تعديل:</strong> {{ master.last_person|default:'-' }}</li>
                 <li class="list-group-item"><strong>تاريخ التعديل:</strong> {{ master.last_update }}</li>
@@ -31,9 +30,9 @@
         <div class="card mb-3">
             <div class="card-header bg-secondary text-white"><i class="bi bi-book"></i> الدورات</div>
             <ul class="list-group list-group-flush">
-                {% for course in master.courses.all %}
+                {% for course in courses %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ course.code }} - {{ course.instructor|default:course.master.name }}
+                    {{ course.code }} - {{ course.instructor|default:course.master.name }} <small class="text-muted">({{ course.branch.name }})</small>
                     <a href="{% url 'course-detail' course.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
                 </li>
                 {% empty %}

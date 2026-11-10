@@ -46,7 +46,7 @@ class BillBuyAdmin(admin.ModelAdmin):
 @admin.register(Offer)
 class OfferAdmin(admin.ModelAdmin):
     list_display = ['code', 'customer_name', 'customer_mobile', 'master', 'master_price', 'get_net', 'registered', 'created_at']
-    list_filter = ['master_payment_type', 'registered', 'master__branch', 'created_at']
+    list_filter = ['master_payment_type', 'registered', 'branch', 'created_at']
     search_fields = ['code', 'customer_name', 'customer_mobile', 'customer_identity_number']
     
     def get_net(self, obj):

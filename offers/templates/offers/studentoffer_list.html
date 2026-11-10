@@ -201,13 +201,15 @@
     if (branchSelect) {
         branchSelect.addEventListener('change', function() {
             loadBranchTemplate(this.value);
+            if (masterSelect && masterSelect.value) loadCourses(masterSelect.value);
         });
     }
 
     function loadCourses(masterId) {
         courseSelect.innerHTML = '<option value="">---------</option>';
         if (!masterId) return;
-        fetch('{% url "master-courses-ajax" 0 %}'.replace('0', masterId))
+        const branchId = branchSelect ? branchSelect.value : '';
+        fetch('{% url "master-courses-ajax" 0 %}'.replace('0', masterId) + (branchId ? '?branch=' + branchId : ''))
             .then(r => r.json())
             .then(data => {
                 if (data.success && data.courses) {

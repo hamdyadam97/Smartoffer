@@ -13,7 +13,7 @@ class PaymentForm(forms.ModelForm):
             else:
                 perm = 'add_payment' if not self.instance.pk else 'change_payment'
                 allowed = [b.pk for b in user.get_branches_for_perm(perm)]
-                self.fields['account'].queryset = queryset.filter(course__master__branch__pk__in=allowed)
+                self.fields['account'].queryset = queryset.filter(course__branch__pk__in=allowed)
         else:
             self.fields['account'].queryset = queryset.all()
 
@@ -150,28 +150,22 @@ class BillBuyForm(forms.ModelForm):
 class OfferForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        from courses.models import Master
-        queryset = Master.objects.select_related('branch')
-        if user is not None:
-            if user.is_executive():
-                self.fields['master'].queryset = queryset.all()
-            else:
-                perm = 'add_offer_price' if not self.instance.pk else 'change_offer_price'
-                allowed = [b.pk for b in user.get_branches_for_perm(perm)]
-                self.fields['master'].queryset = queryset.filter(branch__pk__in=allowed)
-        else:
-            self.fields['master'].queryset = queryset.all()
+        if user is not None and not user.is_executive():
+            perm = 'add_offer_price' if not self.instance.pk else 'change_offer_price'
+            allowed = [b.pk for b in user.get_branches_for_perm(perm)]
+            self.fields['branch'].queryset = self.fields['branch'].queryset.filter(pk__in=allowed)
 
     class Meta:
         model = Offer
         fields = [
-            'master', 'code', 'customer_name', 'customer_identity_number',
+            'branch', 'master', 'code', 'customer_name', 'customer_identity_number',
             'customer_mobile', 'customer_email', 'note', 'message_body',
             'master_payment_type', 'master_price', 'master_discount_amount',
             'master_profit_amount', 'master_credit_amount',
             'send_email', 'send_sms', 'sms_body', 'registered',
         ]
         widgets = {
+            'branch': forms.Select(attrs={'class': 'form-select'}),
             'master': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control'}),
             'customer_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -202,7 +196,7 @@ class CallForm(forms.ModelForm):
             else:
                 perm = 'add_call' if not self.instance.pk else 'change_call'
                 allowed = [b.pk for b in user.get_branches_for_perm(perm)]
-                self.fields['offer'].queryset = queryset.filter(master__branch__pk__in=allowed)
+                self.fields['offer'].queryset = queryset.filter(branch__pk__in=allowed)
         else:
             self.fields['offer'].queryset = queryset.all()
 

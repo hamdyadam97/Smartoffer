@@ -29,7 +29,7 @@
             <div class="card-header bg-secondary text-white"><i class="bi bi-mortarboard"></i> بيانات التخصص</div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item"><strong>التخصص:</strong> {{ offer.master.name }}</li>
-                <li class="list-group-item"><strong>الفرع:</strong> {{ offer.master.branch.name }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ offer.branch.name }}</li>
                 <li class="list-group-item"><strong>نوع الدفع:</strong> {{ offer.master_payment_type }}</li>
                 <li class="list-group-item"><strong>مسجل:</strong> {% if offer.registered %}<span class="badge bg-success">نعم</span>{% else %}<span class="badge bg-warning text-dark">لا</span>{% endif %}</li>
             </ul>

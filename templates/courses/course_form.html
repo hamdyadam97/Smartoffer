@@ -15,6 +15,11 @@
             {% csrf_token %}
             <div class="row">
                 <div class="col-md-6 mb-3">
+                    <label for="{{ form.branch.id_for_label }}" class="form-label">{{ form.branch.label }}</label>
+                    {{ form.branch }}
+                    {% if form.branch.errors %}<div class="text-danger small">{{ form.branch.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
                     <label for="{{ form.master.id_for_label }}" class="form-label">{{ form.master.label }}</label>
                     <div class="input-group">
                         {{ form.master }}
@@ -91,15 +96,6 @@
                     {% csrf_token %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">الفرع <span class="text-danger">*</span></label>
-                            <select name="branch" class="form-select" required>
-                                <option value="">اختر الفرع...</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
                             <label class="form-label">النوع <span class="text-danger">*</span></label>
                             <select name="program_type" class="form-select" required>
                                 {% for value, label in program_types %}
@@ -138,19 +134,25 @@
     const masterSelect = document.getElementById('{{ form.master.id_for_label }}');
     const codeInput = document.getElementById('{{ form.code.id_for_label }}');
     const companyInput = document.getElementById('{{ form.company_name.id_for_label }}');
+    const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
+    const branchCompanies = {
+        {% for branch in branches %}'{{ branch.id }}': '{{ branch.company.name|escapejs }}',{% endfor %}
+    };
+
+    if (branchSelect) {
+        branchSelect.addEventListener('change', function() {
+            if (!companyInput.value.trim()) {
+                companyInput.value = branchCompanies[this.value] || '';
+            }
+        });
+    }
 
     function fillFromMaster(masterId) {
-        if (!masterId) {
-            companyInput.value = '';
-            return;
-        }
+        if (!masterId) return;
         fetch('{% url "master-info-ajax" 0 %}'.replace('0', masterId))
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    if (!companyInput.value.trim()) {
-                        companyInput.value = data.company_name || '';
-                    }
                     // لو الكود فاضي (إنشاء جديد) نملأ تلقائي
                     if (!codeInput.value.trim() && data.next_code) {
                         codeInput.value = data.next_code;

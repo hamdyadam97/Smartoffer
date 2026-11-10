@@ -306,7 +306,6 @@ class Command(BaseCommand):
         self.masters = []
         for i in range(10):
             m = Master.objects.create(
-                branch=random.choice(self.branches),
                 program_type=random.choice(['دبلوم', 'دورة']),
                 code=i + 1,
                 name=f'تخصص {random_string(4)}',
@@ -321,6 +320,7 @@ class Command(BaseCommand):
             start = rand_date(2024, 2025)
             c = Course.objects.create(
                 master=master,
+                branch=random.choice(self.branches),
                 code=i + 1,
                 instructor=random_name()[0] + ' ' + random_name()[3],
                 company_name='شركة ' + random_string(4),
@@ -505,6 +505,7 @@ class Command(BaseCommand):
         for i in range(20):
             fo = FinanceOffer.objects.create(
                 master=random.choice(self.masters),
+                branch=random.choice(self.branches),
                 code=i + 1,
                 customer_name=random_name()[0] + ' ' + random_name()[3],
                 customer_identity_number=str(random.randint(1000000000, 9999999999)),

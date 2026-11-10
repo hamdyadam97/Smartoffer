@@ -206,9 +206,10 @@ class Offer(models.Model):
     ]
     
     master = models.ForeignKey('courses.Master', on_delete=models.PROTECT, related_name='offers', verbose_name='التخصص')
-    
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='price_offers', verbose_name='الفرع')
+
     code = models.PositiveIntegerField(db_index=True, verbose_name='الكود')
-    
+
     customer_name = models.CharField(max_length=255, db_index=True, verbose_name='اسم العميل')
     customer_identity_number = models.CharField(max_length=50, blank=True, verbose_name='رقم الهوية')
     customer_mobile = models.CharField(max_length=20, blank=True, db_index=True, verbose_name='جوال العميل')

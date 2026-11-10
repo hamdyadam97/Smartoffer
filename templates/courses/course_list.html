@@ -44,6 +44,7 @@
             <tr>
                 <th>الكود</th>
                 <th>التخصص</th>
+                <th>الفرع</th>
                 <th>اسم الدورة</th>
                 <th>المحاضر</th>
                 <th>الشركة</th>
@@ -58,6 +59,7 @@
             <tr data-course-id="{{ course.pk }}">
                 <td>{{ course.code }}</td>
                 <td>{{ course.master.name }}</td>
+                <td>{{ course.branch.name }}</td>
                 <td>{{ course.name|default:'-' }}</td>
                 <td>{{ course.instructor|default:'-' }}</td>
                 <td>{{ course.company_name|default:'-' }}</td>
@@ -66,11 +68,11 @@
                 <td>{{ course.end_date|default:'-' }}</td>
                 <td class="text-start">
                     <a href="{% url 'course-detail' course.pk %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
-                    {% has_perm_on_branch user 'change_course' course.master.branch as can_change_course %}
+                    {% has_perm_on_branch user 'change_course' course.branch as can_change_course %}
                     {% if can_change_course %}
                     <a href="{% url 'course-update' course.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
                     {% endif %}
-                    {% has_perm_on_branch user 'delete_course' course.master.branch as can_delete_course %}
+                    {% has_perm_on_branch user 'delete_course' course.branch as can_delete_course %}
                     {% if can_delete_course %}
                     <a href="{% url 'course-delete' course.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
                     {% endif %}
@@ -78,7 +80,7 @@
             </tr>
             {% empty %}
             <tr id="emptyRow">
-                <td colspan="9" class="text-center text-muted">لا توجد دورات</td>
+                <td colspan="10" class="text-center text-muted">لا توجد دورات</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -100,6 +102,15 @@
                 <form id="courseForm" class="modal-form">
                     {% csrf_token %}
                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الفرع <span class="text-danger">*</span></label>
+                            <select name="branch" id="courseBranch" class="form-select" required>
+                                <option value="">اختر الفرع...</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" data-company="{{ branch.company.name }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">التخصص <span class="text-danger">*</span></label>
                             <div class="input-group">
@@ -185,15 +196,6 @@
                     {% csrf_token %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">الفرع <span class="text-danger">*</span></label>
-                            <select name="branch" id="masterBranch" class="form-select" required>
-                                <option value="">اختر الفرع...</option>
-                                {% for branch in branches %}
-                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
                             <label class="form-label">النوع <span class="text-danger">*</span></label>
                             <select name="program_type" class="form-select" required>
                                 {% for value, label in program_types %}
@@ -252,20 +254,25 @@
         courseBtnText.textContent = loading ? 'جاري الحفظ...' : 'حفظ الدورة';
     }
 
+    const courseBranch = document.getElementById('courseBranch');
+
     function fillCourseFromMaster(masterId) {
-        if (!masterId) {
-            courseCompanyName.value = '';
-            return;
-        }
+        if (!masterId) return;
         fetch('{% url "master-info-ajax" 0 %}'.replace('0', masterId))
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    courseCompanyName.value = data.company_name || '';
                     courseCode.value = data.next_code || '';
                 }
             })
             .catch(() => {});
+    }
+
+    if (courseBranch) {
+        courseBranch.addEventListener('change', function() {
+            const option = this.options[this.selectedIndex];
+            courseCompanyName.value = (option && option.dataset.company) || '';
+        });
     }
 
     if (courseMaster) {
@@ -330,30 +337,6 @@
     const masterSpinner = document.getElementById('masterSpinner');
     const masterBtnText = document.getElementById('masterBtnText');
     const masterAlertBox = document.getElementById('masterAlert');
-    const masterBranch = document.getElementById('masterBranch');
-    const masterCode = document.getElementById('masterCode');
-
-    function fillMasterCode(branchId) {
-        if (!branchId) {
-            masterCode.value = '';
-            return;
-        }
-        fetch('{% url "master-next-code-ajax" 0 %}'.replace('0', branchId))
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    masterCode.value = data.next_code || '';
-                }
-            })
-            .catch(() => {});
-    }
-
-    if (masterBranch) {
-        masterBranch.addEventListener('change', function() {
-            fillMasterCode(this.value);
-        });
-    }
-
     function showMasterAlert(message, type) {
         masterAlertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
     }

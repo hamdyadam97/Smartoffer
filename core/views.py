@@ -96,37 +96,37 @@ def dashboard(request):
 
     # Base querysets scoped by permission
     student_qs = filter_by_branch(
-        Student.objects.all(), request.user, 'accounts__course__master__branch', 'view_student'
+        Student.objects.all(), request.user, 'accounts__course__branch', 'view_student'
     )
     course_qs = filter_by_branch(
-        Course.objects.all(), request.user, 'master__branch', 'view_course'
+        Course.objects.all(), request.user, 'branch', 'view_course'
     )
     account_qs = filter_by_branch(
-        Account.objects.all(), request.user, 'course__master__branch', 'view_account'
+        Account.objects.all(), request.user, 'course__branch', 'view_account'
     )
     payment_qs = filter_by_branch(
-        Payment.objects.all(), request.user, 'account__course__master__branch', 'view_payment'
+        Payment.objects.all(), request.user, 'account__course__branch', 'view_payment'
     )
     offer_qs = filter_by_branch(
-        Offer.objects.all(), request.user, 'master__branch', 'view_offer'
+        Offer.objects.all(), request.user, 'branch', 'view_offer'
     )
     studentoffer_qs = filter_by_branch(
         StudentOffer.objects.all(), request.user, 'branch', 'view_studentoffer'
     )
     call_qs = filter_by_branch(
-        Call.objects.all(), request.user, 'offer__master__branch', 'view_call'
+        Call.objects.all(), request.user, 'offer__branch', 'view_call'
     )
 
     if selected_branch:
         student_qs = student_qs.filter(
-            accounts__course__master__branch=selected_branch
+            accounts__course__branch=selected_branch
         ).distinct()
-        course_qs = course_qs.filter(master__branch=selected_branch)
-        account_qs = account_qs.filter(course__master__branch=selected_branch)
-        payment_qs = payment_qs.filter(account__course__master__branch=selected_branch)
-        offer_qs = offer_qs.filter(master__branch=selected_branch)
+        course_qs = course_qs.filter(branch=selected_branch)
+        account_qs = account_qs.filter(course__branch=selected_branch)
+        payment_qs = payment_qs.filter(account__course__branch=selected_branch)
+        offer_qs = offer_qs.filter(branch=selected_branch)
         studentoffer_qs = studentoffer_qs.filter(branch=selected_branch)
-        call_qs = call_qs.filter(offer__master__branch=selected_branch)
+        call_qs = call_qs.filter(offer__branch=selected_branch)
 
     # Base stats
     students_count = student_qs.count()
@@ -145,28 +145,28 @@ def dashboard(request):
         branch_stats.append({
             'branch': branch,
             'registrations': filter_by_branch(
-                Account.objects.filter(course__master__branch=branch),
-                request.user, 'course__master__branch', 'view_account'
+                Account.objects.filter(course__branch=branch),
+                request.user, 'course__branch', 'view_account'
             ).count(),
             'payments_total': filter_by_branch(
-                Payment.objects.filter(account__course__master__branch=branch),
-                request.user, 'account__course__master__branch', 'view_payment'
+                Payment.objects.filter(account__course__branch=branch),
+                request.user, 'account__course__branch', 'view_payment'
             ).aggregate(total=Sum('amount_number'))['total'] or 0,
             'offers': filter_by_branch(
-                Offer.objects.filter(master__branch=branch),
-                request.user, 'master__branch', 'view_offer'
+                Offer.objects.filter(branch=branch),
+                request.user, 'branch', 'view_offer'
             ).count(),
             'student_offers': filter_by_branch(
                 StudentOffer.objects.filter(branch=branch),
                 request.user, 'branch', 'view_studentoffer'
             ).count(),
             'courses': filter_by_branch(
-                Course.objects.filter(master__branch=branch),
-                request.user, 'master__branch', 'view_course'
+                Course.objects.filter(branch=branch),
+                request.user, 'branch', 'view_course'
             ).count(),
             'masters': filter_by_branch(
-                Course.objects.filter(master__branch=branch),
-                request.user, 'master__branch', 'view_course'
+                Course.objects.filter(branch=branch),
+                request.user, 'branch', 'view_course'
             ).values('master').distinct().count(),
         })
 
@@ -305,32 +305,32 @@ def branch_dashboard(request, slug):
 
     # Stats filtered by this branch and scoped by permission
     registrations_qs = filter_by_branch(
-        Account.objects.filter(course__master__branch=branch),
-        request.user, 'course__master__branch', 'view_account'
+        Account.objects.filter(course__branch=branch),
+        request.user, 'course__branch', 'view_account'
     )
     payments_qs = filter_by_branch(
-        Payment.objects.filter(account__course__master__branch=branch),
-        request.user, 'account__course__master__branch', 'view_payment'
+        Payment.objects.filter(account__course__branch=branch),
+        request.user, 'account__course__branch', 'view_payment'
     )
     offers_qs = filter_by_branch(
-        Offer.objects.filter(master__branch=branch),
-        request.user, 'master__branch', 'view_offer'
+        Offer.objects.filter(branch=branch),
+        request.user, 'branch', 'view_offer'
     )
     studentoffers_qs = filter_by_branch(
         StudentOffer.objects.filter(branch=branch),
         request.user, 'branch', 'view_studentoffer'
     )
     courses_qs = filter_by_branch(
-        Course.objects.filter(master__branch=branch),
-        request.user, 'master__branch', 'view_course'
+        Course.objects.filter(branch=branch),
+        request.user, 'branch', 'view_course'
     )
     calls_qs = filter_by_branch(
-        Call.objects.filter(offer__master__branch=branch),
-        request.user, 'offer__master__branch', 'view_call'
+        Call.objects.filter(offer__branch=branch),
+        request.user, 'offer__branch', 'view_call'
     )
     students_qs = filter_by_branch(
-        Student.objects.filter(accounts__course__master__branch=branch).distinct(),
-        request.user, 'accounts__course__master__branch', 'view_student'
+        Student.objects.filter(accounts__course__branch=branch).distinct(),
+        request.user, 'accounts__course__branch', 'view_student'
     )
 
     students_count = students_qs.count()
@@ -586,19 +586,17 @@ def branch_related_data(branch, user):
 
     الموظفين اللي فرعهم الرئيسي هو الفرع ده بيتمسحوا، ما عدا المستخدم الحالي ومديري النظام.
     """
-    from courses.models import Master
     from finance.models import Call, Deposit, Offer, Withdraw
     from offers.models import OfferRecipient
     from students.models import Contact
-    branch_accounts = Q(course__master__branch=branch) | Q(student__branch=branch)
+    branch_accounts = Q(course__branch=branch) | Q(student__branch=branch)
     return [
         ('سند قبض', Payment.objects.filter(
-            Q(account__course__master__branch=branch) | Q(account__student__branch=branch))),
+            Q(account__course__branch=branch) | Q(account__student__branch=branch))),
         ('تسجيل', Account.objects.filter(branch_accounts)),
-        ('دورة', Course.objects.filter(master__branch=branch)),
-        ('مكالمة', Call.objects.filter(offer__master__branch=branch)),
-        ('عرض سعر', Offer.objects.filter(master__branch=branch)),
-        ('تخصص', Master.objects.filter(branch=branch)),
+        ('دورة', Course.objects.filter(branch=branch)),
+        ('مكالمة', Call.objects.filter(offer__branch=branch)),
+        ('عرض سعر', Offer.objects.filter(branch=branch)),
         ('مستلم عرض', OfferRecipient.objects.filter(Q(offer__branch=branch) | Q(student__branch=branch))),
         ('عرض طالب', StudentOffer.objects.filter(branch=branch)),
         ('طالب', Contact.objects.filter(student__branch=branch)),

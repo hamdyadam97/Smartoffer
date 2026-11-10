@@ -9,7 +9,7 @@ class StudentOfferForm(forms.ModelForm):
             perm = 'change_studentoffer' if self.instance and self.instance.pk else 'add_studentoffer'
             branch_ids = [b.pk for b in user.get_branches_for_perm(perm)]
             self.fields['branch'].queryset = self.fields['branch'].queryset.filter(pk__in=branch_ids)
-            self.fields['course'].queryset = self.fields['course'].queryset.filter(master__branch__in=branch_ids)
+            self.fields['course'].queryset = self.fields['course'].queryset.filter(branch__in=branch_ids)
 
     class Meta:
         model = StudentOffer
@@ -101,14 +101,25 @@ class QuickOfferForm(forms.Form):
         if user is not None:
             branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
             self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
-            self.fields['master'].queryset = Master.objects.select_related('branch').filter(branch__in=branch_ids)
-            self.fields['course'].queryset = Course.objects.select_related('master').filter(master__branch__in=branch_ids)
+            self.fields['course'].queryset = Course.objects.select_related('master').filter(branch__in=branch_ids)
         else:
             self.fields['branch'].queryset = Branch.objects.all()
-            self.fields['master'].queryset = Master.objects.select_related('branch').all()
             self.fields['course'].queryset = Course.objects.select_related('master').all()
+        # التخصصات مشتركة بين كل الفروع
+        self.fields['master'].queryset = Master.objects.all()
         # Display course name only in the dropdown
         self.fields['course'].label_from_instance = lambda obj: obj.name or obj.master.name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        branch = cleaned_data.get('branch')
+        course = cleaned_data.get('course')
+        master = cleaned_data.get('master')
+        if course and branch and course.branch_id != branch.pk:
+            self.add_error('course', 'الدورة دي مش تبع الفرع المختار.')
+        if course and master and course.master_id != master.pk:
+            self.add_error('course', 'الدورة دي مش تبع التخصص المختار.')
+        return cleaned_data
 
 
 class OfferNoteForm(forms.ModelForm):

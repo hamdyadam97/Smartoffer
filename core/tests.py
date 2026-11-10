@@ -25,14 +25,14 @@ class BranchDeleteTests(TestCase):
         self.other = Branch.objects.create(company=company, code=2, name='Other')
 
     def _fill(self, branch, n):
-        master = Master.objects.create(branch=branch, name=f'm{n}')
-        course = Course.objects.create(master=master, target_level='الكل')
+        master = Master.objects.create(name=f'm{n}')
+        course = Course.objects.create(master=master, branch=branch, target_level='الكل')
         student = Student.objects.create(
             contact=Contact.objects.create(first_name=f's{n}', forth_name='x'), branch=branch,
         )
         account = Account.objects.create(course=course, student=student, code=n)
         Payment.objects.create(account=account, code=n, amount_number=50)
-        offer = Offer.objects.create(master=master, code=n, customer_name='c')
+        offer = Offer.objects.create(master=master, branch=branch, code=n, customer_name='c')
         Call.objects.create(offer=offer, person=self.user)
         student_offer = StudentOffer.objects.create(title='t', content='c', branch=branch, created_by=self.user)
         OfferRecipient.objects.create(offer=student_offer, student=student, channel='whatsapp')
@@ -53,9 +53,11 @@ class BranchDeleteTests(TestCase):
 
         self.assertRedirects(response, reverse('branch-list'))
         self.assertFalse(Branch.objects.filter(pk=self.branch.pk).exists())
-        for model in [Master, Course, Student, Contact, Account, Payment, Offer, Call,
+        for model in [Course, Student, Contact, Account, Payment, Offer, Call,
                       StudentOffer, OfferRecipient, Bank, Deposit]:
             self.assertEqual(model.objects.count(), 1, model.__name__)
+        # التخصصات مشتركة بين الفروع، فمش بتتمسح مع الفرع
+        self.assertEqual(Master.objects.count(), 2)
         self.assertFalse(Person.objects.filter(email='emp1@example.com').exists())
         self.assertTrue(Person.objects.filter(email='emp2@example.com').exists())
         self.assertTrue(Person.objects.filter(pk=self.user.pk).exists())

@@ -100,7 +100,7 @@ class Person(AbstractBaseUser, PermissionsMixin):
     objects = PersonManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['first_name', 'forth_name']
+    REQUIRED_FIELDS = ['first_name']
 
     class Meta:
         verbose_name = 'مستخدم'
@@ -132,7 +132,8 @@ class Person(AbstractBaseUser, PermissionsMixin):
         return f"{self.first_name} {self.second_name} {self.third_name} {self.forth_name}".strip()
 
     def get_short_name(self):
-        return f"{self.first_name} {self.forth_name}".strip()
+        """الاسم الأول والرابع، ولو مش موجودين يرجع الإيميل."""
+        return f"{self.first_name} {self.forth_name}".strip() or self.email
 
     def get_branches(self):
         """Get all accessible branches (main + accessed)"""

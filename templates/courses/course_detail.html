@@ -18,6 +18,7 @@
             <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل الدورة</div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item"><strong>التخصص:</strong> {{ course.master }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ course.branch }}</li>
                 <li class="list-group-item"><strong>الكود:</strong> {{ course.code }}</li>
                 <li class="list-group-item"><strong>اسم الدورة:</strong> {{ course.name|default:'-' }}</li>
                 <li class="list-group-item"><strong>المحاضر:</strong> {{ course.instructor|default:'-' }}</li>

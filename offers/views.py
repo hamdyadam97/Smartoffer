@@ -757,14 +757,19 @@ def branch_offer_template_ajax(request, branch_id):
 
 @login_required
 def master_courses_ajax(request, master_id):
-    """AJAX endpoint to fetch courses for a given master (used in quick offer modal)."""
+    """AJAX endpoint to fetch courses for a given master (used in quick offer modal).
+
+    التخصص مشترك، فالدورات بتترشح بالفروع المسموحة للمستخدم، وبالفرع المختار لو اتبعت (?branch=).
+    """
     from courses.models import Master, Course
+    if not request.user.has_perm_on_any_branch('add_studentoffer'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
     master = get_object_or_404(Master, pk=master_id)
-    if not request.user.is_executive():
-        allowed_ids = [b.pk for b in request.user.get_branches_for_perm('add_studentoffer')]
-        if master.branch_id not in allowed_ids:
-            raise PermissionDenied('غير مسموح لك دخول هنا')
-    courses = Course.objects.filter(master=master).values('id', 'code', 'name', 'master__name').order_by('-created_at')
+    courses = filter_by_branch(Course.objects.filter(master=master), request.user, 'branch', perm='add_studentoffer')
+    branch_id = request.GET.get('branch')
+    if branch_id:
+        courses = courses.filter(branch_id=branch_id)
+    courses = courses.values('id', 'code', 'name', 'master__name').order_by('-created_at')
     return JsonResponse({
         'success': True,
         'courses': list(courses),
@@ -841,18 +846,15 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
         context = super().get_context_data(**kwargs)
         from accounts.mixins import filter_by_branch
         from courses.models import Master
+        context['masters'] = Master.objects.order_by('name')
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['masters'] = Master.objects.select_related('branch').all().order_by('branch__name', 'name')
             context['courses'] = Course.objects.select_related('master').all()
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['masters'] = Master.objects.select_related('branch').filter(
-                branch__in=allowed_ids
-            ).order_by('branch__name', 'name')
             context['courses'] = filter_by_branch(
-                Course.objects.select_related('master'), self.request.user, 'master__branch', perm='view_course'
+                Course.objects.select_related('master'), self.request.user, 'branch', perm='view_course'
             )
         return context
 
@@ -878,7 +880,7 @@ class StudentOfferDetailView(BranchPermissionMixin, DetailView):
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
             context['courses'] = filter_by_branch(
-                Course.objects.select_related('master'), self.request.user, 'master__branch', perm='view_course'
+                Course.objects.select_related('master'), self.request.user, 'branch', perm='view_course'
             )
             context['all_students'] = filter_by_branch(
                 Student.objects.select_related('contact'), self.request.user, 'branch', perm='view_student'

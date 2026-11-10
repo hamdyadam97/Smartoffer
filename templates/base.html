@@ -759,7 +759,7 @@
                             <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.email }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'person-detail' user.pk %}">الملف الشخصي</a></li>
+                            {% if user.slug %}<li><a class="dropdown-item" href="{% url 'person-detail' user.slug %}">الملف الشخصي</a></li>{% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="post" action="{% url 'logout' %}" class="d-inline">

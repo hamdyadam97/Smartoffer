@@ -176,18 +176,18 @@ class BranchAccessForm(forms.ModelForm):
         if user is not None:
             if user.is_executive():
                 self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+                self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
             else:
                 perm = 'add_branchaccess' if not self.instance.pk else 'change_branchaccess'
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
                 self.fields['person'].queryset = Person.objects.filter(
-                    is_staff=True, branch__pk__in=allowed_ids
+                    is_active=True, branch__pk__in=allowed_ids
                 ).order_by('first_name', 'forth_name')
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
 
     class Meta:
         model = BranchAccess
@@ -221,7 +221,7 @@ class EmployeeRoleForm(forms.ModelForm):
         if user is not None:
             if user.is_executive():
                 self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+                self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
                 self.fields['role'].queryset = Role.objects.all().order_by('name')
             else:
                 perm = 'add_employeerole' if not self.instance.pk else 'change_employeerole'
@@ -229,12 +229,12 @@ class EmployeeRoleForm(forms.ModelForm):
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
                 self.fields['person'].queryset = Person.objects.filter(
-                    is_staff=True, branch__pk__in=allowed_ids
+                    is_active=True, branch__pk__in=allowed_ids
                 ).order_by('first_name', 'forth_name')
                 self.fields['role'].queryset = Role.objects.all().order_by('name')
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
             self.fields['role'].queryset = Role.objects.all().order_by('name')
 
     class Meta:
@@ -254,18 +254,18 @@ class EmployeePerformanceForm(forms.ModelForm):
         if user is not None:
             if user.is_executive():
                 self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+                self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
             else:
                 perm = 'add_employeeperformance' if not self.instance.pk else 'change_employeeperformance'
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
                 self.fields['person'].queryset = Person.objects.filter(
-                    is_staff=True, branch__pk__in=allowed_ids
+                    is_active=True, branch__pk__in=allowed_ids
                 ).order_by('first_name', 'forth_name')
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['person'].queryset = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            self.fields['person'].queryset = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
 
     class Meta:
         model = EmployeePerformance

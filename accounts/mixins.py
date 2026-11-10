@@ -27,7 +27,7 @@ class BranchPermissionMixin(LoginRequiredMixin):
       a branch within the user's permission scope.
     """
     required_perm = None   # e.g. 'view_student'
-    branch_field = None    # e.g. 'branch' or 'course__master__branch'
+    branch_field = None    # e.g. 'branch' or 'course__branch'
 
     def get_branch(self):
         """Return the branch being acted upon, if explicitly provided.

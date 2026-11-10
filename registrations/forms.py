@@ -16,7 +16,7 @@ class AccountForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['course'].queryset = Course.objects.filter(
-                    master__branch_id__in=allowed_ids
+                    branch_id__in=allowed_ids
                 ).order_by('-created_at')
                 self.fields['student'].queryset = Student.objects.filter(
                     branch_id__in=allowed_ids
@@ -85,7 +85,7 @@ class AccountAttachForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__master__branch_id__in=allowed_ids
+                    course__branch_id__in=allowed_ids
                 ).order_by('-created_at')
                 self.fields['attach'].queryset = Attach.objects.filter(
                     person__branch_id__in=allowed_ids
@@ -111,7 +111,7 @@ class AccountConditionForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__master__branch_id__in=allowed_ids
+                    course__branch_id__in=allowed_ids
                 ).order_by('-created_at')
 
     class Meta:
@@ -136,7 +136,7 @@ class AccountNoteForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__master__branch_id__in=allowed_ids
+                    course__branch_id__in=allowed_ids
                 ).order_by('-created_at')
 
     class Meta:

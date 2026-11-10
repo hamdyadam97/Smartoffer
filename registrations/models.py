@@ -61,12 +61,12 @@ class Account(models.Model):
     def get_key(self):
         """Generate unique key: Year-Branch-Master-Course-Account"""
         year_shortcut = str(self.register_date.year)[-2:]
-        return f"{year_shortcut}-{self.course.master.branch.code}-{self.course.master.code}-{self.course.code}-{self.code}"
+        return f"{year_shortcut}-{self.course.branch.code}-{self.course.master.code}-{self.course.code}-{self.code}"
 
     def get_key_rtl(self):
         """RTL key: Account-Course-Master-Branch-Year"""
         year_shortcut = str(self.register_date.year)[-2:]
-        return f"{self.code}-{self.course.code}-{self.course.master.code}-{self.course.master.branch.code}-{year_shortcut}"
+        return f"{self.code}-{self.course.code}-{self.course.master.code}-{self.course.branch.code}-{year_shortcut}"
 
     def get_required_price(self):
         """Calculate required price based on payment type"""

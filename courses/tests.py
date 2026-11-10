@@ -10,7 +10,7 @@ class CourseFormAjaxTests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(name='Smart Academy')
         self.branch = Branch.objects.create(company=self.company, code=1, name='Main Branch')
-        self.master = Master.objects.create(branch=self.branch, code=10, name='Programming')
+        self.master = Master.objects.create(code=10, name='Programming')
 
         self.user = Person.objects.create_user(
             email='tester@example.com',
@@ -21,7 +21,7 @@ class CourseFormAjaxTests(TestCase):
 
         # إنشاء دور وصلاحيات
         self.role = Role.objects.create(name='course_manager')
-        for codename in ['view_course', 'add_course', 'change_course', 'add_master']:
+        for codename in ['view_course', 'add_course', 'change_course', 'add_master', 'view_master']:
             action, model_name = codename.split('_', 1)
             perm, _ = Permission.objects.get_or_create(
                 codename=codename,
@@ -44,18 +44,17 @@ class CourseFormAjaxTests(TestCase):
         self.assertContains(response, 'masterModal')
         self.assertContains(response, '/masters/ajax/info/')
 
-    def test_master_info_ajax_returns_company_and_next_code(self):
+    def test_master_info_ajax_returns_next_code(self):
         url = reverse('master-info-ajax', args=[self.master.pk])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['company_name'], 'Smart Academy')
         self.assertEqual(data['next_code'], 1)
 
     def test_master_info_ajax_next_code_after_existing_course(self):
-        Course.objects.create(master=self.master, code=1, target_level='الكل')
-        Course.objects.create(master=self.master, code=3, target_level='الكل')
+        Course.objects.create(master=self.master, branch=self.branch, code=1, target_level='الكل')
+        Course.objects.create(master=self.master, branch=self.branch, code=3, target_level='الكل')
         url = reverse('master-info-ajax', args=[self.master.pk])
         response = self.client.get(url)
         data = response.json()
@@ -64,7 +63,6 @@ class CourseFormAjaxTests(TestCase):
     def test_master_create_ajax_adds_master(self):
         url = reverse('master-create-ajax')
         response = self.client.post(url, {
-            'branch': self.branch.pk,
             'program_type': 'دورة',
             'code': 20,
             'name': 'New Master',
@@ -78,6 +76,7 @@ class CourseFormAjaxTests(TestCase):
     def test_course_create_ajax_adds_course(self):
         url = reverse('course-create-ajax')
         response = self.client.post(url, {
+            'branch': self.branch.pk,
             'master': self.master.pk,
             'code': 1,
             'instructor': 'Dr. Ahmed',
@@ -88,13 +87,13 @@ class CourseFormAjaxTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['success'])
-        self.assertTrue(Course.objects.filter(pk=data['course']['id']).exists())
+        self.assertEqual(Course.objects.get(pk=data['course']['id']).branch, self.branch)
 
     def test_delete_course_deletes_registrations_and_payments(self):
         from finance.models import Payment
         from registrations.models import Account
         from students.models import Contact, Student
-        course = Course.objects.create(master=self.master, code=1, target_level='الكل')
+        course = Course.objects.create(master=self.master, branch=self.branch, code=1, target_level='الكل')
         student = Student.objects.create(
             contact=Contact.objects.create(first_name='Ali', forth_name='Omar'),
             branch=self.branch,
@@ -119,14 +118,14 @@ class CourseFormAjaxTests(TestCase):
         from finance.models import Call, Offer, Payment
         from registrations.models import Account
         from students.models import Contact, Student
-        course = Course.objects.create(master=self.master, code=1, target_level='الكل')
+        course = Course.objects.create(master=self.master, branch=self.branch, code=1, target_level='الكل')
         student = Student.objects.create(
             contact=Contact.objects.create(first_name='Ali', forth_name='Omar'),
             branch=self.branch,
         )
         account = Account.objects.create(course=course, student=student, code=1)
         Payment.objects.create(account=account, code=1, amount_number=100)
-        offer = Offer.objects.create(master=self.master, code=1, customer_name='Client')
+        offer = Offer.objects.create(master=self.master, branch=self.branch, code=1, customer_name='Client')
         Call.objects.create(offer=offer, person=self.user)
         self.user.is_superuser = True
         self.user.save()
@@ -159,3 +158,33 @@ class CourseFormAjaxTests(TestCase):
             'target_level': 'الكل',
         })
         self.assertEqual(response.status_code, 403)
+
+    def test_masters_are_shared_between_branches(self):
+        other_branch = Branch.objects.create(company=self.company, code=2, name='Hafr')
+        employee = Person.objects.create_user(email='hafr@example.com', password='x', first_name='H')
+        EmployeeRole.objects.create(person=employee, role=self.role, branch=other_branch)
+        self.client.force_login(employee)
+
+        response = self.client.get(reverse('master-list'))
+        self.assertIn(self.master, response.context['masters'])
+
+        # الدورة اللي اتعملت في الفرع التاني بتاخد الفرع بتاعها، مش فرع التخصص
+        response = self.client.post(reverse('course-create-ajax'), {
+            'branch': other_branch.pk, 'master': self.master.pk, 'max_student_count': 5, 'target_level': 'الكل',
+        })
+        self.assertEqual(response.status_code, 200)
+        course = Course.objects.get(pk=response.json()['course']['id'])
+        self.assertEqual(course.branch, other_branch)
+
+        # ومش بيقدر يعمل دورة في فرع مش بتاعه
+        response = self.client.post(reverse('course-create-ajax'), {
+            'branch': self.branch.pk, 'master': self.master.pk, 'max_student_count': 5, 'target_level': 'الكل',
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_master_detail_shows_only_allowed_branch_courses(self):
+        other_branch = Branch.objects.create(company=self.company, code=2, name='Hafr')
+        mine = Course.objects.create(master=self.master, branch=self.branch, target_level='الكل')
+        Course.objects.create(master=self.master, branch=other_branch, target_level='الكل')
+        response = self.client.get(reverse('master-detail', args=[self.master.slug]))
+        self.assertEqual(list(response.context['courses']), [mine])

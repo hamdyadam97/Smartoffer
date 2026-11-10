@@ -3,13 +3,12 @@ from django.utils.text import slugify
 
 
 class Master(models.Model):
-    """التخصص: نوعه (دبلوم أو دورة) + اسمه"""
+    """التخصص: نوعه (دبلوم أو دورة) + اسمه. مشترك بين كل الفروع."""
     PROGRAM_TYPE_CHOICES = [
         ('دبلوم', 'دبلوم'),
         ('دورة', 'دورة'),
     ]
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
-    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='masters', verbose_name='الفرع')
     program_type = models.CharField(max_length=20, choices=PROGRAM_TYPE_CHOICES, default='دبلوم', db_index=True, verbose_name='النوع')
 
     code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
@@ -26,11 +25,10 @@ class Master(models.Model):
         verbose_name = 'تخصص'
         verbose_name_plural = 'التخصصات'
         ordering = ['-created_at']
-        unique_together = ['branch', 'code']
 
     def save(self, *args, **kwargs):
         if self.code is None or self.code == '':
-            last = Master.objects.filter(branch=self.branch).aggregate(models.Max('code'))['code__max']
+            last = Master.objects.aggregate(models.Max('code'))['code__max']
             self.code = (last or 0) + 1
         if not self.slug:
             base_slug = slugify(self.name, allow_unicode=True)
@@ -55,7 +53,8 @@ class Course(models.Model):
         ('الكل', 'جميع المستويات'),
     ]
     master = models.ForeignKey(Master, on_delete=models.PROTECT, related_name='courses', verbose_name='التخصص')
-    
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='courses', verbose_name='الفرع')
+
     code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
     name = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='اسم الدورة')
     instructor = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='المحاضر')
@@ -91,4 +90,4 @@ class Course(models.Model):
 
     def get_full_key(self):
         """Generate unique key: Branch-Master-Course"""
-        return f"{self.master.branch.code}-{self.master.code}-{self.code}"
+        return f"{self.branch.code}-{self.master.code}-{self.code}"

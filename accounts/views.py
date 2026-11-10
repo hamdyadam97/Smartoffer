@@ -89,6 +89,20 @@ class PersonDetailView(BranchPermissionMixin, DetailView):
     required_perm = 'view_person'
     branch_field = 'branch'
 
+    def dispatch(self, request, *args, **kwargs):
+        # أي موظف يقدر يشوف ملفه الشخصي حتى من غير صلاحية عرض الموظفين (عرض بس، من غير تعديل)
+        if request.user.is_authenticated and kwargs.get('slug') == request.user.slug:
+            self.required_perm = None
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context['can_change'] = user.has_perm('change_person', branch=self.object.branch) if self.object.branch else user.is_executive()
+        context['can_view_list'] = user.has_perm_on_any_branch('view_person')
+        context['employee_roles'] = self.object.employee_roles.select_related('role', 'branch')
+        return context
+
 
 class PersonCreateView(BranchPermissionMixin, CreateView):
     model = Person
@@ -610,9 +624,20 @@ class EmployeeRoleListView(BranchPermissionMixin, ListView):
     branch_field = 'branch'
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('person', 'role', 'branch')
         queryset = filter_by_branch(queryset, self.request.user, 'branch', perm=self.required_perm)
-        return queryset
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                models.Q(person__first_name__icontains=search) |
+                models.Q(person__second_name__icontains=search) |
+                models.Q(person__third_name__icontains=search) |
+                models.Q(person__forth_name__icontains=search) |
+                models.Q(person__email__icontains=search) |
+                models.Q(role__name__icontains=search) |
+                models.Q(branch__name__icontains=search)
+            )
+        return queryset.order_by('person__first_name', 'person__email', 'branch__name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -620,12 +645,12 @@ class EmployeeRoleListView(BranchPermissionMixin, ListView):
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
             context['teams'] = Team.objects.all().order_by('name')
-            context['persons'] = Person.objects.filter(is_staff=True).order_by('first_name', 'forth_name')
+            context['persons'] = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
             context['teams'] = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
-            context['persons'] = Person.objects.filter(is_staff=True, branch__pk__in=allowed_ids).order_by('first_name', 'forth_name')
+            context['persons'] = Person.objects.filter(is_active=True, branch__pk__in=allowed_ids).order_by('first_name', 'forth_name')
         context['roles'] = Role.objects.all().order_by('name')
         return context
 

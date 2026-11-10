@@ -37,11 +37,11 @@ class FinanceBaseTest(TestCase):
         self.master = Master.objects.create(
             name='برمجة',
             code=1,
-            branch=self.branch,
             last_person=self.user
         )
         self.course = Course.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             last_person=self.user
         )
@@ -53,6 +53,7 @@ class FinanceBaseTest(TestCase):
         )
         self.student = Student.objects.create(
             contact=self.contact,
+            branch=self.branch,
             level='مبتدئ'
         )
         self.account = Account.objects.create(
@@ -102,6 +103,7 @@ class OfferModelTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             customer_mobile='0501234567',
@@ -131,6 +133,7 @@ class OfferModelTest(FinanceBaseTest):
     def test_offer_get_net_installment(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=2,
             customer_name='عميل آخر',
             master_payment_type='تقسيط',
@@ -147,6 +150,7 @@ class CallModelTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             customer_mobile='0501234567',
@@ -352,6 +356,7 @@ class OfferProtectTest(FinanceBaseTest):
     def test_cannot_delete_master_with_offer(self):
         Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل',
             last_person=self.user
@@ -364,6 +369,7 @@ class CallProtectTest(FinanceBaseTest):
     def test_cannot_delete_offer_with_call(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل',
             last_person=self.user
@@ -407,6 +413,7 @@ class OfferModelEdgeCaseTest(FinanceBaseTest):
     def test_offer_get_net_zero_price(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل',
             master_payment_type='نقدي',
@@ -419,6 +426,7 @@ class OfferModelEdgeCaseTest(FinanceBaseTest):
     def test_offer_get_net_credit(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=2,
             customer_name='عميل',
             master_payment_type='آجل',
@@ -431,6 +439,7 @@ class OfferModelEdgeCaseTest(FinanceBaseTest):
     def test_offer_get_discount_zero(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=3,
             customer_name='عميل',
             master_payment_type='نقدي',
@@ -443,6 +452,7 @@ class OfferModelEdgeCaseTest(FinanceBaseTest):
     def test_offer_unique_together_master_code(self):
         Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=99,
             customer_name='عميل 1',
             last_person=self.user
@@ -450,6 +460,7 @@ class OfferModelEdgeCaseTest(FinanceBaseTest):
         with self.assertRaises(Exception):
             Offer.objects.create(
                 master=self.master,
+                branch=self.branch,
                 code=99,
                 customer_name='عميل 2',
                 last_person=self.user
@@ -460,6 +471,7 @@ class CallModelEdgeCaseTest(FinanceBaseTest):
     def test_call_default_duration(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل',
             last_person=self.user
@@ -470,6 +482,7 @@ class CallModelEdgeCaseTest(FinanceBaseTest):
     def test_call_incoming_type(self):
         offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=2,
             customer_name='عميل',
             last_person=self.user
@@ -728,6 +741,7 @@ class CallFormTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             last_person=self.user
@@ -1641,6 +1655,7 @@ class OfferViewTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             customer_mobile='0501234567',
@@ -1651,6 +1666,7 @@ class OfferViewTest(FinanceBaseTest):
         )
         self.offer2 = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=2,
             customer_name='عميل آخر',
             customer_mobile='0509876543',
@@ -1773,6 +1789,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             last_person=self.user
@@ -1902,6 +1919,7 @@ class CallViewTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             last_person=self.user
@@ -1915,6 +1933,7 @@ class CallViewTest(FinanceBaseTest):
         )
         self.offer2 = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=2,
             customer_name='عميل آخر',
             last_person=self.user
@@ -2011,6 +2030,7 @@ class CallViewEdgeCaseTest(FinanceBaseTest):
         super().setUp()
         self.offer = Offer.objects.create(
             master=self.master,
+            branch=self.branch,
             code=1,
             customer_name='عميل تجريبي',
             last_person=self.user
