@@ -95,7 +95,7 @@
         <div class="stat-card bg-gradient-success h-100">
             <div class="icon-box"><i class="bi bi-book"></i></div>
             <div class="stat-value">{{ courses_count }}</div>
-            <div class="stat-label">الدورات</div>
+            <div class="stat-label">التخصصات</div>
         </div>
     </div>
     <div class="col-xl col-lg-3 col-md-4 col-6">
@@ -204,7 +204,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>العنوان</th>
-                                <th>الدورة</th>
+                                <th>التخصص</th>
                                 <th>الحالة</th>
                                 <th>التاريخ</th>
                             </tr>
@@ -213,7 +213,7 @@
                             {% for so in recent_student_offers %}
                             <tr>
                                 <td class="fw-semibold">{{ so.title }}</td>
-                                <td>{{ so.course.name|default:'-' }}</td>
+                                <td>{{ so.course.get_display_name|default:'-' }}</td>
                                 <td>
                                     {% if so.status == 'مسودة' %}
                                         <span class="badge bg-secondary">مسودة</span>

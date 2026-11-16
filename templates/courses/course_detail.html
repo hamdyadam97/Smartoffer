@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
+{% load permission_tags %}
 
-{% block title %}{{ course.master.get_display_name }} - {{ course.code }}{% endblock %}
+{% block title %}{{ course.get_display_name }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-book"></i> {{ course.master.get_display_name }} - {{ course.code }}</h2>
+    <h2><i class="bi bi-journal-bookmark"></i> {{ course.get_display_name }}</h2>
     <div>
-        <a href="{% url 'course-update' course.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
-        <a href="{% url 'course-delete' course.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        {% has_perm_on_branch user 'change_course' course.branch as can_change_course %}
+        {% if can_change_course %}<a href="{% url 'course-update' course.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>{% endif %}
+        {% has_perm_on_branch user 'delete_course' course.branch as can_delete_course %}
+        {% if can_delete_course %}<a href="{% url 'course-delete' course.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>{% endif %}
         <a href="{% url 'course-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
     </div>
 </div>
@@ -15,17 +18,18 @@
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل الدورة</div>
+            <div class="card-header bg-primary text-white"><i class="bi bi-info-circle"></i> تفاصيل التخصص</div>
             <ul class="list-group list-group-flush">
-                <li class="list-group-item"><strong>التخصص:</strong> {{ course.master }}</li>
-                <li class="list-group-item"><strong>الفرع:</strong> {{ course.branch }}</li>
                 <li class="list-group-item"><strong>الكود:</strong> {{ course.code }}</li>
-                <li class="list-group-item"><strong>اسم الدورة:</strong> {{ course.name|default:'-' }}</li>
+                <li class="list-group-item"><strong>النوع:</strong> {{ course.get_program_type_display }}</li>
+                <li class="list-group-item"><strong>الاسم:</strong> {{ course.name }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ course.branch.name|default:'كل الفروع' }}</li>
                 <li class="list-group-item"><strong>المحاضر:</strong> {{ course.instructor|default:'-' }}</li>
                 <li class="list-group-item"><strong>الشركة:</strong> {{ course.company_name|default:'-' }}</li>
-                <li class="list-group-item"><strong>الحد الأقصى للطلاب:</strong> {{ course.max_student_count }}</li>
-                <li class="list-group-item"><strong>المستوى المستهدف:</strong> {{ course.target_level }}</li>
+                <li class="list-group-item"><strong>المدة:</strong> {{ course.period|default:'-' }}</li>
                 <li class="list-group-item"><strong>عدد الساعات:</strong> {{ course.hours|default:'-' }}</li>
+                <li class="list-group-item"><strong>الحد الأقصى للطلاب:</strong> {{ course.max_student_count }}</li>
+                <li class="list-group-item"><strong>المستوى المستهدف:</strong> {{ course.get_target_level_display }}</li>
                 <li class="list-group-item"><strong>تاريخ البداية:</strong> {{ course.start_date|default:'-' }}</li>
                 <li class="list-group-item"><strong>تاريخ النهاية:</strong> {{ course.end_date|default:'-' }}</li>
                 <li class="list-group-item"><strong>آخر تعديل:</strong> {{ course.last_person|default:'-' }}</li>
@@ -36,8 +40,8 @@
         <div class="card mb-3">
             <div class="card-header bg-secondary text-white"><i class="bi bi-people"></i> الطلاب المسجلين</div>
             <ul class="list-group list-group-flush">
-                {% for account in course.accounts.all %}
-                <li class="list-group-item">{{ account.student.get_full_name }}</li>
+                {% for account in accounts %}
+                <li class="list-group-item">{{ account.student.get_full_name }} <small class="text-muted">({{ account.student.branch.name }})</small></li>
                 {% empty %}
                 <li class="list-group-item text-muted">لا يوجد طلاب مسجلين</li>
                 {% endfor %}

@@ -31,11 +31,11 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">الدورة</label>
+                            <label class="form-label">التخصص (دبلوم / دورة)</label>
                             <select name="course" id="so_course" class="form-select">
-                                <option value="">اختر الدورة...</option>
+                                <option value="">اختر التخصص...</option>
                                 {% for course in courses %}
-                                <option value="{{ course.id }}">{{ course.name|default:course.master.get_display_name }}</option>
+                                <option value="{{ course.id }}">{{ course.get_display_name }}{% if course.branch %} ({{ course.branch.name }}){% endif %}</option>
                                 {% endfor %}
                             </select>
                         </div>

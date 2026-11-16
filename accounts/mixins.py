@@ -3,7 +3,7 @@ from collections import Counter
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.shortcuts import redirect
 
 
@@ -28,6 +28,8 @@ class BranchPermissionMixin(LoginRequiredMixin):
     """
     required_perm = None   # e.g. 'view_student'
     branch_field = None    # e.g. 'branch' or 'course__branch'
+    # لو True: السجلات اللي فرعها فاضي (متاحة لكل الفروع) بتظهر لأي حد عنده الصلاحية على أي فرع
+    include_shared = False
 
     def get_branch(self):
         """Return the branch being acted upon, if explicitly provided.
@@ -75,8 +77,7 @@ class BranchPermissionMixin(LoginRequiredMixin):
             allowed_ids = self._get_allowed_branch_ids()
             if not allowed_ids:
                 return qs.none()
-            filters = {self.branch_field + '__in': allowed_ids}
-            qs = qs.filter(**filters)
+            qs = qs.filter(_branch_q(self.branch_field, allowed_ids, self.include_shared))
         return qs
 
     def get_object(self, queryset=None):
@@ -101,6 +102,8 @@ class BranchPermissionMixin(LoginRequiredMixin):
             value = None
 
         branch_id = value.pk if hasattr(value, 'pk') else value
+        if branch_id is None and self.include_shared:
+            return obj
         if branch_id not in allowed_ids:
             raise PermissionDenied('غير مسموح لك دخول هنا')
         return obj
@@ -115,11 +118,19 @@ class ExecutiveOnlyMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
-def filter_by_branch(qs, user, branch_path='branch', perm=None):
+def _branch_q(branch_path, allowed_ids, include_shared=False):
+    q = Q(**{branch_path + '__in': allowed_ids})
+    if include_shared:
+        q |= Q(**{branch_path + '__isnull': True})
+    return q
+
+
+def filter_by_branch(qs, user, branch_path='branch', perm=None, include_shared=False):
     """Filter a queryset by the user's permission-scoped branches.
 
     If perm is given, only branches where the user has that permission are used.
     Otherwise, falls back to branches where the user has any role.
+    include_shared: السجلات اللي فرعها فاضي (متاحة لكل الفروع) بتظهر كمان.
     """
     if user.is_executive():
         return qs
@@ -130,5 +141,4 @@ def filter_by_branch(qs, user, branch_path='branch', perm=None):
     allowed_ids = [b.pk for b in branches]
     if not allowed_ids:
         return qs.none()
-    filters = {branch_path + '__in': allowed_ids}
-    return qs.filter(**filters)
+    return qs.filter(_branch_q(branch_path, allowed_ids, include_shared))

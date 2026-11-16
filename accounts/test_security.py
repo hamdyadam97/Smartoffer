@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from accounts.models import EmployeeRole, Permission, Person, Role
 from core.models import Branch, Company
-from courses.models import Course, Master
+from courses.models import Course
 from registrations.models import Account
 from students.models import Contact, Student
 
@@ -133,10 +133,9 @@ class SecurityTests(TestCase):
         self.assertTrue(AppNotification.objects.filter(pk=note.pk).exists())
 
     def test_dropdowns_only_show_own_branch_data(self):
-        master = Master.objects.create(name='m')
         data = {}
         for branch in (self.mine, self.other):
-            course = Course.objects.create(master=master, branch=branch, target_level='الكل')
+            course = Course.objects.create(name='m', branch=branch, target_level='الكل')
             student = Student.objects.create(contact=Contact.objects.create(first_name=branch.name, forth_name='x'), branch=branch)
             Account.objects.create(course=course, student=student, code=branch.code)
             data[branch.pk] = (course, student)

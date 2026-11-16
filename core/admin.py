@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Branch, Bank
+from .models import Company, Branch
 
 
 @admin.register(Company)
@@ -24,9 +24,3 @@ class BranchAdmin(admin.ModelAdmin):
         }),
     )
 
-
-@admin.register(Bank)
-class BankAdmin(admin.ModelAdmin):
-    list_display = ['name', 'branch', 'account_number', 'created_at']
-    list_filter = ['branch']
-    search_fields = ['name', 'account_number', 'iban']

@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from accounts.models import Person
 from core.models import Bank, Branch, Company
-from courses.models import Course, Master
+from courses.models import Course
 from offers.models import OfferRecipient, StudentOffer
 from registrations.models import Account
 from students.models import Contact, Student
@@ -24,8 +24,8 @@ class BranchDeleteTests(TestCase):
         self.other = Branch.objects.create(company=company, code=2, name='Other')
 
     def _fill(self, branch, n):
-        master = Master.objects.create(name=f'm{n}')
-        course = Course.objects.create(master=master, branch=branch, target_level='الكل')
+        course = Course.objects.create(name=f'm{n}', branch=branch, target_level='الكل')
+        Course.objects.create(name=f'shared{n}', branch=None)
         student = Student.objects.create(
             contact=Contact.objects.create(first_name=f's{n}', forth_name='x'), branch=branch,
         )
@@ -48,10 +48,11 @@ class BranchDeleteTests(TestCase):
 
         self.assertRedirects(response, reverse('branch-list'))
         self.assertFalse(Branch.objects.filter(pk=self.branch.pk).exists())
-        for model in [Course, Student, Contact, Account, StudentOffer, OfferRecipient, Bank]:
+        self.assertEqual(Course.objects.filter(branch__isnull=False).count(), 1)
+        for model in [Student, Contact, Account, StudentOffer, OfferRecipient, Bank]:
             self.assertEqual(model.objects.count(), 1, model.__name__)
-        # التخصصات مشتركة بين الفروع، فمش بتتمسح مع الفرع
-        self.assertEqual(Master.objects.count(), 2)
+        # التخصصات اللي لكل الفروع مش بتتمسح مع الفرع
+        self.assertEqual(Course.objects.filter(branch__isnull=True).count(), 2)
         self.assertFalse(Person.objects.filter(email='emp1@example.com').exists())
         self.assertTrue(Person.objects.filter(email='emp2@example.com').exists())
         self.assertTrue(Person.objects.filter(pk=self.user.pk).exists())

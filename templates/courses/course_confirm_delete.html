@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}حذف دورة{% endblock %}
+{% block title %}حذف تخصص{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -10,11 +10,11 @@
                 <i class="bi bi-exclamation-triangle"></i> تأكيد الحذف
             </div>
             <div class="card-body">
-                <h5 class="card-title">هل أنت متأكد من حذف الدورة <strong>{{ object.master.get_display_name }} - {{ object.code }}</strong>؟</h5>
+                <h5 class="card-title">هل أنت متأكد من حذف التخصص <strong>{{ object.get_display_name }}</strong>؟</h5>
                 {% if accounts_count %}
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle"></i>
-                    سيتم أيضًا حذف <strong>{{ accounts_count }}</strong> تسجيل مرتبطين بهذه الدورة.
+                    سيتم أيضًا حذف <strong>{{ accounts_count }}</strong> تسجيل مرتبطين بهذا التخصص.
                 </div>
                 {% endif %}
                 <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه.</p>

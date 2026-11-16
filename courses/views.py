@@ -1,121 +1,27 @@
-from django.db import IntegrityError, transaction
-from django.db.models import Q, Max
+from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, UpdateView, DeleteView
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 
-from .models import Master, Course
-from .forms import MasterForm, CourseForm
+from .models import Course
+from .forms import CourseForm
+
+# «التخصصات»: كل تخصص (دبلوم أو دورة) بكل بياناته. التخصص اللي فرعه فاضي متاح لكل الفروع.
 
 
-class MasterListView(BranchPermissionMixin, ListView):
-    """التخصصات مشتركة بين كل الفروع، فأي حد عنده صلاحية العرض على أي فرع بيشوفها كلها."""
-    model = Master
-    template_name = 'courses/master_list.html'
-    context_object_name = 'masters'
-    paginate_by = 20
-    required_perm = 'view_master'
-
-    def get_queryset(self):
-        queryset = Master.objects.all()
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(Q(name__icontains=search) | Q(code__icontains=search))
-        program_type = self.request.GET.get('program_type')
-        if program_type:
-            queryset = queryset.filter(program_type=program_type)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
-        return context
-
-
-class MasterDetailView(BranchPermissionMixin, DetailView):
-    required_perm = 'view_master'
-    model = Master
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'courses/master_detail.html'
-    context_object_name = 'master'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # التخصص مشترك، بس الدورات بتاعته بتظهر من الفروع المسموحة للمستخدم بس
-        context['courses'] = filter_by_branch(
-            self.object.courses.select_related('branch'), self.request.user, 'branch', perm='view_course'
-        )
-        return context
-
-
-class MasterCreateView(BranchPermissionMixin, CreateView):
-    required_perm = 'add_master'
-    model = Master
-    form_class = MasterForm
-    template_name = 'courses/master_form.html'
-    success_url = reverse_lazy('master-list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.last_person = self.request.user
-        return super().form_valid(form)
-
-
-class MasterUpdateView(BranchPermissionMixin, UpdateView):
-    required_perm = 'change_master'
-    model = Master
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    form_class = MasterForm
-    template_name = 'courses/master_form.html'
-    success_url = reverse_lazy('master-list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.last_person = self.request.user
-        return super().form_valid(form)
-
-
-class MasterDeleteView(BranchPermissionMixin, DeleteView):
-    required_perm = 'delete_master'
-    model = Master
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'courses/master_confirm_delete.html'
-    success_url = reverse_lazy('master-list')
-
-    def get_context_data(self, **kwargs):
-        from registrations.models import Account
-        context = super().get_context_data(**kwargs)
-        context['courses_count'] = self.object.courses.count()
-        context['accounts_count'] = Account.objects.filter(course__master=self.object).count()
-        return context
-
-    def form_valid(self, form):
-        """حذف التخصص بكل اللي مرتبط بيه: الدورات وتسجيلاتها."""
-        from registrations.models import Account
-        with transaction.atomic():
-            Account.objects.filter(course__master=self.object).delete()
-            self.object.courses.all().delete()
-            response = super().form_valid(form)
-        messages.success(self.request, 'تم حذف التخصص وكل البيانات المرتبطة به.')
-        return response
+def _form_branches(user, perm):
+    from core.models import Branch
+    branches = Branch.objects.select_related('company').order_by('code', 'name')
+    if user.is_executive():
+        return branches
+    return branches.filter(pk__in=[b.pk for b in user.get_branches_for_perm(perm)])
 
 
 class CourseListView(BranchPermissionMixin, ListView):
@@ -125,25 +31,20 @@ class CourseListView(BranchPermissionMixin, ListView):
     paginate_by = 20
     required_perm = 'view_course'
     branch_field = 'branch'
+    include_shared = True
 
     def get_queryset(self):
-        queryset = Course.objects.select_related('master', 'branch', 'branch__company').all()
-        queryset = filter_by_branch(
-            queryset,
-            self.request.user,
-            'branch',
-            perm=self.required_perm,
-        )
+        queryset = super().get_queryset().select_related('branch', 'branch__company')
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
+                Q(name__icontains=search) |
                 Q(code__icontains=search) |
-                Q(master__code__icontains=search) |
                 Q(instructor__icontains=search) | Q(company_name__icontains=search)
             )
-        master = self.request.GET.get('master')
-        if master:
-            queryset = queryset.filter(master_id=master)
+        program_type = self.request.GET.get('program_type')
+        if program_type:
+            queryset = queryset.filter(program_type=program_type)
         level = self.request.GET.get('target_level')
         if level:
             queryset = queryset.filter(target_level=level)
@@ -154,29 +55,33 @@ class CourseListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from core.models import Branch
-        user = self.request.user
-        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
-        context['form_master_queryset'] = Master.objects.order_by('code', 'name')
-        if user.is_executive():
-            context['branches'] = Branch.objects.select_related('company').order_by('code', 'name')
-        else:
-            allowed_ids = [b.pk for b in user.get_branches_for_perm('add_course')]
-            context['branches'] = Branch.objects.select_related('company').filter(pk__in=allowed_ids).order_by('code', 'name')
+        context['program_types'] = Course.PROGRAM_TYPE_CHOICES
+        context['branches'] = _form_branches(self.request.user, 'add_course')
         return context
 
 
 class CourseDetailView(BranchPermissionMixin, DetailView):
     required_perm = 'view_course'
     branch_field = 'branch'
+    include_shared = True
     model = Course
     template_name = 'courses/course_detail.html'
     context_object_name = 'course'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # التخصص ممكن يبقى لكل الفروع، فالطلاب بيظهروا من فروع المستخدم بس
+        context['accounts'] = filter_by_branch(
+            self.object.accounts.select_related('student__contact', 'student__branch'),
+            self.request.user, 'student__branch', perm='view_registration',
+        )
+        return context
 
 
 class CourseUpdateView(BranchPermissionMixin, UpdateView):
     required_perm = 'change_course'
     branch_field = 'branch'
+    include_shared = True
     model = Course
     form_class = CourseForm
     template_name = 'courses/course_form.html'
@@ -189,14 +94,7 @@ class CourseUpdateView(BranchPermissionMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from core.models import Branch
-        user = self.request.user
-        context['program_types'] = Master.PROGRAM_TYPE_CHOICES
-        if user.is_executive():
-            context['branches'] = Branch.objects.select_related('company').order_by('code', 'name')
-        else:
-            allowed_ids = [b.pk for b in user.get_branches_for_perm('change_course')]
-            context['branches'] = Branch.objects.select_related('company').filter(pk__in=allowed_ids).order_by('code', 'name')
+        context['branches'] = _form_branches(self.request.user, 'change_course')
         return context
 
     def form_valid(self, form):
@@ -207,6 +105,7 @@ class CourseUpdateView(BranchPermissionMixin, UpdateView):
 class CourseDeleteView(BranchPermissionMixin, DeleteView):
     required_perm = 'delete_course'
     branch_field = 'branch'
+    include_shared = True
     model = Course
     template_name = 'courses/course_confirm_delete.html'
     success_url = reverse_lazy('course-list')
@@ -217,12 +116,12 @@ class CourseDeleteView(BranchPermissionMixin, DeleteView):
         return context
 
     def form_valid(self, form):
-        """حذف الدورة بكل اللي مرتبط بيها: التسجيلات (ومرفقاتها وشروطها وملاحظاتها)."""
+        """حذف التخصص بكل اللي مرتبط بيه: التسجيلات (ومرفقاتها وشروطها وملاحظاتها)."""
         from registrations.models import Account
         with transaction.atomic():
             Account.objects.filter(course=self.object).delete()
             response = super().form_valid(form)
-        messages.success(self.request, 'تم حذف الدورة وكل البيانات المرتبطة بها.')
+        messages.success(self.request, 'تم حذف التخصص وكل البيانات المرتبطة به.')
         return response
 
 
@@ -232,79 +131,8 @@ class CourseDeleteView(BranchPermissionMixin, DeleteView):
 
 @login_required
 @require_POST
-def master_create_ajax(request):
-    """إنشاء تخصص جديد عبر AJAX (للـ Modal)"""
-    if not request.user.has_perm_on_any_branch('add_master'):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
-
-    form = MasterForm(request.POST, user=request.user)
-    if form.is_valid():
-        try:
-            master = form.save(commit=False)
-            master.last_person = request.user
-            master.save()
-            return JsonResponse({
-                'success': True,
-                'message': 'تم إنشاء التخصص بنجاح',
-                'master': {
-                    'id': master.id,
-                    'name': master.name,
-                    'display_name': master.get_display_name(),
-                    'code': master.code,
-                    'slug': master.slug,
-                }
-            })
-        except IntegrityError:
-            return JsonResponse({
-                'success': False,
-                'errors': {'code': ['هذا الكود مستخدم بالفعل. جرب كود تاني.']}
-            }, status=400)
-    return JsonResponse({
-        'success': False,
-        'errors': form.errors
-    }, status=400)
-
-
-@login_required
-def course_next_code_ajax(request, master_id):
-    """جلب الكود التالي للدورة بناءً على التخصص."""
-    if not request.user.has_perm_on_any_branch('add_course'):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
-    master = get_object_or_404(Master, pk=master_id)
-    last_code = Course.objects.filter(master=master).aggregate(Max('code'))['code__max'] or 0
-    return JsonResponse({
-        'success': True,
-        'next_code': int(last_code) + 1,
-        'master_id': master_id,
-    })
-
-
-@login_required
-def master_info_ajax(request, pk):
-    """جلب معلومات التخصص لإنشاء دورة (الكود التالي + الساعات)"""
-    if not request.user.has_perm_on_any_branch('add_course'):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
-    master = get_object_or_404(Master, pk=pk)
-    last_code = Course.objects.filter(master=master).aggregate(Max('code'))['code__max'] or 0
-    next_code = int(last_code) + 1
-
-    return JsonResponse({
-        'success': True,
-        'next_code': next_code,
-        'master_hours': master.hours,
-        'master': {
-            'id': master.id,
-            'name': master.name,
-            'code': master.code,
-            'hours': master.hours,
-        }
-    })
-
-
-@login_required
-@require_POST
 def course_create_ajax(request):
-    """إنشاء دورة جديدة عبر AJAX (للـ Modal)"""
+    """إنشاء تخصص جديد عبر AJAX (للـ Modal)"""
     if not request.user.has_perm_on_any_branch('add_course'):
         raise PermissionDenied('غير مسموح لك دخول هنا')
 
@@ -312,30 +140,17 @@ def course_create_ajax(request):
     if form.is_valid():
         course = form.save(commit=False)
         course.last_person = request.user
-        try:
-            course.save()
-            return JsonResponse({
-                'success': True,
-                'message': 'تم إنشاء الدورة بنجاح',
-                'course': {
-                    'id': course.id,
-                    'code': course.code,
-                    'master_name': course.master.get_display_name(),
-                    'instructor': course.instructor,
-                    'company_name': course.company_name,
-                    'target_level': course.target_level,
-                    'start_date': course.start_date.isoformat() if course.start_date else None,
-                    'end_date': course.end_date.isoformat() if course.end_date else None,
-                    'detail_url': reverse('course-detail', args=[course.pk]),
-                    'update_url': reverse('course-update', args=[course.pk]),
-                    'delete_url': reverse('course-delete', args=[course.pk]),
-                }
-            })
-        except IntegrityError:
-            return JsonResponse({
-                'success': False,
-                'errors': {'code': ['هذا الكود مستخدم بالفعل لنفس التخصص. جرب كود تاني.']}
-            }, status=400)
+        course.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إنشاء التخصص بنجاح',
+            'course': {
+                'id': course.id,
+                'code': course.code,
+                'display_name': course.get_display_name(),
+                'detail_url': reverse('course-detail', args=[course.pk]),
+            }
+        })
     return JsonResponse({
         'success': False,
         'errors': form.errors

@@ -20,8 +20,8 @@ from students.models import Student
 from courses.models import Course
 from registrations.models import Account
 from offers.models import StudentOffer
-from core.models import Branch, Company, Bank
-from .forms import CompanyForm, BranchForm, BankForm
+from core.models import Branch, Company, Bank  # Bank: الصفحة اتشالت، بس بيتمسح مع الفرع
+from .forms import CompanyForm, BranchForm
 
 
 def custom_page_not_found_view(request, exception):
@@ -102,10 +102,10 @@ def _dashboard_charts(request, student_qs, account_qs, studentoffer_qs):
             'time': s.created_at,
             'css_class': 'success',
         })
-    for r in account_qs.select_related('student', 'course__master').order_by('-created_at')[:50]:
+    for r in account_qs.select_related('student', 'course').order_by('-created_at')[:50]:
         activities.append({
             'title': f'تسجيل جديد: {r.student.get_full_name()}',
-            'desc': r.course.master.get_display_name(),
+            'desc': r.course.get_display_name(),
             'time': r.created_at,
             'css_class': 'purple',
         })
@@ -145,13 +145,13 @@ def dashboard(request):
     # Base querysets scoped by permission
     student_qs = filter_by_branch(Student.objects.all(), request.user, 'branch', 'view_student')
     course_qs = filter_by_branch(Course.objects.all(), request.user, 'branch', 'view_course')
-    account_qs = filter_by_branch(Account.objects.all(), request.user, 'course__branch', 'view_account')
+    account_qs = filter_by_branch(Account.objects.all(), request.user, 'student__branch', 'view_account')
     studentoffer_qs = filter_by_branch(StudentOffer.objects.all(), request.user, 'branch', 'view_studentoffer')
 
     if selected_branch:
         student_qs = student_qs.filter(branch=selected_branch)
         course_qs = course_qs.filter(branch=selected_branch)
-        account_qs = account_qs.filter(course__branch=selected_branch)
+        account_qs = account_qs.filter(student__branch=selected_branch)
         studentoffer_qs = studentoffer_qs.filter(branch=selected_branch)
 
     branches = _allowed_branches_queryset(request.user, DASHBOARD_PERMS).select_related('company')
@@ -159,7 +159,7 @@ def dashboard(request):
     for branch in branches:
         branch_stats.append({
             'branch': branch,
-            'registrations': account_qs.filter(course__branch=branch).count(),
+            'registrations': account_qs.filter(student__branch=branch).count(),
             'courses': course_qs.filter(branch=branch).count(),
             'student_offers': studentoffer_qs.filter(branch=branch).count(),
         })
@@ -194,7 +194,7 @@ def branch_dashboard(request, slug):
     students_qs = filter_by_branch(Student.objects.filter(branch=branch), request.user, 'branch', 'view_student')
     courses_qs = filter_by_branch(Course.objects.filter(branch=branch), request.user, 'branch', 'view_course')
     registrations_qs = filter_by_branch(
-        Account.objects.filter(course__branch=branch), request.user, 'course__branch', 'view_account'
+        Account.objects.filter(student__branch=branch), request.user, 'student__branch', 'view_account'
     )
     studentoffers_qs = filter_by_branch(
         StudentOffer.objects.filter(branch=branch), request.user, 'branch', 'view_studentoffer'
@@ -352,7 +352,7 @@ def branch_related_data(branch, user):
     from students.models import Contact
     return [
         ('تسجيل', Account.objects.filter(Q(course__branch=branch) | Q(student__branch=branch))),
-        ('دورة', Course.objects.filter(branch=branch)),
+        ('تخصص', Course.objects.filter(branch=branch)),
         ('مستلم عرض', OfferRecipient.objects.filter(Q(offer__branch=branch) | Q(student__branch=branch))),
         ('عرض طالب', StudentOffer.objects.filter(branch=branch)),
         ('طالب', Contact.objects.filter(student__branch=branch)),
@@ -383,80 +383,6 @@ class BranchDeleteView(BranchPermissionMixin, DeleteView):
             response = super().form_valid(form)
         messages.success(self.request, 'تم حذف الفرع وكل البيانات المرتبطة به.')
         return response
-
-
-# ============================================================
-# Bank Views
-# ============================================================
-
-class BankListView(BranchPermissionMixin, ListView):
-    model = Bank
-    template_name = 'core/bank_list.html'
-    context_object_name = 'banks'
-    paginate_by = 20
-    required_perm = 'view_bank'
-    branch_field = 'branch'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = filter_by_branch(queryset, self.request.user, self.branch_field)
-        return queryset
-
-
-class BankDetailView(BranchPermissionMixin, DetailView):
-    model = Bank
-    template_name = 'core/bank_detail.html'
-    context_object_name = 'bank'
-    required_perm = 'view_bank'
-    branch_field = 'branch'
-
-
-class BankCreateView(BranchPermissionMixin, CreateView):
-    model = Bank
-    form_class = BankForm
-    template_name = 'core/bank_form.html'
-    success_url = reverse_lazy('bank-list')
-    required_perm = 'add_bank'
-    branch_field = 'branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم إنشاء البنك بنجاح')
-        return super().form_valid(form)
-
-
-class BankUpdateView(BranchPermissionMixin, UpdateView):
-    model = Bank
-    form_class = BankForm
-    template_name = 'core/bank_form.html'
-    success_url = reverse_lazy('bank-list')
-    required_perm = 'change_bank'
-    branch_field = 'branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم تحديث البنك بنجاح')
-        return super().form_valid(form)
-
-
-class BankDeleteView(BranchPermissionMixin, DeleteView):
-    model = Bank
-    template_name = 'core/bank_confirm_delete.html'
-    success_url = reverse_lazy('bank-list')
-    required_perm = 'delete_bank'
-    branch_field = 'branch'
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف البنك بنجاح')
-        return super().delete(request, *args, **kwargs)
 
 
 # ============================================================

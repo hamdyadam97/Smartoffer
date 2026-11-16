@@ -5,7 +5,6 @@ from .models import Permission
 MODEL_NAMES_AR = {
     'company': 'الشركات',
     'branch': 'الفروع',
-    'bank': 'البنوك',
     'person': 'الموظفين',
     'branchaccess': 'صلاحيات الفروع',
     'role': 'الأدوار',
@@ -13,8 +12,7 @@ MODEL_NAMES_AR = {
     'employeeperformance': 'أداء الموظفين',
     'contact': 'جهات الاتصال',
     'student': 'الطلاب',
-    'master': 'التخصصات',
-    'course': 'الكورسات',
+    'course': 'التخصصات',
     'account': 'الحسابات',
     'attachtype': 'أنواع المرفقات',
     'attach': 'المرفقات',

@@ -23,13 +23,13 @@ def generate_report_data(report_type, user=None, branch=None, start_date=None, e
 
     if report_type == 'summary':
         students_qs = filter_by_branch(Student.objects.filter(date_filter), user, 'branch', 'view_student')
-        accounts_qs = filter_by_branch(Account.objects.filter(date_filter), user, 'course__branch', 'view_account')
+        accounts_qs = filter_by_branch(Account.objects.filter(date_filter), user, 'student__branch', 'view_account')
         offers_qs = filter_by_branch(StudentOffer.objects.filter(date_filter), user, 'branch', 'view_studentoffer')
         persons_qs = filter_by_branch(Person.objects.filter(date_filter), user, 'branch', 'view_person')
 
         if branch:
             students_qs = students_qs.filter(branch=branch)
-            accounts_qs = accounts_qs.filter(course__branch=branch)
+            accounts_qs = accounts_qs.filter(student__branch=branch)
             offers_qs = offers_qs.filter(branch=branch)
             persons_qs = persons_qs.filter(branch=branch)
 
@@ -50,7 +50,7 @@ def generate_report_data(report_type, user=None, branch=None, start_date=None, e
 
     elif report_type == 'offers':
         qs = filter_by_branch(
-            StudentOffer.objects.filter(date_filter).select_related('branch', 'master', 'created_by'),
+            StudentOffer.objects.filter(date_filter).select_related('branch', 'course', 'created_by'),
             user, 'branch', 'view_studentoffer'
         )
         if branch:
@@ -60,7 +60,7 @@ def generate_report_data(report_type, user=None, branch=None, start_date=None, e
         for offer in qs:
             offers_data.append({
                 'العنوان': offer.title,
-                'التخصص': offer.master.get_display_name() if offer.master else '-',
+                'التخصص': offer.course.get_display_name() if offer.course else '-',
                 'الفرع': offer.branch.name,
                 'السعر': float(offer.price),
                 'الحالة': offer.get_status_display(),
@@ -83,7 +83,7 @@ def generate_report_data(report_type, user=None, branch=None, start_date=None, e
                 'الفرع': b.name,
                 'الطلاب': filter_by_branch(Student.objects.filter(branch=b), user, 'branch', 'view_student').count(),
                 'التسجيلات': filter_by_branch(
-                    Account.objects.filter(course__branch=b), user, 'course__branch', 'view_account'
+                    Account.objects.filter(student__branch=b), user, 'student__branch', 'view_account'
                 ).count(),
                 'العروض': filter_by_branch(
                     StudentOffer.objects.filter(branch=b), user, 'branch', 'view_studentoffer'
@@ -103,13 +103,13 @@ def get_dashboard_data(user=None, branch=None):
     data = {}
 
     student_qs = filter_by_branch(Student.objects.all(), user, 'branch', 'view_student')
-    account_qs = filter_by_branch(Account.objects.all(), user, 'course__branch', 'view_account')
+    account_qs = filter_by_branch(Account.objects.all(), user, 'student__branch', 'view_account')
     offer_qs = filter_by_branch(StudentOffer.objects.all(), user, 'branch', 'view_studentoffer')
     person_qs = filter_by_branch(Person.objects.all(), user, 'branch', 'view_person')
 
     if branch:
         student_qs = student_qs.filter(branch=branch)
-        account_qs = account_qs.filter(course__branch=branch)
+        account_qs = account_qs.filter(student__branch=branch)
         offer_qs = offer_qs.filter(branch=branch)
         person_qs = person_qs.filter(branch=branch)
 
@@ -135,7 +135,7 @@ def get_dashboard_data(user=None, branch=None):
         {
             'name': b.name,
             'students': student_qs.filter(branch=b).count(),
-            'registrations': account_qs.filter(course__branch=b).count(),
+            'registrations': account_qs.filter(student__branch=b).count(),
             'offers': offer_qs.filter(branch=b).count(),
         }
         for b in branches

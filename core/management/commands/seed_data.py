@@ -9,7 +9,7 @@ from django.utils.timezone import make_aware
 
 from accounts.models import Person, BranchAccess, Role, EmployeeRole, EmployeePerformance
 from core.models import Company, Branch, Bank
-from courses.models import Master, Course
+from courses.models import Course
 from messaging.models import InternalMessage
 from notifications.models import AppNotification
 from offers.models import StudentOffer, OfferRecipient, OfferNote
@@ -110,7 +110,6 @@ class Command(BaseCommand):
         OfferRecipient.objects.all().delete()
         StudentOffer.objects.all().delete()
         Course.objects.all().delete()
-        Master.objects.all().delete()
         Student.objects.all().delete()
         Contact.objects.all().delete()
         EmployeeRole.objects.all().delete()
@@ -180,16 +179,6 @@ class Command(BaseCommand):
         # default company for relations
         self.company = self.companies[0]
 
-        self.banks = []
-        for i, bname in enumerate(['البنك الأهلي', 'بنك الرياض'], start=1):
-            bank = Bank.objects.create(
-                branch=self.branches[i % len(self.branches)],
-                name=bname,
-                account_number='SA' + ''.join(random.choices(string.digits, k=20)),
-                iban='SA' + ''.join(random.choices(string.digits, k=22)),
-                swift='SARISARI'
-            )
-            self.banks.append(bank)
 
     def create_accounts(self):
         self.persons = []
@@ -285,24 +274,15 @@ class Command(BaseCommand):
             self.students.append(st)
 
     def create_courses(self):
-        self.masters = []
-        for i in range(10):
-            m = Master.objects.create(
-                program_type=random.choice(['دبلوم', 'دورة']),
-                code=i + 1,
-                name=f'تخصص {random_string(4)}',
-                period=f'{random.randint(1, 12)} شهر',
-                last_person=random.choice(self.persons)
-            )
-            self.masters.append(m)
-
         self.courses = []
         for i in range(15):
-            master = random.choice(self.masters)
             start = rand_date(2024, 2025)
             c = Course.objects.create(
-                master=master,
-                branch=random.choice(self.branches),
+                program_type=random.choice(['دبلوم', 'دورة']),
+                name=f'تخصص {random_string(4)}',
+                period=f'{random.randint(1, 12)} شهر',
+                # بعض التخصصات متاحة لكل الفروع
+                branch=random.choice(self.branches + [None]),
                 code=i + 1,
                 instructor=random_name()[0] + ' ' + random_name()[3],
                 company_name='شركة ' + random_string(4),

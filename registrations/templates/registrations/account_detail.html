@@ -25,10 +25,10 @@
     </div>
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header bg-secondary text-white"><i class="bi bi-book"></i> بيانات الدورة</div>
+            <div class="card-header bg-secondary text-white"><i class="bi bi-journal-bookmark"></i> بيانات التخصص</div>
             <ul class="list-group list-group-flush">
-                <li class="list-group-item"><strong>الدورة:</strong> {{ account.course.master.get_display_name }} - {{ account.course.code }}</li>
-                <li class="list-group-item"><strong>الفرع:</strong> {{ account.course.branch.name }}</li>
+                <li class="list-group-item"><strong>التخصص:</strong> {{ account.course.get_display_name }}</li>
+                <li class="list-group-item"><strong>الفرع:</strong> {{ account.student.branch.name }}</li>
                 <li class="list-group-item"><strong>نوع الدفع:</strong> {{ account.course_payment_type }}</li>
             </ul>
         </div>

@@ -241,7 +241,7 @@
         <div class="stat-card bg-gradient-success h-100">
             <div class="icon-box"><i class="bi bi-book"></i></div>
             <div class="stat-value">{{ courses_count }}</div>
-            <div class="stat-label">الدورات</div>
+            <div class="stat-label">التخصصات</div>
         </div>
     </div>
     <div class="col-xl col-lg-3 col-md-4 col-6">
@@ -333,7 +333,7 @@
                     <div class="col-4">
                         <div class="mini-stat">
                             <div class="mini-value">{{ bs.courses }}</div>
-                            <div class="mini-label">دورات</div>
+                            <div class="mini-label">تخصصات</div>
                         </div>
                     </div>
                     <div class="col-4">
@@ -428,7 +428,7 @@
                             <tr>
                                 <th>العنوان</th>
                                 <th>الفرع</th>
-                                <th>الدورة</th>
+                                <th>التخصص</th>
                                 <th>الحالة</th>
                                 <th>التاريخ</th>
                             </tr>
@@ -438,7 +438,7 @@
                             <tr>
                                 <td class="fw-semibold">{{ so.title }}</td>
                                 <td><span class="badge bg-secondary">{{ so.branch.name }}</span></td>
-                                <td>{{ so.course.name|default:'-' }}</td>
+                                <td>{{ so.course.get_display_name|default:'-' }}</td>
                                 <td>
                                     {% if so.status == 'مسودة' %}
                                         <span class="badge bg-secondary offer-badge">مسودة</span>
@@ -477,7 +477,7 @@
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="mb-1 fw-bold">{{ tb.branch.name }}</h6>
-                    <div class="text-muted small">{{ tb.courses }} دورة · {{ tb.student_offers }} عرض</div>
+                    <div class="text-muted small">{{ tb.courses }} تخصص · {{ tb.student_offers }} عرض</div>
                 </div>
                 <div class="flex-shrink-0 text-end">
                     <div class="fw-bold text-primary">{{ tb.registrations }}</div>

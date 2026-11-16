@@ -1,20 +1,33 @@
 from django.db import models
-from django.utils.text import slugify
 
 
-class Master(models.Model):
-    """التخصص: نوعه (دبلوم أو دورة) + اسمه. مشترك بين كل الفروع."""
+class Course(models.Model):
+    """التخصص: دبلوم أو دورة، بكل بياناته (الاسم، الفرع، المحاضر، التواريخ...)."""
     PROGRAM_TYPE_CHOICES = [
         ('دبلوم', 'دبلوم'),
         ('دورة', 'دورة'),
     ]
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
+    LEVEL_CHOICES = [
+        ('مبتدئ', 'مبتدئ'),
+        ('متوسط', 'متوسط'),
+        ('متقدم', 'متقدم'),
+        ('الكل', 'جميع المستويات'),
+    ]
     program_type = models.CharField(max_length=20, choices=PROGRAM_TYPE_CHOICES, default='دبلوم', db_index=True, verbose_name='النوع')
+    name = models.CharField(max_length=255, db_index=True, verbose_name='الاسم')
+    # فاضي = متاح لكل الفروع
+    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, null=True, blank=True, related_name='courses', verbose_name='الفرع')
 
     code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
-    name = models.CharField(max_length=255, db_index=True, verbose_name='اسم الدبلوم / الدورة')
-    period = models.CharField(max_length=100, blank=True, verbose_name='الفترة')
-    hours = models.PositiveIntegerField(null=True, blank=True, db_index=True, verbose_name='عدد الساعات (للبرامج)')
+    instructor = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='المحاضر')
+    company_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الشركة')
+    max_student_count = models.PositiveIntegerField(default=1, verbose_name='الحد الأقصى للطلاب')
+    target_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
+    period = models.CharField(max_length=100, blank=True, verbose_name='المدة')
+    hours = models.PositiveIntegerField(null=True, blank=True, db_index=True, verbose_name='عدد الساعات')
+
+    start_date = models.DateField(null=True, blank=True, db_index=True, verbose_name='تاريخ البداية')
+    end_date = models.DateField(null=True, blank=True, verbose_name='تاريخ النهاية')
 
     # Tracking
     last_person = models.ForeignKey('accounts.Person', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='آخر تعديل')
@@ -28,16 +41,8 @@ class Master(models.Model):
 
     def save(self, *args, **kwargs):
         if self.code is None or self.code == '':
-            last = Master.objects.aggregate(models.Max('code'))['code__max']
+            last = Course.objects.aggregate(models.Max('code'))['code__max']
             self.code = (last or 0) + 1
-        if not self.slug:
-            base_slug = slugify(self.name, allow_unicode=True)
-            slug = base_slug
-            counter = 1
-            while Master.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f'{base_slug}-{counter}'
-                counter += 1
-            self.slug = slug
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -57,51 +62,6 @@ class Master(models.Model):
                 return program_type, name[len(prefix):].strip()
         return None, name
 
-
-class Course(models.Model):
-    """الدورة / الفصل"""
-    LEVEL_CHOICES = [
-        ('مبتدئ', 'مبتدئ'),
-        ('متوسط', 'متوسط'),
-        ('متقدم', 'متقدم'),
-        ('الكل', 'جميع المستويات'),
-    ]
-    master = models.ForeignKey(Master, on_delete=models.PROTECT, related_name='courses', verbose_name='التخصص')
-    branch = models.ForeignKey('core.Branch', on_delete=models.PROTECT, related_name='courses', verbose_name='الفرع')
-
-    code = models.PositiveIntegerField(db_index=True, blank=True, null=True, verbose_name='الكود')
-    name = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='اسم الدورة')
-    instructor = models.CharField(max_length=255, blank=True, db_index=True, verbose_name='المحاضر')
-    company_name = models.CharField(max_length=255, blank=True, verbose_name='اسم الشركة')
-    max_student_count = models.PositiveIntegerField(default=1, verbose_name='الحد الأقصى للطلاب')
-    target_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='الكل', db_index=True, verbose_name='المستوى المستهدف')
-    hours = models.PositiveIntegerField(null=True, blank=True, db_index=True, verbose_name='عدد الساعات')
-    
-    start_date = models.DateField(null=True, blank=True, db_index=True, verbose_name='تاريخ البداية')
-    end_date = models.DateField(null=True, blank=True, verbose_name='تاريخ النهاية')
-    
-    # Tracking
-    last_person = models.ForeignKey('accounts.Person', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='آخر تعديل')
-    last_update = models.DateTimeField(auto_now=True, verbose_name='تاريخ التعديل')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'دورة'
-        verbose_name_plural = 'الدورات'
-        ordering = ['-created_at']
-        unique_together = ['master', 'code']
-
-    def save(self, *args, **kwargs):
-        if self.code is None or self.code == '':
-            last = Course.objects.filter(master=self.master).aggregate(models.Max('code'))['code__max']
-            self.code = (last or 0) + 1
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        if self.name:
-            return f"{self.code} - {self.name}"
-        return f"{self.code} - {self.master.get_display_name()}"
-
     def get_full_key(self):
-        """Generate unique key: Branch-Master-Course"""
-        return f"{self.branch.code}-{self.master.code}-{self.code}"
+        """Generate unique key: Branch-Course"""
+        return f"{self.branch.code if self.branch else 0}-{self.code}"

@@ -33,7 +33,7 @@
                         </small>
                     </div>
                     <small class="{% if o.slug == offer.slug %}text-white-50{% else %}text-muted{% endif %}">
-                        {{ o.branch.name }}{% if o.course %} | {{ o.course.master.get_display_name }}{% endif %}
+                        {{ o.branch.name }}{% if o.course %} | {{ o.course.get_display_name }}{% endif %}
                     </small>
                 </a>
                 {% endfor %}
@@ -51,7 +51,7 @@
                         <li class="list-group-item"><strong>العنوان:</strong> {{ offer.title }}</li>
                         <li class="list-group-item"><strong>المحتوى:</strong> {{ offer.content|linebreaksbr }}</li>
                         <li class="list-group-item"><strong>الفرع:</strong> {{ offer.branch }}</li>
-                        <li class="list-group-item"><strong>الدورة:</strong> {{ offer.course|default:'-' }}</li>
+                        <li class="list-group-item"><strong>التخصص:</strong> {{ offer.course.get_display_name|default:'-' }}</li>
                         <li class="list-group-item"><strong>السعر:</strong> {{ offer.price }} {{ offer.branch.company.get_currency_display_name }} {% if offer.price_description %}({{ offer.price_description }}){% endif %}</li>
                         <li class="list-group-item"><strong>تاريخ بداية العرض:</strong> {{ offer.start_date|default:'-' }}</li>
                         <li class="list-group-item"><strong>تاريخ نهاية العرض:</strong> {{ offer.end_date|default:'-' }}</li>

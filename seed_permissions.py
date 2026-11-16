@@ -40,10 +40,6 @@ PERMISSIONS_DATA = [
     ('change_branch', 'تعديل فرع', 'core', 'branch', 'change'),
     ('delete_branch', 'حذف فرع', 'core', 'branch', 'delete'),
 
-    ('view_bank', 'عرض البنوك', 'core', 'bank', 'view'),
-    ('add_bank', 'إضافة بنك', 'core', 'bank', 'add'),
-    ('change_bank', 'تعديل بنك', 'core', 'bank', 'change'),
-    ('delete_bank', 'حذف بنك', 'core', 'bank', 'delete'),
 
     # --- students ---
     ('view_contact', 'عرض جهات الاتصال', 'students', 'contact', 'view'),
@@ -57,10 +53,6 @@ PERMISSIONS_DATA = [
     ('delete_student', 'حذف طالب', 'students', 'student', 'delete'),
 
     # --- courses ---
-    ('view_master', 'عرض التخصصات', 'courses', 'master', 'view'),
-    ('add_master', 'إضافة تخصص', 'courses', 'master', 'add'),
-    ('change_master', 'تعديل تخصص', 'courses', 'master', 'change'),
-    ('delete_master', 'حذف تخصص', 'courses', 'master', 'delete'),
 
     ('view_course', 'عرض الدورات', 'courses', 'course', 'view'),
     ('add_course', 'إضافة دورة', 'courses', 'course', 'add'),

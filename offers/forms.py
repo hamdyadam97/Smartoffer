@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from .models import StudentOffer, OfferRecipient, OfferNote
 
 
@@ -9,11 +10,23 @@ class StudentOfferForm(forms.ModelForm):
             perm = 'change_studentoffer' if self.instance and self.instance.pk else 'add_studentoffer'
             branch_ids = [b.pk for b in user.get_branches_for_perm(perm)]
             self.fields['branch'].queryset = self.fields['branch'].queryset.filter(pk__in=branch_ids)
-            self.fields['course'].queryset = self.fields['course'].queryset.filter(branch__in=branch_ids)
+            # تخصصات الفروع المسموحة + المتاحة لكل الفروع
+            self.fields['course'].queryset = self.fields['course'].queryset.filter(
+                Q(branch__in=branch_ids) | Q(branch__isnull=True)
+            )
+        self.fields['course'].label_from_instance = lambda obj: obj.get_display_name()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        branch = cleaned_data.get('branch')
+        course = cleaned_data.get('course')
+        if course and branch and course.branch_id not in (None, branch.pk):
+            self.add_error('course', 'التخصص ده مش تبع الفرع المختار.')
+        return cleaned_data
 
     class Meta:
         model = StudentOffer
-        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'master', 'manual_course_name', 'manual_course_hours', 'manual_program_hours']
+        exclude = ['created_by', 'created_at', 'updated_at', 'sent_at', 'manual_course_name', 'manual_course_hours', 'manual_program_hours']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -82,10 +95,9 @@ class OfferRecipientAddForm(forms.ModelForm):
 class QuickOfferForm(forms.Form):
     """Form to quickly create an offer + recipient in one step."""
     # Offer fields
-    master = forms.ModelChoiceField(queryset=None, label='التخصص (دبلوم / دورة)', widget=forms.Select(attrs={'class': 'form-select'}))
     content = forms.CharField(label=' البيان ووصف العرض ', widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}))
     branch = forms.ModelChoiceField(queryset=None, label='الفرع', widget=forms.Select(attrs={'class': 'form-select'}))
-    course = forms.ModelChoiceField(queryset=None, required=False, label='الدورة', widget=forms.Select(attrs={'class': 'form-select'}))
+    course = forms.ModelChoiceField(queryset=None, label='التخصص (دبلوم / دورة)', widget=forms.Select(attrs={'class': 'form-select'}))
     price = forms.DecimalField(max_digits=10, decimal_places=2, initial=0, label='السعر', widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
     price_description = forms.CharField(max_length=255, required=False, label='وصف السعر', widget=forms.TextInput(attrs={'class': 'form-control'}))
     # Recipient fields
@@ -96,29 +108,23 @@ class QuickOfferForm(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         from core.models import Branch
-        from courses.models import Master, Course
+        from courses.models import Course
         super().__init__(*args, **kwargs)
-        if user is not None:
+        if user is not None and not user.is_executive():
             branch_ids = [b.pk for b in user.get_branches_for_perm('add_studentoffer')]
             self.fields['branch'].queryset = Branch.objects.filter(pk__in=branch_ids)
-            self.fields['course'].queryset = Course.objects.select_related('master').filter(branch__in=branch_ids)
+            self.fields['course'].queryset = Course.objects.filter(Q(branch__in=branch_ids) | Q(branch__isnull=True))
         else:
             self.fields['branch'].queryset = Branch.objects.all()
-            self.fields['course'].queryset = Course.objects.select_related('master').all()
-        # التخصصات مشتركة بين كل الفروع
-        self.fields['master'].queryset = Master.objects.all()
-        # Display course name only in the dropdown
-        self.fields['course'].label_from_instance = lambda obj: obj.name or obj.master.get_display_name()
+            self.fields['course'].queryset = Course.objects.all()
+        self.fields['course'].label_from_instance = lambda obj: obj.get_display_name()
 
     def clean(self):
         cleaned_data = super().clean()
         branch = cleaned_data.get('branch')
         course = cleaned_data.get('course')
-        master = cleaned_data.get('master')
-        if course and branch and course.branch_id != branch.pk:
-            self.add_error('course', 'الدورة دي مش تبع الفرع المختار.')
-        if course and master and course.master_id != master.pk:
-            self.add_error('course', 'الدورة دي مش تبع التخصص المختار.')
+        if course and branch and course.branch_id not in (None, branch.pk):
+            self.add_error('course', 'التخصص ده مش تبع الفرع المختار.')
         return cleaned_data
 
 

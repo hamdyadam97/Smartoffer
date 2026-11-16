@@ -31,7 +31,7 @@
             <tr>
                 <th>العنوان</th>
                 <th>الفرع</th>
-                <th>الدورة</th>
+                <th>التخصص</th>
                 <th>السعر</th>
                 <th>الحالة</th>
                 <th>تاريخ الإنشاء</th>
@@ -43,7 +43,7 @@
             <tr>
                 <td><a href="{% url 'studentoffer-detail' offer.slug %}">{{ offer.title }}</a></td>
                 <td>{{ offer.branch }}</td>
-                <td>{{ offer.course|default:'-' }}</td>
+                <td>{{ offer.course.get_display_name|default:'-' }}</td>
                 <td>{{ offer.price }} {{ offer.branch.company.get_currency_display_name }}</td>
                 <td><span class="badge bg-secondary">{{ offer.get_status_display }}</span></td>
                 <td>{{ offer.created_at|date:'Y-m-d H:i' }}</td>
@@ -96,15 +96,6 @@
                         <div class="tab-pane fade show active" id="q-offer-pane" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">التخصص (دبلوم / دورة) <span class="text-danger">*</span></label>
-                                    <select name="master" id="quickOfferMaster" class="form-select" required>
-                                        <option value="">اختر التخصص...</option>
-                                        {% for m in masters %}
-                                        <option value="{{ m.id }}">{{ m.get_display_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
                                     <label class="form-label">الفرع <span class="text-danger">*</span></label>
                                     <select name="branch" id="quickOfferBranch" class="form-select" required>
                                         <option value="">اختر الفرع...</option>
@@ -113,14 +104,17 @@
                                         {% endfor %}
                                     </select>
                                 </div>
-                            </div>
-                            <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">الدورة</label>
-                                    <select name="course" id="quickOfferCourse" class="form-select">
-                                        <option value="">---------</option>
+                                    <label class="form-label">التخصص (دبلوم / دورة) <span class="text-danger">*</span></label>
+                                    <select name="course" id="quickOfferCourse" class="form-select" required>
+                                        <option value="">اختر التخصص...</option>
+                                        {% for c in courses %}
+                                        <option value="{{ c.id }}" data-branch="{{ c.branch_id|default:'' }}">{{ c.get_display_name }}{% if c.branch %} ({{ c.branch.name }}){% endif %}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">السعر</label>
                                     <input type="number" name="price" class="form-control" step="0.01" value="0">
@@ -181,7 +175,6 @@
     const saveBtn = document.getElementById('saveQuickOfferBtn');
     const spinner = document.getElementById('saveQuickOfferSpinner');
     const btnText = document.getElementById('saveQuickOfferBtnText');
-    const masterSelect = document.getElementById('quickOfferMaster');
     const courseSelect = document.getElementById('quickOfferCourse');
     const branchSelect = document.getElementById('quickOfferBranch');
     const contentArea = document.getElementById('quickOfferContent');
@@ -201,32 +194,17 @@
     if (branchSelect) {
         branchSelect.addEventListener('change', function() {
             loadBranchTemplate(this.value);
-            if (masterSelect && masterSelect.value) loadCourses(masterSelect.value);
+            filterCourses(this.value);
         });
     }
 
-    function loadCourses(masterId) {
-        courseSelect.innerHTML = '<option value="">---------</option>';
-        if (!masterId) return;
-        const branchId = branchSelect ? branchSelect.value : '';
-        fetch('{% url "master-courses-ajax" 0 %}'.replace('0', masterId) + (branchId ? '?branch=' + branchId : ''))
-            .then(r => r.json())
-            .then(data => {
-                if (data.success && data.courses) {
-                    data.courses.forEach(c => {
-                        const option = document.createElement('option');
-                        option.value = c.id;
-                        option.textContent = c.name || c.master__name || '-';
-                        courseSelect.appendChild(option);
-                    });
-                }
-            })
-            .catch(() => {});
-    }
-
-    if (masterSelect) {
-        masterSelect.addEventListener('change', function() {
-            loadCourses(this.value);
+    // التخصصات: بتاعة الفرع المختار + المتاحة لكل الفروع
+    function filterCourses(branchId) {
+        Array.from(courseSelect.options).forEach(option => {
+            if (!option.value) return;
+            const visible = !branchId || !option.dataset.branch || option.dataset.branch === branchId;
+            option.hidden = !visible;
+            if (!visible && option.selected) courseSelect.value = '';
         });
     }
 
@@ -271,6 +249,7 @@
         alertBox.innerHTML = '';
         clearFieldErrors();
         form.reset();
+        filterCourses('');
         const offerTab = document.getElementById('q-offer-tab');
         new bootstrap.Tab(offerTab).show();
         new bootstrap.Modal(modal).show();

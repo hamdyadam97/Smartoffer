@@ -320,14 +320,12 @@ def build_offer_pdf(offer, recipient=None):
         course_hours = f"{offer.manual_course_hours} ساعة"
     elif offer.manual_program_hours:
         course_hours = f"{offer.manual_program_hours} ساعة"
-    elif offer.master and offer.master.hours:
-        course_hours = f"{offer.master.hours} ساعة"
 
     subscription_display = 'دورة انفرادية' if offer.manual_course_name else offer.title
     detail_rows = [
         [Paragraph(_prepare_arabic(subscription_display), field_style), Paragraph(_prepare_arabic('نوع  الاشتراك'), section_label_style)],
         [Paragraph(_prepare_arabic(str(offer.branch)), field_style), Paragraph(_prepare_arabic('الفرع'), section_label_style)],
-        [Paragraph(_prepare_arabic(str(offer.course) if offer.course else (offer.manual_course_name or '-')), field_style), Paragraph(_prepare_arabic('الدورة'), section_label_style)],
+        [Paragraph(_prepare_arabic(offer.course.get_display_name() if offer.course else (offer.manual_course_name or '-')), field_style), Paragraph(_prepare_arabic('التخصص'), section_label_style)],
         [Paragraph(_prepare_arabic(course_hours or '-'), field_style), Paragraph(_prepare_arabic('عدد الساعات'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.created_at.strftime('%Y-%m-%d')), field_style), Paragraph(_prepare_arabic('تاريخ العرض'), section_label_style)],
         [Paragraph(_prepare_arabic(offer.get_status_display()), field_style), Paragraph(_prepare_arabic('الحالة'), section_label_style)],
@@ -500,15 +498,12 @@ def _get_recipient_context(offer, recipient):
         course_hours = f"{offer.manual_course_hours} ساعة"
     elif offer.manual_program_hours:
         course_hours = f"{offer.manual_program_hours} ساعة"
-    elif offer.master and offer.master.hours:
-        course_hours = f"{offer.master.hours} ساعة"
 
     return {
         'offer': offer,
         'recipient_name': recipient_name,
         'branch_name': branch.name if branch else '-',
-        'course_name': str(offer.course) if offer.course else (offer.manual_course_name or None),
-        'master_name': str(offer.master) if offer.master else None,
+        'course_name': offer.course.get_display_name() if offer.course else (offer.manual_course_name or None),
         'course_hours': course_hours,
         'currency_name': currency_name,
         'creator_name': offer.created_by.get_full_name() or offer.created_by.email,
@@ -755,27 +750,6 @@ def branch_offer_template_ajax(request, branch_id):
     })
 
 
-@login_required
-def master_courses_ajax(request, master_id):
-    """AJAX endpoint to fetch courses for a given master (used in quick offer modal).
-
-    التخصص مشترك، فالدورات بتترشح بالفروع المسموحة للمستخدم، وبالفرع المختار لو اتبعت (?branch=).
-    """
-    from courses.models import Master, Course
-    if not request.user.has_perm_on_any_branch('add_studentoffer'):
-        raise PermissionDenied('غير مسموح لك دخول هنا')
-    master = get_object_or_404(Master, pk=master_id)
-    courses = filter_by_branch(Course.objects.filter(master=master), request.user, 'branch', perm='add_studentoffer')
-    branch_id = request.GET.get('branch')
-    if branch_id:
-        courses = courses.filter(branch_id=branch_id)
-    courses = courses.values('id', 'code', 'name', 'master__name').order_by('-created_at')
-    return JsonResponse({
-        'success': True,
-        'courses': list(courses),
-    })
-
-
 @require_POST
 @login_required
 def quick_offer_ajax(request):
@@ -787,7 +761,7 @@ def quick_offer_ajax(request):
         if form.is_valid():
             cd = form.cleaned_data
             offer = StudentOffer.objects.create(
-                title=cd['master'].get_display_name(),
+                title=cd['course'].get_display_name(),
                 content=cd['content'],
                 branch=cd['branch'],
                 course=cd['course'],
@@ -838,23 +812,21 @@ class StudentOfferListView(BranchPermissionMixin, ListView):
                 Q(title__icontains=q) |
                 Q(content__icontains=q) |
                 Q(branch__name__icontains=q) |
-                Q(course__master__name__icontains=q)
+                Q(course__name__icontains=q)
             )
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from accounts.mixins import filter_by_branch
-        from courses.models import Master
-        context['masters'] = Master.objects.order_by('name')
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['courses'] = Course.objects.select_related('master').all()
+            context['courses'] = Course.objects.select_related('branch').all()
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
             context['courses'] = filter_by_branch(
-                Course.objects.select_related('master'), self.request.user, 'branch', perm='view_course'
+                Course.objects.select_related('branch'), self.request.user, 'branch', perm='view_studentoffer', include_shared=True
             )
         return context
 
@@ -873,20 +845,20 @@ class StudentOfferDetailView(BranchPermissionMixin, DetailView):
         from accounts.mixins import filter_by_branch
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['courses'] = Course.objects.select_related('master').all()
+            context['courses'] = Course.objects.select_related('branch').all()
             context['all_students'] = Student.objects.select_related('contact').all()
-            context['all_offers'] = StudentOffer.objects.select_related('branch', 'course__master').all()
+            context['all_offers'] = StudentOffer.objects.select_related('branch', 'course').all()
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
             context['courses'] = filter_by_branch(
-                Course.objects.select_related('master'), self.request.user, 'branch', perm='view_course'
+                Course.objects.select_related('branch'), self.request.user, 'branch', perm='view_studentoffer', include_shared=True
             )
             context['all_students'] = filter_by_branch(
                 Student.objects.select_related('contact'), self.request.user, 'branch', perm='view_student'
             )
             context['all_offers'] = filter_by_branch(
-                StudentOffer.objects.select_related('branch', 'course__master'), self.request.user, 'branch', perm='view_studentoffer'
+                StudentOffer.objects.select_related('branch', 'course'), self.request.user, 'branch', perm='view_studentoffer'
             )
         return context
 

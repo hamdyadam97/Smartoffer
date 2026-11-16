@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from students.models import Student
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
 
@@ -16,11 +17,21 @@ class AccountForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['course'].queryset = Course.objects.filter(
-                    branch_id__in=allowed_ids
+                    Q(branch_id__in=allowed_ids) | Q(branch__isnull=True)
                 ).order_by('-created_at')
                 self.fields['student'].queryset = Student.objects.filter(
                     branch_id__in=allowed_ids
                 ).order_by('-created_at')
+        self.fields['course'].label = 'التخصص'
+        self.fields['course'].label_from_instance = lambda obj: obj.get_display_name()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        student = cleaned_data.get('student')
+        if course and student and course.branch_id not in (None, student.branch_id):
+            self.add_error('course', 'التخصص ده تبع فرع غير فرع الطالب.')
+        return cleaned_data
 
     class Meta:
         model = Account
@@ -85,7 +96,7 @@ class AccountAttachForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__branch_id__in=allowed_ids
+                    student__branch_id__in=allowed_ids
                 ).order_by('-created_at')
                 self.fields['attach'].queryset = Attach.objects.filter(
                     person__branch_id__in=allowed_ids
@@ -111,7 +122,7 @@ class AccountConditionForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__branch_id__in=allowed_ids
+                    student__branch_id__in=allowed_ids
                 ).order_by('-created_at')
 
     class Meta:
@@ -136,7 +147,7 @@ class AccountNoteForm(forms.ModelForm):
                 allowed = user.get_branches_for_perm(perm)
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['account'].queryset = Account.objects.filter(
-                    course__branch_id__in=allowed_ids
+                    student__branch_id__in=allowed_ids
                 ).order_by('-created_at')
 
     class Meta:

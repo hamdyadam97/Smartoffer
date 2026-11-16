@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from core.models import Company, Branch
-from courses.models import Master, Course
+from courses.models import Course
 from students.models import Contact, Student
 
 from .models import Account, AttachType, Attach, AccountAttach, AccountCondition, AccountNote
@@ -31,8 +31,7 @@ class BaseTestCase(TestCase):
 
         self.company = Company.objects.create(name='Test Company')
         self.branch = Branch.objects.create(company=self.company, code=1, name='Main Branch')
-        self.master = Master.objects.create(code=10, name='Test Master')
-        self.course = Course.objects.create(master=self.master, branch=self.branch, code=100)
+        self.course = Course.objects.create(name='Test Master', branch=self.branch, code=100)
 
         self.contact = Contact.objects.create(first_name='Ali', forth_name='Ahmed')
         self.student = Student.objects.create(contact=self.contact, branch=self.branch)
@@ -63,12 +62,12 @@ class AccountModelTests(BaseTestCase):
 
     def test_get_key_format(self):
         year_shortcut = str(self.account.register_date.year)[-2:]
-        expected = f"{year_shortcut}-{self.branch.code}-{self.master.code}-{self.course.code}-{self.account.code}"
+        expected = f"{year_shortcut}-{self.branch.code}-{self.course.code}-{self.account.code}"
         self.assertEqual(self.account.get_key(), expected)
 
     def test_get_key_rtl_format(self):
         year_shortcut = str(self.account.register_date.year)[-2:]
-        expected = f"{self.account.code}-{self.course.code}-{self.master.code}-{self.branch.code}-{year_shortcut}"
+        expected = f"{self.account.code}-{self.course.code}-{self.branch.code}-{year_shortcut}"
         self.assertEqual(self.account.get_key_rtl(), expected)
 
     def test_get_required_price_cash(self):
