@@ -1,39 +1,38 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
+from .models import Person, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 
 
-class TeamForm(forms.ModelForm):
-    def __init__(self, *args, user=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        from core.models import Branch
-        if user is not None:
-            if user.is_executive():
-                self.fields['default_branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['default_role'].queryset = Role.objects.all().order_by('name')
-            else:
-                perm = 'add_team' if not self.instance.pk else 'change_team'
-                allowed = user.get_branches_for_perm(perm)
-                allowed_ids = [b.pk for b in allowed]
-                self.fields['default_branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-                self.fields['default_role'].queryset = Role.objects.all().order_by('name')
-        else:
-            self.fields['default_branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['default_role'].queryset = Role.objects.all().order_by('name')
+class PersonRoleMixin(forms.Form):
+    """الدور بيتحدد مع الموظف نفسه، وبيتطبق على فرعه الرئيسي."""
+    role = forms.ModelChoiceField(
+        queryset=Role.objects.order_by('name'),
+        required=False,
+        label='الدور',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
 
-    class Meta:
-        model = Team
-        fields = ['name', 'code', 'description', 'default_role', 'default_branch']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'code': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'default_role': forms.Select(attrs={'class': 'form-select'}),
-            'default_branch': forms.Select(attrs={'class': 'form-select'}),
-        }
+    def _set_role_initial(self):
+        person = self.instance
+        if person.pk and person.branch_id:
+            current = person.employee_roles.filter(branch_id=person.branch_id).first()
+            if current:
+                self.fields['role'].initial = current.role_id
+
+    def save_role(self, person):
+        role = self.cleaned_data.get('role')
+        if role and person.branch_id:
+            person.employee_roles.filter(branch_id=person.branch_id).exclude(role=role).delete()
+            EmployeeRole.objects.get_or_create(person=person, role=role, branch_id=person.branch_id)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('role') and not cleaned_data.get('branch'):
+            self.add_error('branch', 'لازم تختار الفرع الرئيسي عشان الدور يتطبق عليه.')
+        return cleaned_data
 
 
-class PersonCreationForm(forms.ModelForm):
+class PersonCreationForm(PersonRoleMixin, forms.ModelForm):
     password1 = forms.CharField(
         label='كلمة المرور',
         widget=forms.PasswordInput(attrs={'class': 'form-control'})
@@ -49,23 +48,20 @@ class PersonCreationForm(forms.ModelForm):
         if user is not None:
             if user.is_executive():
                 self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['team'].queryset = Team.objects.all().order_by('name')
             else:
                 allowed = user.get_branches_for_perm('add_person')
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-                self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
                 # مدير النظام بس هو اللي يقدر يعمل مدير نظام
                 del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['team'].queryset = Team.objects.all().order_by('name')
 
     class Meta:
         model = Person
         fields = [
             'email', 'first_name', 'second_name', 'third_name', 'forth_name',
-            'mobile', 'phone', 'address', 'photo', 'team', 'branch',
+            'mobile', 'phone', 'address', 'photo', 'branch',
             'is_staff', 'is_active', 'is_superuser', 'options'
         ]
         widgets = {
@@ -77,7 +73,6 @@ class PersonCreationForm(forms.ModelForm):
             'mobile': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'team': forms.Select(attrs={'class': 'form-select'}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -97,10 +92,11 @@ class PersonCreationForm(forms.ModelForm):
         person.set_password(self.cleaned_data['password1'])
         if commit:
             person.save()
+            self.save_role(person)
         return person
 
 
-class PersonChangeForm(forms.ModelForm):
+class PersonChangeForm(PersonRoleMixin, forms.ModelForm):
     password1 = forms.CharField(
         label='كلمة المرور',
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
@@ -118,23 +114,21 @@ class PersonChangeForm(forms.ModelForm):
         if user is not None:
             if user.is_executive():
                 self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-                self.fields['team'].queryset = Team.objects.all().order_by('name')
             else:
                 allowed = user.get_branches_for_perm('change_person')
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-                self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
                 # مدير النظام بس هو اللي يقدر يعمل مدير نظام أو يشيلها
                 del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
-            self.fields['team'].queryset = Team.objects.all().order_by('name')
+        self._set_role_initial()
 
     class Meta:
         model = Person
         fields = [
             'email', 'first_name', 'second_name', 'third_name', 'forth_name',
-            'mobile', 'phone', 'address', 'photo', 'team', 'branch',
+            'mobile', 'phone', 'address', 'photo', 'branch',
             'is_staff', 'is_active', 'is_superuser', 'options'
         ]
         widgets = {
@@ -146,7 +140,6 @@ class PersonChangeForm(forms.ModelForm):
             'mobile': forms.TextInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'team': forms.Select(attrs={'class': 'form-select'}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
             'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -170,6 +163,7 @@ class PersonChangeForm(forms.ModelForm):
             person.set_password(password1)
         if commit:
             person.save()
+            self.save_role(person)
         return person
 
 

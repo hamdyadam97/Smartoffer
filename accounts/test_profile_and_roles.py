@@ -67,3 +67,49 @@ class ProfileAndEmployeeRoleTests(TestCase):
         response = self.client.get(reverse('employeerole-list'), {'search': 'عبيد'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['employee_roles']), 1)
+
+
+class PersonRoleOnCreateTests(TestCase):
+    def setUp(self):
+        company = Company.objects.create(name='Co')
+        self.branch = Branch.objects.create(company=company, code=1, name='Main')
+        self.admin = Person.objects.create_user(email='admin@example.com', password='x', is_superuser=True)
+        self.employee_role = Role.objects.create(name='موظف')
+        self.manager_role = Role.objects.create(name='مدير تنفيذي')
+        self.client = Client()
+        self.client.force_login(self.admin)
+
+    def test_role_is_given_on_main_branch_when_creating_employee(self):
+        response = self.client.post(reverse('person-create-ajax'), {
+            'email': 'new@example.com', 'first_name': 'n', 'branch': self.branch.pk,
+            'role': self.employee_role.pk, 'is_active': 'on',
+            'password1': 'Strong-pass-123', 'password2': 'Strong-pass-123',
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        person = Person.objects.get(email='new@example.com')
+        self.assertEqual(list(person.employee_roles.values_list('role__name', 'branch_id')), [('موظف', self.branch.pk)])
+        self.assertEqual(person.get_main_role(), self.employee_role)
+
+    def test_changing_role_replaces_old_one_on_main_branch(self):
+        person = Person.objects.create_user(email='p@example.com', password='x', branch=self.branch)
+        EmployeeRole.objects.create(person=person, role=self.employee_role, branch=self.branch)
+        response = self.client.post(reverse('person-update-ajax', args=[person.pk]), {
+            'email': person.email, 'branch': self.branch.pk, 'role': self.manager_role.pk, 'is_active': 'on',
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(list(person.employee_roles.values_list('role__name', flat=True)), ['مدير تنفيذي'])
+
+    def test_role_needs_main_branch(self):
+        response = self.client.post(reverse('person-create-ajax'), {
+            'email': 'nobranch@example.com', 'first_name': 'n', 'role': self.employee_role.pk,
+            'password1': 'Strong-pass-123', 'password2': 'Strong-pass-123',
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('branch', response.json()['errors'])
+
+    def test_employees_page_shows_role_column(self):
+        person = Person.objects.create_user(email='p@example.com', password='x', branch=self.branch)
+        EmployeeRole.objects.create(person=person, role=self.manager_role, branch=self.branch)
+        response = self.client.get(reverse('person-list'))
+        self.assertContains(response, 'مدير تنفيذي')
+        self.assertNotContains(response, 'الفريق')

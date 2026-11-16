@@ -34,37 +34,6 @@ class Permission(models.Model):
         return self.name
 
 
-class Team(models.Model):
-    """فريق العمل"""
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
-    name = models.CharField(max_length=255, verbose_name='اسم الفريق')
-    code = models.CharField(max_length=50, unique=True, verbose_name='كود الفريق')
-    description = models.TextField(blank=True, verbose_name='الوصف')
-    default_role = models.ForeignKey('accounts.Role', on_delete=models.SET_NULL, null=True, blank=True, related_name='default_teams', verbose_name='الدور الافتراضي')
-    default_branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, related_name='default_teams', verbose_name='الفرع الافتراضي')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'فريق'
-        verbose_name_plural = 'فرق العمل'
-        ordering = ['name']
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.name, allow_unicode=True)
-            slug = base_slug
-            counter = 1
-            while Team.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f'{base_slug}-{counter}'
-                counter += 1
-            self.slug = slug
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-
-
 class Person(AbstractBaseUser, PermissionsMixin):
     """المستخدم / الموظف"""
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط المختصر')
@@ -81,7 +50,6 @@ class Person(AbstractBaseUser, PermissionsMixin):
     photo = models.ImageField(upload_to='person_photos/', blank=True, verbose_name='الصورة')
 
     # Settings
-    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='members', verbose_name='الفريق')
     branch = models.ForeignKey('core.Branch', on_delete=models.SET_NULL, null=True, blank=True, db_index=True, related_name='persons', verbose_name='الفرع الرئيسي')
 
     # Status
@@ -120,13 +88,6 @@ class Person(AbstractBaseUser, PermissionsMixin):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
-        # Auto-create EmployeeRole if team has default_role and default_branch
-        if self.team and self.team.default_role and self.team.default_branch:
-            EmployeeRole.objects.get_or_create(
-                person=self,
-                role=self.team.default_role,
-                branch=self.team.default_branch
-            )
 
     def get_full_name(self):
         return f"{self.first_name} {self.second_name} {self.third_name} {self.forth_name}".strip()
@@ -134,6 +95,13 @@ class Person(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         """الاسم الأول والرابع، ولو مش موجودين يرجع الإيميل."""
         return f"{self.first_name} {self.forth_name}".strip() or self.email
+
+    def get_main_role(self):
+        """الدور بتاع الموظف على فرعه الرئيسي."""
+        if not self.branch_id:
+            return None
+        er = self.employee_roles.select_related('role').filter(branch_id=self.branch_id).first()
+        return er.role if er else None
 
     def get_branches(self):
         """Get all accessible branches (main + accessed)"""

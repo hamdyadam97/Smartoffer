@@ -109,7 +109,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">اسم الدبلوم / الدورة <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required>
+                            <input type="text" name="name" class="form-control" placeholder="مثال: موارد بشرية (من غير كلمة دبلوم أو دورة)" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">المدة</label>
@@ -222,7 +222,7 @@
                     if (masterSelect) {
                         const option = document.createElement('option');
                         option.value = data.master.id;
-                        option.textContent = data.master.code + ' - ' + data.master.name;
+                        option.textContent = data.master.code + ' - ' + data.master.get_display_name;
                         masterSelect.appendChild(option);
                         masterSelect.value = data.master.id;
                         fillFromMaster(data.master.id);

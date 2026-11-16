@@ -56,7 +56,7 @@ LOCAL_APPS = [
     'students',
     'courses',
     'registrations',
-    'finance',
+    'finance',  # فاضل بس عشان migration مسح الجداول المالية
     'offers',
     'messaging',
     'reports',

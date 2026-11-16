@@ -4,7 +4,6 @@ from django.urls import reverse
 from accounts.models import Person
 from core.models import Bank, Branch, Company
 from courses.models import Course, Master
-from finance.models import Call, Deposit, Offer, Payment
 from offers.models import OfferRecipient, StudentOffer
 from registrations.models import Account
 from students.models import Contact, Student
@@ -30,14 +29,10 @@ class BranchDeleteTests(TestCase):
         student = Student.objects.create(
             contact=Contact.objects.create(first_name=f's{n}', forth_name='x'), branch=branch,
         )
-        account = Account.objects.create(course=course, student=student, code=n)
-        Payment.objects.create(account=account, code=n, amount_number=50)
-        offer = Offer.objects.create(master=master, branch=branch, code=n, customer_name='c')
-        Call.objects.create(offer=offer, person=self.user)
+        Account.objects.create(course=course, student=student, code=n)
         student_offer = StudentOffer.objects.create(title='t', content='c', branch=branch, created_by=self.user)
         OfferRecipient.objects.create(offer=student_offer, student=student, channel='whatsapp')
-        bank = Bank.objects.create(branch=branch, name='b', account_number='1')
-        Deposit.objects.create(code=n, amount=10, bank=bank)
+        Bank.objects.create(branch=branch, name='b', account_number='1')
         Person.objects.create_user(
             email=f'emp{n}@example.com', password='x', first_name='E', forth_name='E', branch=branch,
         )
@@ -53,8 +48,7 @@ class BranchDeleteTests(TestCase):
 
         self.assertRedirects(response, reverse('branch-list'))
         self.assertFalse(Branch.objects.filter(pk=self.branch.pk).exists())
-        for model in [Course, Student, Contact, Account, Payment, Offer, Call,
-                      StudentOffer, OfferRecipient, Bank, Deposit]:
+        for model in [Course, Student, Contact, Account, StudentOffer, OfferRecipient, Bank]:
             self.assertEqual(model.objects.count(), 1, model.__name__)
         # التخصصات مشتركة بين الفروع، فمش بتتمسح مع الفرع
         self.assertEqual(Master.objects.count(), 2)

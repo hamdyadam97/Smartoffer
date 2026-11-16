@@ -9,13 +9,22 @@ class MasterForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # «دبلوم موارد بشرية» بتتسجل: النوع دبلوم + الاسم «موارد بشرية»
+        program_type, name = Master.split_type_prefix(cleaned_data.get('name'))
+        if program_type:
+            cleaned_data['program_type'] = program_type
+            cleaned_data['name'] = name
+        return cleaned_data
+
     class Meta:
         model = Master
         fields = ['program_type', 'code', 'name', 'period', 'hours']
         widgets = {
             'program_type': forms.Select(attrs={'class': 'form-select'}),
             'code': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'يتم التوليد تلقائيًا إذا تركته فارغًا'}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: موارد بشرية (من غير كلمة دبلوم أو دورة)'}),
             'period': forms.TextInput(attrs={'class': 'form-control'}),
             'hours': forms.NumberInput(attrs={'class': 'form-control'}),
         }

@@ -108,7 +108,7 @@ class QuickOfferForm(forms.Form):
         # التخصصات مشتركة بين كل الفروع
         self.fields['master'].queryset = Master.objects.all()
         # Display course name only in the dropdown
-        self.fields['course'].label_from_instance = lambda obj: obj.name or obj.master.name
+        self.fields['course'].label_from_instance = lambda obj: obj.name or obj.master.get_display_name()
 
     def clean(self):
         cleaned_data = super().clean()

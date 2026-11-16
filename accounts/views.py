@@ -11,10 +11,10 @@ from django.db import models
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
+from .models import Person, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 from accounts.mixins import BranchPermissionMixin, ExecutiveOnlyMixin, filter_by_branch
 from .forms import (
-    PersonCreationForm, PersonChangeForm, TeamForm,
+    PersonCreationForm, PersonChangeForm,
     BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm, PermissionForm
 )
 
@@ -67,9 +67,6 @@ class PersonListView(BranchPermissionMixin, ListView):
                 models.Q(forth_name__icontains=search) |
                 models.Q(slug__icontains=search)
             )
-        team = self.request.GET.get('team')
-        if team:
-            queryset = queryset.filter(team_id=team)
         branch = self.request.GET.get('branch')
         if branch:
             queryset = queryset.filter(branch_id=branch)
@@ -80,11 +77,9 @@ class PersonListView(BranchPermissionMixin, ListView):
         from core.models import Branch
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['teams'] = Team.objects.all().order_by('name')
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['teams'] = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
         context['roles'] = Role.objects.all().order_by('name')
         return context
 
@@ -195,124 +190,6 @@ def person_update_ajax(request, pk):
     if form.is_valid():
         form.save()
         return JsonResponse({'success': True, 'message': 'تم تحديث الموظف بنجاح'})
-    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-# ============================================================
-# Team Views
-# ============================================================
-
-class TeamListView(BranchPermissionMixin, ListView):
-    model = Team
-    template_name = 'accounts/team_list.html'
-    context_object_name = 'teams'
-    paginate_by = 20
-    required_perm = 'view_team'
-    branch_field = 'default_branch'
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = filter_by_branch(queryset, self.request.user, 'default_branch', perm=self.required_perm)
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from core.models import Branch
-        if self.request.user.is_executive():
-            context['branches'] = Branch.objects.all().order_by('code', 'name')
-        else:
-            allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
-            context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-        context['roles'] = Role.objects.all().order_by('name')
-        return context
-
-
-class TeamDetailView(BranchPermissionMixin, DetailView):
-    model = Team
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'accounts/team_detail.html'
-    context_object_name = 'team'
-    required_perm = 'view_team'
-    branch_field = 'default_branch'
-
-
-class TeamCreateView(BranchPermissionMixin, CreateView):
-    model = Team
-    form_class = TeamForm
-    template_name = 'accounts/team_form.html'
-    success_url = reverse_lazy('team-list')
-    required_perm = 'add_team'
-    branch_field = 'default_branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم إنشاء الفريق بنجاح')
-        return super().form_valid(form)
-
-
-class TeamUpdateView(BranchPermissionMixin, UpdateView):
-    model = Team
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    form_class = TeamForm
-    template_name = 'accounts/team_form.html'
-    success_url = reverse_lazy('team-list')
-    required_perm = 'change_team'
-    branch_field = 'default_branch'
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, 'تم تحديث الفريق بنجاح')
-        return super().form_valid(form)
-
-
-class TeamDeleteView(BranchPermissionMixin, DeleteView):
-    model = Team
-    slug_field = 'slug'
-    slug_url_kwarg = 'slug'
-    template_name = 'accounts/team_confirm_delete.html'
-    success_url = reverse_lazy('team-list')
-    required_perm = 'delete_team'
-    branch_field = 'default_branch'
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'تم حذف الفريق بنجاح')
-        return super().delete(request, *args, **kwargs)
-
-
-@require_POST
-@login_required
-def team_create_ajax(request):
-    if not request.user.has_perm_on_any_branch('add_team'):
-        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
-    form = TeamForm(request.POST, user=request.user)
-    if form.is_valid():
-        team = form.save()
-        return JsonResponse({'success': True, 'message': 'تم إنشاء الفريق بنجاح', 'id': team.id, 'slug': team.slug})
-    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-@require_POST
-@login_required
-def team_update_ajax(request, pk):
-    team = get_object_or_404(Team, pk=pk)
-    if not request.user.is_executive() and team.default_branch is None:
-        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
-    if not request.user.has_perm('change_team', branch=team.default_branch):
-        return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
-    form = TeamForm(request.POST, instance=team, user=request.user)
-    if form.is_valid():
-        form.save()
-        return JsonResponse({'success': True, 'message': 'تم تحديث الفريق بنجاح'})
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
@@ -667,12 +544,10 @@ class EmployeeRoleListView(BranchPermissionMixin, ListView):
         from core.models import Branch
         if self.request.user.is_executive():
             context['branches'] = Branch.objects.all().order_by('code', 'name')
-            context['teams'] = Team.objects.all().order_by('name')
             context['persons'] = Person.objects.filter(is_active=True).order_by('first_name', 'forth_name')
         else:
             allowed_ids = [b.pk for b in self.request.user.get_branches_for_perm(self.required_perm)]
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
-            context['teams'] = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
             context['persons'] = Person.objects.filter(is_active=True, branch__pk__in=allowed_ids).order_by('first_name', 'forth_name')
         context['roles'] = Role.objects.all().order_by('name')
         return context
@@ -762,15 +637,9 @@ def employeerole_bulk_create(request):
 
     # Determine persons
     person_id = request.POST.get('person')
-    team_id = request.POST.get('team')
-
-    if person_id:
-        persons = [get_object_or_404(Person, pk=person_id)]
-    elif team_id:
-        team = get_object_or_404(Team, pk=team_id)
-        persons = list(team.members.all())
-    else:
-        return JsonResponse({'success': False, 'message': 'اختر موظف أو فريق'}, status=400)
+    if not person_id:
+        return JsonResponse({'success': False, 'message': 'اختر موظف'}, status=400)
+    persons = [get_object_or_404(Person, pk=person_id)]
 
     created = 0
     skipped = 0

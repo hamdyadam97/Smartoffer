@@ -33,7 +33,7 @@
                         </small>
                     </div>
                     <small class="{% if o.slug == offer.slug %}text-white-50{% else %}text-muted{% endif %}">
-                        {{ o.branch.name }}{% if o.course %} | {{ o.course.master.name }}{% endif %}
+                        {{ o.branch.name }}{% if o.course %} | {{ o.course.master.get_display_name }}{% endif %}
                     </small>
                 </a>
                 {% endfor %}

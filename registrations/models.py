@@ -1,4 +1,3 @@
-from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
@@ -74,18 +73,6 @@ class Account(models.Model):
             return self.course_price - (self.course_price * self.course_discount_amount / 100)
         else:
             return self.course_price + (self.course_price * self.course_profit_amount / 100)
-
-    def get_paid_price(self):
-        """Calculate total paid amount"""
-        from finance.models import Payment
-        return sum(
-            (payment.amount_number for payment in self.payments.filter(type='ايرادات اساسية')),
-            Decimal(0)
-        )
-
-    def get_remain_price(self):
-        """Calculate remaining amount"""
-        return self.get_required_price() - self.get_paid_price()
 
 
 class AttachType(models.Model):

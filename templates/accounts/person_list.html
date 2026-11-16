@@ -16,16 +16,8 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <input type="text" name="search" class="form-control" placeholder="بحث بالاسم أو البريد أو الرابط..." value="{{ request.GET.search }}">
-            </div>
-            <div class="col-md-3">
-                <select name="team" class="form-select">
-                    <option value="">جميع الفرق</option>
-                    {% for team in teams %}
-                    <option value="{{ team.id }}" {% if request.GET.team == team.id|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
-                    {% endfor %}
-                </select>
             </div>
             <div class="col-md-3">
                 <select name="branch" class="form-select">
@@ -52,7 +44,7 @@
                     <th>البريد الإلكتروني</th>
                     <th>الرابط</th>
                     <th>الفرع</th>
-                    <th>الفريق</th>
+                    <th>الدور</th>
                     <th>الحالة</th>
                     <th>الإجراءات</th>
                 </tr>
@@ -65,7 +57,7 @@
                     <td>{{ person.email }}</td>
                     <td><code>{{ person.slug }}</code></td>
                     <td>{{ person.branch|default:"-" }}</td>
-                    <td>{{ person.team|default:"-" }}</td>
+                    <td>{{ person.get_main_role|default:"-" }}</td>
                     <td>
                         {% if person.is_active %}
                         <span class="badge bg-success">نشط</span>
@@ -77,7 +69,7 @@
                         <a href="{% url 'person-detail' person.slug %}" class="btn btn-sm btn-info"><i class="bi bi-eye"></i></a>
                         {% has_perm_on_branch user 'change_person' person.branch as can_change_person %}
                         {% if can_change_person %}
-                        <button type="button" class="btn btn-sm btn-warning" onclick="openPersonModal({{ person.id }}, '{{ person.email|escapejs }}', '{{ person.first_name|escapejs }}', '{{ person.second_name|escapejs }}', '{{ person.third_name|escapejs }}', '{{ person.forth_name|escapejs }}', {{ person.team_id|default:'null' }}, {{ person.branch_id|default:'null' }}, {{ person.is_staff|yesno:'true,false' }}, {{ person.is_active|yesno:'true,false' }})">
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openPersonModal({{ person.id }}, '{{ person.email|escapejs }}', '{{ person.first_name|escapejs }}', '{{ person.second_name|escapejs }}', '{{ person.third_name|escapejs }}', '{{ person.forth_name|escapejs }}', {{ person.get_main_role.id|default:'null' }}, {{ person.branch_id|default:'null' }}, {{ person.is_staff|yesno:'true,false' }}, {{ person.is_active|yesno:'true,false' }})">
                             <i class="bi bi-pencil"></i>
                         </button>
                         {% endif %}
@@ -143,16 +135,16 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="id_team" class="form-label">الفريق</label>
-                            <select name="team" id="id_team" class="form-select">
+                            <label for="id_role" class="form-label">الدور <small class="text-muted">(بيتطبق على الفرع الرئيسي)</small></label>
+                            <select name="role" id="id_role" class="form-select">
                                 <option value="">---------</option>
-                                {% for team in teams %}
-                                <option value="{{ team.id }}">{{ team.name }}</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}">{{ role.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="id_branch" class="form-label">الفرع</label>
+                            <label for="id_branch" class="form-label">الفرع الرئيسي</label>
                             <select name="branch" id="id_branch" class="form-select">
                                 <option value="">---------</option>
                                 {% for branch in branches %}
@@ -259,7 +251,7 @@
     const personSaveBtn = document.getElementById('personSaveBtn');
     const personFormErrors = document.getElementById('personFormErrors');
 
-    function openPersonModal(id, email, firstName, secondName, thirdName, forthName, teamId, branchId, isStaff, isActive) {
+    function openPersonModal(id, email, firstName, secondName, thirdName, forthName, roleId, branchId, isStaff, isActive) {
         personFormErrors.classList.add('d-none');
         personFormErrors.innerHTML = '';
         personForm.reset();
@@ -272,7 +264,7 @@
             document.getElementById('id_second_name').value = secondName || '';
             document.getElementById('id_third_name').value = thirdName || '';
             document.getElementById('id_forth_name').value = forthName || '';
-            document.getElementById('id_team').value = teamId || '';
+            document.getElementById('id_role').value = roleId || '';
             document.getElementById('id_branch').value = branchId || '';
             document.getElementById('id_is_staff').checked = isStaff || false;
             document.getElementById('id_is_active').checked = isActive !== false;

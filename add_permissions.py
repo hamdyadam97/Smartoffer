@@ -12,13 +12,6 @@ data = [
     ('add_student', 'إضافة طالب', 'students', 'student', 'add'),
     ('change_student', 'تعديل طالب', 'students', 'student', 'change'),
     ('delete_student', 'حذف طالب', 'students', 'student', 'delete'),
-    # finance
-    ('view_payment', 'عرض المدفوعات', 'finance', 'payment', 'view'),
-    ('add_payment', 'إضافة مدفوعة', 'finance', 'payment', 'add'),
-    ('change_payment', 'تعديل مدفوعة', 'finance', 'payment', 'change'),
-    ('delete_payment', 'حذف مدفوعة', 'finance', 'payment', 'delete'),
-    ('view_expense', 'عرض المصروفات', 'finance', 'expense', 'view'),
-    ('add_expense', 'إضافة مصروف', 'finance', 'expense', 'add'),
     # registrations
     ('view_registration', 'عرض التسجيلات', 'registrations', 'registration', 'view'),
     ('add_registration', 'إضافة تسجيل', 'registrations', 'registration', 'add'),
@@ -37,8 +30,6 @@ data = [
     # messaging
     ('view_message', 'عرض الرسائل', 'messaging', 'message', 'view'),
     ('add_message', 'إضافة رسالة', 'messaging', 'message', 'add'),
-    ('view_call', 'عرض المكالمات', 'messaging', 'call', 'view'),
-    ('add_call', 'إضافة مكالمة', 'messaging', 'call', 'add'),
     # accounts
     ('view_person', 'عرض الموظفين', 'accounts', 'person', 'view'),
     ('add_person', 'إضافة موظف', 'accounts', 'person', 'add'),

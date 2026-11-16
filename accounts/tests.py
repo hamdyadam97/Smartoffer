@@ -2,9 +2,9 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from core.models import Company, Branch
-from .models import Team, Person, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
+from .models import Person, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
 from .forms import (
-    TeamForm, PersonCreationForm, PersonChangeForm,
+    PersonCreationForm, PersonChangeForm,
     BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm
 )
 
@@ -24,24 +24,6 @@ def get_perm(codename):
 # ============================================================
 # Model Tests
 # ============================================================
-
-class TeamModelTest(TestCase):
-    def setUp(self):
-        self.team = Team.objects.create(
-            name='فريق المبيعات',
-            code='SALES',
-            description='فريق مبيعات المعهد'
-        )
-
-    def test_team_creation(self):
-        self.assertEqual(self.team.name, 'فريق المبيعات')
-        self.assertEqual(self.team.code, 'SALES')
-        self.assertEqual(str(self.team), 'فريق المبيعات')
-
-    def test_team_unique_code(self):
-        with self.assertRaises(Exception):
-            Team.objects.create(name='فريق آخر', code='SALES')
-
 
 class PersonModelTest(TestCase):
     def setUp(self):
@@ -300,19 +282,6 @@ class PersonModelEdgeCaseTest(TestCase):
         self.assertIn('noname@test.com', str(user))
 
 
-class TeamModelEdgeCaseTest(TestCase):
-    def test_team_blank_description(self):
-        team = Team.objects.create(name='فريق', code='T2')
-        self.assertEqual(team.description, '')
-
-    def test_team_ordering(self):
-        Team.objects.create(name='فريق ب', code='B')
-        Team.objects.create(name='فريق أ', code='A')
-        teams = list(Team.objects.all())
-        self.assertEqual(teams[0].name, 'فريق أ')
-        self.assertEqual(teams[1].name, 'فريق ب')
-
-
 class RoleModelEdgeCaseTest(TestCase):
     def test_role_permissions_default(self):
         role = Role.objects.create(name='مدير_نظام')
@@ -401,18 +370,6 @@ class BranchAccessModelEdgeCaseTest(TestCase):
 # ============================================================
 # Form Tests
 # ============================================================
-
-class TeamFormTest(TestCase):
-    def test_valid_team_form(self):
-        data = {'name': 'فريق جديد', 'code': 'NEW', 'description': 'وصف'}
-        form = TeamForm(data=data)
-        self.assertTrue(form.is_valid())
-
-    def test_invalid_team_form_missing_name(self):
-        data = {'name': '', 'code': 'NEW', 'description': 'وصف'}
-        form = TeamForm(data=data)
-        self.assertFalse(form.is_valid())
-
 
 class PersonCreationFormTest(TestCase):
     def test_valid_person_creation_form(self):
@@ -647,13 +604,11 @@ class LoginLogoutViewTest(TestCase):
 class PersonViewTest(AccountsBaseViewTest):
     def setUp(self):
         super().setUp()
-        self.team = Team.objects.create(name='فريق', code='T1')
         self.other_user = User.objects.create_user(
             email='other@test.com',
             password='testpass123',
             first_name='Other',
             forth_name='User',
-            team=self.team
         )
 
     def test_person_list_get(self):
@@ -663,11 +618,6 @@ class PersonViewTest(AccountsBaseViewTest):
 
     def test_person_list_search(self):
         response = self.client.get(reverse('person-list'), {'search': 'Other'})
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'other@test.com')
-
-    def test_person_list_filter_by_team(self):
-        response = self.client.get(reverse('person-list'), {'team': self.team.pk})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'other@test.com')
 
@@ -827,92 +777,6 @@ class PersonViewEdgeCaseTest(AccountsBaseViewTest):
     def test_redirect_after_delete(self):
         response = self.client.post(reverse('person-delete', kwargs={'slug': self.other_user.slug}))
         self.assertRedirects(response, reverse('person-list'))
-
-
-class TeamViewTest(AccountsBaseViewTest):
-    def setUp(self):
-        super().setUp()
-        self.team = Team.objects.create(name='فريق', code='T1')
-
-    def test_team_list_get(self):
-        response = self.client.get(reverse('team-list'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'فريق')
-
-    def test_team_detail_get(self):
-        response = self.client.get(reverse('team-detail', kwargs={'slug': self.team.slug}))
-        self.assertEqual(response.status_code, 200)
-
-    def test_team_create_get(self):
-        response = self.client.get(reverse('team-create'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_team_create_post(self):
-        data = {'name': 'فريق جديد', 'code': 'NEW', 'description': 'وصف'}
-        response = self.client.post(reverse('team-create'), data)
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(Team.objects.filter(code='NEW').exists())
-
-    def test_team_update_get(self):
-        response = self.client.get(reverse('team-update', kwargs={'slug': self.team.slug}))
-        self.assertEqual(response.status_code, 200)
-
-    def test_team_update_post(self):
-        data = {'name': 'فريق محدث', 'code': 'T1', 'description': 'وصف'}
-        response = self.client.post(reverse('team-update', kwargs={'slug': self.team.slug}), data)
-        self.assertEqual(response.status_code, 302)
-        self.team.refresh_from_db()
-        self.assertEqual(self.team.name, 'فريق محدث')
-
-    def test_team_delete_get(self):
-        response = self.client.get(reverse('team-delete', kwargs={'slug': self.team.slug}))
-        self.assertEqual(response.status_code, 200)
-
-    def test_team_delete_post(self):
-        response = self.client.post(reverse('team-delete', kwargs={'slug': self.team.slug}))
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(Team.objects.filter(pk=self.team.pk).exists())
-
-    def test_team_views_login_required(self):
-        self.client.logout()
-        urls = [
-            reverse('team-list'),
-            reverse('team-detail', kwargs={'slug': self.team.slug}),
-            reverse('team-create'),
-            reverse('team-update', kwargs={'slug': self.team.slug}),
-            reverse('team-delete', kwargs={'slug': self.team.slug}),
-        ]
-        for url in urls:
-            with self.subTest(url=url):
-                response = self.client.get(url)
-                self.assertEqual(response.status_code, 302)
-                self.assertTrue(response.url.startswith('/login/'))
-
-
-class TeamViewEdgeCaseTest(AccountsBaseViewTest):
-    def test_team_create_post_duplicate_code(self):
-        Team.objects.create(name='فريق', code='T1')
-        data = {'name': 'فريق آخر', 'code': 'T1', 'description': ''}
-        response = self.client.post(reverse('team-create'), data)
-        self.assertEqual(response.status_code, 200)
-
-    def test_team_update_404(self):
-        response = self.client.get(reverse('team-update', kwargs={'slug': 'no-such-slug'}))
-        self.assertEqual(response.status_code, 404)
-
-    def test_team_delete_404(self):
-        response = self.client.get(reverse('team-delete', kwargs={'slug': 'no-such-slug'}))
-        self.assertEqual(response.status_code, 404)
-
-    def test_team_redirect_after_create(self):
-        data = {'name': 'فريق جديد', 'code': 'NEW2', 'description': ''}
-        response = self.client.post(reverse('team-create'), data)
-        self.assertRedirects(response, reverse('team-list'))
-
-    def test_team_redirect_after_delete(self):
-        team = Team.objects.create(name='فريق مؤقت', code='TMP')
-        response = self.client.post(reverse('team-delete', kwargs={'slug': team.slug}))
-        self.assertRedirects(response, reverse('team-list'))
 
 
 class BranchAccessViewTest(AccountsBaseViewTest):

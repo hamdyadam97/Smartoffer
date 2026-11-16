@@ -100,7 +100,7 @@
                                     <select name="master" id="quickOfferMaster" class="form-select" required>
                                         <option value="">اختر التخصص...</option>
                                         {% for m in masters %}
-                                        <option value="{{ m.id }}">{{ m.get_program_type_display }} - {{ m.name }}</option>
+                                        <option value="{{ m.id }}">{{ m.get_display_name }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>

@@ -40,7 +40,7 @@
                     <tr><td class="fw-bold">التليفون</td><td>{{ person.phone|default:"-" }}</td></tr>
                     <tr><td class="fw-bold">العنوان</td><td>{{ person.address|default:"-" }}</td></tr>
                     <tr><td class="fw-bold">الفرع</td><td>{{ person.branch|default:"-" }}</td></tr>
-                    <tr><td class="fw-bold">الفريق</td><td>{{ person.team|default:"-" }}</td></tr>
+                    <tr><td class="fw-bold">الدور</td><td>{{ person.get_main_role|default:"-" }}</td></tr>
                 </table>
             </div>
         </div>

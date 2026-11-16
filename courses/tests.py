@@ -89,8 +89,7 @@ class CourseFormAjaxTests(TestCase):
         self.assertTrue(data['success'])
         self.assertEqual(Course.objects.get(pk=data['course']['id']).branch, self.branch)
 
-    def test_delete_course_deletes_registrations_and_payments(self):
-        from finance.models import Payment
+    def test_delete_course_deletes_registrations(self):
         from registrations.models import Account
         from students.models import Contact, Student
         course = Course.objects.create(master=self.master, branch=self.branch, code=1, target_level='الكل')
@@ -99,23 +98,19 @@ class CourseFormAjaxTests(TestCase):
             branch=self.branch,
         )
         account = Account.objects.create(course=course, student=student, code=1)
-        Payment.objects.create(account=account, code=1, amount_number=100)
         self.user.is_superuser = True
         self.user.save()
 
         confirm = self.client.get(reverse('course-delete', args=[course.pk]))
         self.assertEqual(confirm.context['accounts_count'], 1)
-        self.assertEqual(confirm.context['payments_count'], 1)
 
         response = self.client.post(reverse('course-delete', args=[course.pk]))
 
         self.assertRedirects(response, reverse('course-list'))
         self.assertFalse(Course.objects.filter(pk=course.pk).exists())
         self.assertFalse(Account.objects.filter(pk=account.pk).exists())
-        self.assertFalse(Payment.objects.filter(account_id=account.pk).exists())
 
-    def test_delete_master_deletes_courses_registrations_and_offers(self):
-        from finance.models import Call, Offer, Payment
+    def test_delete_master_deletes_courses_and_registrations(self):
         from registrations.models import Account
         from students.models import Contact, Student
         course = Course.objects.create(master=self.master, branch=self.branch, code=1, target_level='الكل')
@@ -124,15 +119,12 @@ class CourseFormAjaxTests(TestCase):
             branch=self.branch,
         )
         account = Account.objects.create(course=course, student=student, code=1)
-        Payment.objects.create(account=account, code=1, amount_number=100)
-        offer = Offer.objects.create(master=self.master, branch=self.branch, code=1, customer_name='Client')
-        Call.objects.create(offer=offer, person=self.user)
         self.user.is_superuser = True
         self.user.save()
 
         confirm = self.client.get(reverse('master-delete', args=[self.master.slug]))
         self.assertEqual(confirm.context['courses_count'], 1)
-        self.assertEqual(confirm.context['calls_count'], 1)
+        self.assertEqual(confirm.context['accounts_count'], 1)
 
         response = self.client.post(reverse('master-delete', args=[self.master.slug]))
 
@@ -140,7 +132,6 @@ class CourseFormAjaxTests(TestCase):
         self.assertFalse(Master.objects.filter(pk=self.master.pk).exists())
         self.assertFalse(Course.objects.filter(pk=course.pk).exists())
         self.assertFalse(Account.objects.filter(pk=account.pk).exists())
-        self.assertFalse(Offer.objects.filter(pk=offer.pk).exists())
 
     def test_course_create_ajax_requires_permission(self):
         # مستخدم بدون صلاحية
@@ -188,3 +179,17 @@ class CourseFormAjaxTests(TestCase):
         Course.objects.create(master=self.master, branch=other_branch, target_level='الكل')
         response = self.client.get(reverse('master-detail', args=[self.master.slug]))
         self.assertEqual(list(response.context['courses']), [mine])
+
+    def test_type_word_in_name_becomes_the_type(self):
+        response = self.client.post(reverse('master-create-ajax'), {
+            'program_type': 'دبلوم', 'name': 'دورة موارد بشرية',
+        })
+        master = Master.objects.get(pk=response.json()['master']['id'])
+        self.assertEqual((master.program_type, master.name), ('دورة', 'موارد بشرية'))
+        self.assertEqual(master.get_display_name(), 'دورة موارد بشرية')
+        self.assertEqual(response.json()['master']['display_name'], 'دورة موارد بشرية')
+
+    def test_plain_name_keeps_selected_type(self):
+        response = self.client.post(reverse('master-create-ajax'), {'program_type': 'دبلوم', 'name': 'موارد بشرية'})
+        master = Master.objects.get(pk=response.json()['master']['id'])
+        self.assertEqual(master.get_display_name(), 'دبلوم موارد بشرية')

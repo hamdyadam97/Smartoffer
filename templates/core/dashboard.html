@@ -220,8 +220,8 @@
                 <a href="{% url 'student-create' %}" class="btn btn-light text-primary fw-bold">
                     <i class="bi bi-plus-lg"></i> طالب جديد
                 </a>
-                <a href="{% url 'payment-create' %}" class="btn btn-outline-light fw-bold">
-                    <i class="bi bi-cash-stack"></i> قبض
+                <a href="{% url 'studentoffer-list' %}" class="btn btn-outline-light fw-bold">
+                    <i class="bi bi-tag"></i> عرض جديد
                 </a>
             </div>
         </div>
@@ -252,20 +252,6 @@
         </div>
     </div>
     <div class="col-xl col-lg-3 col-md-4 col-6">
-        <div class="stat-card bg-gradient-warning h-100">
-            <div class="icon-box"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-value">{{ payments_total|floatformat:0 }}</div>
-            <div class="stat-label">المدفوعات</div>
-        </div>
-    </div>
-    <div class="col-xl col-lg-3 col-md-4 col-6">
-        <div class="stat-card bg-gradient-danger h-100">
-            <div class="icon-box"><i class="bi bi-tag"></i></div>
-            <div class="stat-value">{{ offers_count }}</div>
-            <div class="stat-label">عروض الأسعار</div>
-        </div>
-    </div>
-    <div class="col-xl col-lg-3 col-md-4 col-6">
         <div class="stat-card bg-gradient-secondary h-100">
             <div class="icon-box"><i class="bi bi-building"></i></div>
             <div class="stat-value">{{ branches_count }}</div>
@@ -276,7 +262,7 @@
         <div class="stat-card bg-gradient-dark h-100">
             <div class="icon-box"><i class="bi bi-send"></i></div>
             <div class="stat-value">{{ student_offers_count }}</div>
-            <div class="stat-label">عروض الطلاب</div>
+            <div class="stat-label">عروض الأسعار</div>
         </div>
     </div>
 </div>
@@ -285,17 +271,17 @@
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
         <div class="card chart-card h-100">
-            <div class="card-header"><i class="bi bi-graph-up text-primary me-2"></i> المدفوعات الشهرية (آخر 6 أشهر)</div>
+            <div class="card-header"><i class="bi bi-graph-up text-primary me-2"></i> عروض الأسعار الشهرية (آخر 6 أشهر)</div>
             <div class="card-body">
-                <canvas id="paymentsChart" height="100"></canvas>
+                <canvas id="offersChart" height="100"></canvas>
             </div>
         </div>
     </div>
     <div class="col-lg-4">
         <div class="card chart-card h-100">
-            <div class="card-header"><i class="bi bi-pie-chart text-success me-2"></i> طرق الدفع</div>
+            <div class="card-header"><i class="bi bi-pie-chart text-success me-2"></i> حالة العروض</div>
             <div class="card-body d-flex align-items-center justify-content-center">
-                <canvas id="paymentMethodsChart" style="max-height:220px;"></canvas>
+                <canvas id="offerStatusChart" style="max-height:220px;"></canvas>
             </div>
         </div>
     </div>
@@ -313,9 +299,9 @@
     </div>
     <div class="col-lg-6">
         <div class="card chart-card h-100">
-            <div class="card-header"><i class="bi bi-pie-chart-fill text-warning me-2"></i> أنواع دفع العروض</div>
+            <div class="card-header"><i class="bi bi-pie-chart-fill text-warning me-2"></i> أنواع الدفع في التسجيلات</div>
             <div class="card-body d-flex align-items-center justify-content-center">
-                <canvas id="offerStatusChart" style="max-height:220px;"></canvas>
+                <canvas id="paymentTypeChart" style="max-height:220px;"></canvas>
             </div>
         </div>
     </div>
@@ -352,19 +338,19 @@
                     </div>
                     <div class="col-4">
                         <div class="mini-stat">
-                            <div class="mini-value">{{ bs.offers }}</div>
+                            <div class="mini-value">{{ bs.student_offers }}</div>
                             <div class="mini-label">عروض</div>
                         </div>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <small class="text-muted">الإيرادات</small>
-                    <small class="fw-bold text-primary">{{ bs.payments_total|floatformat:0 }}</small>
+                    <small class="text-muted">نسبة التسجيلات</small>
+                    <small class="fw-bold text-primary">{{ bs.registrations }}</small>
                 </div>
-                {% if payments_total > 0 %}
+                {% if registrations_count > 0 %}
                 <div class="progress progress-thin">
                     <div class="progress-bar bg-primary" role="progressbar"
-                         style="width: {% widthratio bs.payments_total payments_total 100 %}%"></div>
+                         style="width: {% widthratio bs.registrations registrations_count 100 %}%"></div>
                 </div>
                 {% else %}
                 <div class="progress progress-thin">
@@ -434,7 +420,7 @@
     <!-- Recent Student Offers -->
     <div class="col-lg-7">
         <div class="card chart-card h-100">
-            <div class="card-header"><i class="bi bi-send-check text-success me-2"></i> آخر عروض الطلاب</div>
+            <div class="card-header"><i class="bi bi-send-check text-success me-2"></i> آخر عروض الأسعار</div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -477,44 +463,8 @@
     </div>
 </div>
 
-<!-- Recent Price Offers -->
-<div class="section-title"><i class="bi bi-tags"></i> آخر عروض الأسعار</div>
-<div class="row g-3 mb-4">
-    {% for o in recent_offers %}
-    <div class="col-lg-4 col-md-6">
-        <div class="card branch-card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <h6 class="mb-1 fw-bold">{{ o.customer_name }}</h6>
-                        <small class="text-muted">{{ o.master.name }}</small>
-                    </div>
-                    <span class="badge 
-                        {% if o.master_payment_type == 'نقدي' %}bg-success
-                        {% elif o.master_payment_type == 'تقسيط' %}bg-info
-                        {% else %}bg-warning text-dark{% endif %}">
-                        {{ o.master_payment_type }}
-                    </span>
-                </div>
-                <div class="d-flex justify-content-between text-muted small mb-2">
-                    <span><i class="bi bi-cash"></i> {{ o.master_price|floatformat:0 }}</span>
-                    <span><i class="bi bi-calendar"></i> {{ o.created_at|date:"Y-m-d" }}</span>
-                </div>
-                {% if o.registered %}
-                <div class="mt-2"><span class="badge bg-primary">مسجل</span></div>
-                {% else %}
-                <div class="mt-2"><span class="badge bg-secondary">غير مسجل</span></div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12 text-muted text-center py-4">لا يوجد عروض أسعار</div>
-    {% endfor %}
-</div>
-
 <!-- Top Branches -->
-<div class="section-title"><i class="bi bi-trophy"></i> أفضل الفروع (حسب الإيرادات)</div>
+<div class="section-title"><i class="bi bi-trophy"></i> أفضل الفروع (حسب التسجيلات)</div>
 <div class="row g-3 mb-4">
     {% for tb in top_branches %}
     <div class="col-md-6 col-lg-4">
@@ -527,11 +477,11 @@
                 </div>
                 <div class="flex-grow-1">
                     <h6 class="mb-1 fw-bold">{{ tb.branch.name }}</h6>
-                    <div class="text-muted small">{{ tb.registrations }} تسجيل · {{ tb.courses }} دورة</div>
+                    <div class="text-muted small">{{ tb.courses }} دورة · {{ tb.student_offers }} عرض</div>
                 </div>
                 <div class="flex-shrink-0 text-end">
-                    <div class="fw-bold text-primary">{{ tb.payments_total|floatformat:0 }}</div>
-                    <small class="text-muted">إيراد</small>
+                    <div class="fw-bold text-primary">{{ tb.registrations }}</div>
+                    <small class="text-muted">تسجيل</small>
                 </div>
             </div>
         </div>
@@ -549,13 +499,13 @@
 Chart.defaults.font.family = "'Cairo', 'Segoe UI', sans-serif";
 Chart.defaults.color = '#94a3b8';
 
-// Payments Line Chart
-new Chart(document.getElementById('paymentsChart'), {
+// Offers Line Chart
+new Chart(document.getElementById('offersChart'), {
     type: 'line',
     data: {
         labels: {{ months_labels|safe }},
         datasets: [{
-            label: 'المدفوعات',
+            label: 'عروض الأسعار',
             data: {{ months_data|safe }},
             borderColor: '#0d6efd',
             backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -578,13 +528,13 @@ new Chart(document.getElementById('paymentsChart'), {
     }
 });
 
-// Payment Methods Doughnut
-new Chart(document.getElementById('paymentMethodsChart'), {
+// Offer Status Doughnut
+new Chart(document.getElementById('offerStatusChart'), {
     type: 'doughnut',
     data: {
-        labels: {{ payment_method_labels|safe }},
+        labels: {{ offer_status_labels|safe }},
         datasets: [{
-            data: {{ payment_method_data|safe }},
+            data: {{ offer_status_data|safe }},
             backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0'],
             borderWidth: 0
         }]
@@ -619,13 +569,13 @@ new Chart(document.getElementById('regsChart'), {
     }
 });
 
-// Offer Status Pie
-new Chart(document.getElementById('offerStatusChart'), {
+// Registration Payment Type Pie
+new Chart(document.getElementById('paymentTypeChart'), {
     type: 'pie',
     data: {
-        labels: {{ offer_status_labels|safe }},
+        labels: {{ payment_type_labels|safe }},
         datasets: [{
-            data: {{ offer_status_data|safe }},
+            data: {{ payment_type_data|safe }},
             backgroundColor: ['#198754', '#0dcaf0', '#ffc107'],
             borderWidth: 2,
             borderColor: '#fff'

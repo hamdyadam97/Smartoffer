@@ -18,7 +18,7 @@
                             <select name="course" id="r_course" class="form-select" required>
                                 <option value="">اختر الدورة...</option>
                                 {% for course in courses %}
-                                <option value="{{ course.id }}">{{ course.master.name }} - {{ course.code }}</option>
+                                <option value="{{ course.id }}">{{ course.master.get_display_name }} - {{ course.code }}</option>
                                 {% endfor %}
                             </select>
                         </div>

@@ -73,7 +73,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold"><i class="bi bi-person-check text-primary me-2"></i> إضافة دور لموظف/فريق</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-check text-primary me-2"></i> إضافة دور لموظف</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -82,9 +82,9 @@
                     {% csrf_token %}
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">الهدف <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">الموظف <span class="text-danger">*</span></label>
                         <div class="row g-2">
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <select name="person" id="bulkPerson" class="form-select">
                                     <option value="">اختر موظف...</option>
                                     {% for p in persons %}
@@ -92,16 +92,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <select name="team" id="bulkTeam" class="form-select">
-                                    <option value="">أو اختر فريق...</option>
-                                    {% for team in teams %}
-                                    <option value="{{ team.id }}">{{ team.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
                         </div>
-                        <small class="text-muted">اختر موظف واحد أو فريق كامل</small>
                     </div>
 
                     <div class="mb-3">
@@ -157,7 +148,6 @@
     const bulkBtnText = document.getElementById('bulkBtnText');
     const bulkAlert = document.getElementById('bulkAlert');
     const bulkPerson = document.getElementById('bulkPerson');
-    const bulkTeam = document.getElementById('bulkTeam');
 
     function showAlert(message, type) {
         bulkAlert.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show">' + message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
@@ -183,18 +173,9 @@
         });
     };
 
-    // Clear person when team selected and vice versa
-    bulkPerson.addEventListener('change', function() {
-        if (this.value) bulkTeam.value = '';
-    });
-    bulkTeam.addEventListener('change', function() {
-        if (this.value) bulkPerson.value = '';
-    });
-
     bulkSaveBtn.addEventListener('click', function() {
         const role = document.getElementById('bulkRole').value;
         const person = bulkPerson.value;
-        const team = bulkTeam.value;
         const allBranches = document.getElementById('selectAllBranches').checked;
         const branches = document.querySelectorAll('.branch-checkbox:checked');
 
@@ -202,8 +183,8 @@
             showAlert('اختر الدور', 'warning');
             return;
         }
-        if (!person && !team) {
-            showAlert('اختر موظف أو فريق', 'warning');
+        if (!person) {
+            showAlert('اختر الموظف', 'warning');
             return;
         }
         if (!allBranches && branches.length === 0) {

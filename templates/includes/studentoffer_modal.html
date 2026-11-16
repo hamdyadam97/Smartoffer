@@ -35,7 +35,7 @@
                             <select name="course" id="so_course" class="form-select">
                                 <option value="">اختر الدورة...</option>
                                 {% for course in courses %}
-                                <option value="{{ course.id }}">{{ course.name|default:course.master.name }}</option>
+                                <option value="{{ course.id }}">{{ course.name|default:course.master.get_display_name }}</option>
                                 {% endfor %}
                             </select>
                         </div>

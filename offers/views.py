@@ -787,7 +787,7 @@ def quick_offer_ajax(request):
         if form.is_valid():
             cd = form.cleaned_data
             offer = StudentOffer.objects.create(
-                title=cd['master'].name,
+                title=cd['master'].get_display_name(),
                 content=cd['content'],
                 branch=cd['branch'],
                 course=cd['course'],

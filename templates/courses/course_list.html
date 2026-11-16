@@ -58,7 +58,7 @@
             {% for course in courses %}
             <tr data-course-id="{{ course.pk }}">
                 <td>{{ course.code }}</td>
-                <td>{{ course.master.name }}</td>
+                <td>{{ course.master.get_display_name }}</td>
                 <td>{{ course.branch.name }}</td>
                 <td>{{ course.name|default:'-' }}</td>
                 <td>{{ course.instructor|default:'-' }}</td>
@@ -117,7 +117,7 @@
                                 <select name="master" id="courseMaster" class="form-select" required>
                                     <option value="">اختر التخصص...</option>
                                     {% for master in form_master_queryset|default:'' %}
-                                    <option value="{{ master.id }}">{{ master.code }} - {{ master.name }}</option>
+                                    <option value="{{ master.id }}">{{ master.code }} - {{ master.get_display_name }}</option>
                                     {% endfor %}
                                 </select>
                                 {% if user|has_perm:'add_master' %}
@@ -209,7 +209,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">اسم الدبلوم / الدورة <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required>
+                            <input type="text" name="name" class="form-control" placeholder="مثال: موارد بشرية (من غير كلمة دبلوم أو دورة)" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">المدة</label>
@@ -378,7 +378,7 @@
                     if (courseMaster) {
                         const option = document.createElement('option');
                         option.value = data.master.id;
-                        option.textContent = data.master.code + ' - ' + data.master.name;
+                        option.textContent = data.master.code + ' - ' + data.master.get_display_name;
                         courseMaster.appendChild(option);
                         courseMaster.value = data.master.id;
                         fillCourseFromMaster(data.master.id);

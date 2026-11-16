@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from import_export.admin import ImportExportMixin
 from import_export import resources, fields, widgets
 from core.models import Branch
-from .models import Team, Person, BranchAccess, Role, Permission, EmployeeRole, EmployeePerformance
+from .models import Person, BranchAccess, Role, Permission, EmployeeRole, EmployeePerformance
 
 
 class PersonResource(resources.ModelResource):
@@ -42,12 +42,6 @@ class PersonResource(resources.ModelResource):
         super().save_instance(instance, is_create, row, **kwargs)
 
 
-@admin.register(Team)
-class TeamAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'created_at']
-    search_fields = ['name', 'code']
-
-
 class BranchAccessInline(admin.TabularInline):
     model = BranchAccess
     extra = 1
@@ -56,14 +50,14 @@ class BranchAccessInline(admin.TabularInline):
 @admin.register(Person)
 class PersonAdmin(ImportExportMixin, UserAdmin):
     resource_class = PersonResource
-    list_display = ['email', 'get_full_name', 'team', 'branch', 'is_active', 'is_staff', 'created_at']
-    list_filter = ['is_staff', 'is_active', 'team', 'branch']
+    list_display = ['email', 'get_full_name', 'branch', 'is_active', 'is_staff', 'created_at']
+    list_filter = ['is_staff', 'is_active', 'branch']
     search_fields = ['email', 'first_name', 'forth_name', 'mobile']
     
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('المعلومات الشخصية', {'fields': ('first_name', 'second_name', 'third_name', 'forth_name', 'mobile', 'phone', 'address', 'photo')}),
-        ('الإعدادات', {'fields': ('team', 'branch', 'options')}),
+        ('الإعدادات', {'fields': ('branch', 'options')}),
         ('الصلاحيات', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('تواريخ', {'fields': ('last_login_date', 'ip_address', 'last_login')}),
     )

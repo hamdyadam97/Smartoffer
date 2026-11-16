@@ -101,26 +101,18 @@ class MasterDeleteView(BranchPermissionMixin, DeleteView):
     success_url = reverse_lazy('master-list')
 
     def get_context_data(self, **kwargs):
-        from finance.models import Payment, Offer, Call
         from registrations.models import Account
         context = super().get_context_data(**kwargs)
         context['courses_count'] = self.object.courses.count()
         context['accounts_count'] = Account.objects.filter(course__master=self.object).count()
-        context['payments_count'] = Payment.objects.filter(account__course__master=self.object).count()
-        context['offers_count'] = Offer.objects.filter(master=self.object).count()
-        context['calls_count'] = Call.objects.filter(offer__master=self.object).count()
         return context
 
     def form_valid(self, form):
-        """حذف التخصص بكل اللي مرتبط بيه: الدورات وتسجيلاتها ومدفوعاتها، وعروض الأسعار ومكالماتها."""
-        from finance.models import Payment, Offer, Call
+        """حذف التخصص بكل اللي مرتبط بيه: الدورات وتسجيلاتها."""
         from registrations.models import Account
         with transaction.atomic():
-            Payment.objects.filter(account__course__master=self.object).delete()
             Account.objects.filter(course__master=self.object).delete()
             self.object.courses.all().delete()
-            Call.objects.filter(offer__master=self.object).delete()
-            Offer.objects.filter(master=self.object).delete()
             response = super().form_valid(form)
         messages.success(self.request, 'تم حذف التخصص وكل البيانات المرتبطة به.')
         return response
@@ -220,18 +212,14 @@ class CourseDeleteView(BranchPermissionMixin, DeleteView):
     success_url = reverse_lazy('course-list')
 
     def get_context_data(self, **kwargs):
-        from finance.models import Payment
         context = super().get_context_data(**kwargs)
         context['accounts_count'] = self.object.accounts.count()
-        context['payments_count'] = Payment.objects.filter(account__course=self.object).count()
         return context
 
     def form_valid(self, form):
-        """حذف الدورة بكل اللي مرتبط بيها: المدفوعات ثم التسجيلات (ومرفقاتها وشروطها وملاحظاتها)."""
-        from finance.models import Payment
+        """حذف الدورة بكل اللي مرتبط بيها: التسجيلات (ومرفقاتها وشروطها وملاحظاتها)."""
         from registrations.models import Account
         with transaction.atomic():
-            Payment.objects.filter(account__course=self.object).delete()
             Account.objects.filter(course=self.object).delete()
             response = super().form_valid(form)
         messages.success(self.request, 'تم حذف الدورة وكل البيانات المرتبطة بها.')
@@ -261,6 +249,7 @@ def master_create_ajax(request):
                 'master': {
                     'id': master.id,
                     'name': master.name,
+                    'display_name': master.get_display_name(),
                     'code': master.code,
                     'slug': master.slug,
                 }
@@ -331,7 +320,7 @@ def course_create_ajax(request):
                 'course': {
                     'id': course.id,
                     'code': course.code,
-                    'master_name': course.master.name,
+                    'master_name': course.master.get_display_name(),
                     'instructor': course.instructor,
                     'company_name': course.company_name,
                     'target_level': course.target_level,

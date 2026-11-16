@@ -4,7 +4,6 @@ from django.urls import reverse
 from accounts.models import EmployeeRole, Permission, Person, Role
 from core.models import Branch, Company
 from courses.models import Course, Master
-from finance.models import Offer
 from registrations.models import Account
 from students.models import Contact, Student
 
@@ -30,15 +29,14 @@ class SecurityTests(TestCase):
         EmployeeRole.objects.create(
             person=self.manager, branch=self.mine,
             role=role_with('add_person', 'change_person', 'delete_person', 'view_person',
-                           'view_registration', 'add_registration', 'view_payment', 'add_payment',
-                           'view_call', 'add_call'),
+                           'view_registration', 'add_registration'),
         )
         self.admin = Person.objects.create_user(email='admin@example.com', password='x', is_superuser=True, branch=self.mine)
         self.client = Client()
 
     def test_anonymous_ajax_redirects_to_login_instead_of_crashing(self):
         for name, args in [('person-create-ajax', []), ('student-create-ajax', []),
-                           ('payment-create-ajax', []), ('call-create-ajax', [])]:
+                           ('registration-create-ajax', []), ('course-create-ajax', [])]:
             with self.subTest(name=name):
                 response = self.client.post(reverse(name, args=args))
                 self.assertEqual(response.status_code, 302)
@@ -140,16 +138,11 @@ class SecurityTests(TestCase):
         for branch in (self.mine, self.other):
             course = Course.objects.create(master=master, branch=branch, target_level='الكل')
             student = Student.objects.create(contact=Contact.objects.create(first_name=branch.name, forth_name='x'), branch=branch)
-            account = Account.objects.create(course=course, student=student, code=branch.code)
-            offer = Offer.objects.create(master=master, branch=branch, code=branch.code, customer_name=f'client-{branch.name}')
-            data[branch.pk] = (course, student, account, offer)
-        course, student, account, offer = data[self.mine.pk]
+            Account.objects.create(course=course, student=student, code=branch.code)
+            data[branch.pk] = (course, student)
+        course, student = data[self.mine.pk]
         self.client.force_login(self.manager)
 
         ctx = self.client.get(reverse('registration-list')).context
         self.assertEqual(list(ctx['courses']), [course])
         self.assertEqual(list(ctx['students']), [student])
-        self.assertEqual(list(self.client.get(reverse('payment-list')).context['accounts']), [account])
-        response = self.client.get(reverse('call-list'))
-        self.assertEqual(list(response.context['offers']), [offer])
-        self.assertNotContains(response, 'client-Other')

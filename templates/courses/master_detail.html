@@ -32,7 +32,7 @@
             <ul class="list-group list-group-flush">
                 {% for course in courses %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ course.code }} - {{ course.instructor|default:course.master.name }} <small class="text-muted">({{ course.branch.name }})</small>
+                    {{ course.code }} - {{ course.instructor|default:course.master.get_display_name }} <small class="text-muted">({{ course.branch.name }})</small>
                     <a href="{% url 'course-detail' course.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
                 </li>
                 {% empty %}

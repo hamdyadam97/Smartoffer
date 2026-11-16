@@ -33,49 +33,31 @@
 
 <!-- KPI Cards -->
 <div class="row mb-4">
-    <div class="col-md-3 mb-3">
+    <div class="col-md mb-3">
         <div class="card card-stats p-3 text-center">
             <div class="text-muted small mb-1"><i class="bi bi-mortarboard"></i> الطلاب</div>
             <div class="fw-bold fs-3 text-primary">{{ dashboard.students_total }}</div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md mb-3">
         <div class="card card-stats p-3 text-center">
             <div class="text-muted small mb-1"><i class="bi bi-journal-check"></i> التسجيلات</div>
             <div class="fw-bold fs-3 text-success">{{ dashboard.registrations_total }}</div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md mb-3">
         <div class="card card-stats p-3 text-center">
-            <div class="text-muted small mb-1"><i class="bi bi-cash-stack"></i> المدفوعات</div>
-            <div class="fw-bold fs-3 text-info">{{ dashboard.payments_total }}</div>
-        </div>
-    </div>
-    <div class="col-md-3 mb-3">
-        <div class="card card-stats p-3 text-center">
-            <div class="text-muted small mb-1"><i class="bi bi-currency-dollar"></i> الإجمالي</div>
-            <div class="fw-bold fs-3 text-warning">{{ dashboard.payments_amount|floatformat:2 }}</div>
-        </div>
-    </div>
-    <div class="col-md-3 mb-3">
-        <div class="card card-stats p-3 text-center">
-            <div class="text-muted small mb-1"><i class="bi bi-tag"></i> العروض</div>
+            <div class="text-muted small mb-1"><i class="bi bi-tag"></i> عروض الأسعار</div>
             <div class="fw-bold fs-3 text-secondary">{{ dashboard.offers_total }}</div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md mb-3">
         <div class="card card-stats p-3 text-center">
-            <div class="text-muted small mb-1"><i class="bi bi-check-circle"></i> مسجلة</div>
-            <div class="fw-bold fs-3 text-success">{{ dashboard.offers_registered }}</div>
+            <div class="text-muted small mb-1"><i class="bi bi-send-check"></i> عروض مرسلة</div>
+            <div class="fw-bold fs-3 text-info">{{ dashboard.offers_sent }}</div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card card-stats p-3 text-center">
-            <div class="text-muted small mb-1"><i class="bi bi-telephone"></i> المكالمات</div>
-            <div class="fw-bold fs-3 text-primary">{{ dashboard.calls_total }}</div>
-        </div>
-    </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-md mb-3">
         <div class="card card-stats p-3 text-center">
             <div class="text-muted small mb-1"><i class="bi bi-person-badge"></i> الموظفين</div>
             <div class="fw-bold fs-3 text-dark">{{ dashboard.employees_total }}</div>
@@ -107,17 +89,9 @@
 <div class="row mb-4">
     <div class="col-md-6 mb-3">
         <div class="card">
-            <div class="card-header bg-light"><i class="bi bi-bar-chart"></i> المكالمات (صادرة vs واردة)</div>
+            <div class="card-header bg-light"><i class="bi bi-bar-chart"></i> عروض الأسعار حسب الحالة</div>
             <div class="card-body">
-                <canvas id="callsChart" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-3">
-        <div class="card">
-            <div class="card-header bg-light"><i class="bi bi-bar-chart"></i> المدفوعات حسب الطريقة</div>
-            <div class="card-body">
-                <canvas id="paymentsChart" height="200"></canvas>
+                <canvas id="offersChart" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -135,10 +109,11 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ dashboard|json_script:"dashboard-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (function() {
-    const data = {{ dashboard|safe }};
+    const data = JSON.parse(document.getElementById('dashboard-data').textContent);
 
     // Students by Level (Pie)
     new Chart(document.getElementById('studentsChart'), {
@@ -166,28 +141,14 @@
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
 
-    // Calls by Type (Bar)
-    new Chart(document.getElementById('callsChart'), {
+    // Offers by Status (Bar)
+    new Chart(document.getElementById('offersChart'), {
         type: 'bar',
         data: {
-            labels: data.calls_by_type.map(i => i.call_type === 'OUTGOING' ? 'صادرة' : 'واردة'),
+            labels: data.offers_by_status.map(i => i.status),
             datasets: [{
-                label: 'المكالمات',
-                data: data.calls_by_type.map(i => i.count),
-                backgroundColor: ['rgba(59,130,246,0.7)', 'rgba(16,185,129,0.7)']
-            }]
-        },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
-
-    // Payments by Method (Bar)
-    new Chart(document.getElementById('paymentsChart'), {
-        type: 'bar',
-        data: {
-            labels: data.payments_by_method.map(i => i.payment_method),
-            datasets: [{
-                label: 'المبلغ',
-                data: data.payments_by_method.map(i => i.total),
+                label: 'العروض',
+                data: data.offers_by_status.map(i => i.count),
                 backgroundColor: 'rgba(245,158,11,0.7)'
             }]
         },

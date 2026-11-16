@@ -41,7 +41,21 @@ class Master(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return f"{self.code} - {self.get_display_name()}"
+
+    def get_display_name(self):
+        """الاسم الكامل اللي بيظهر في العروض: النوع + الاسم (مثلاً: دبلوم موارد بشرية)."""
+        return f"{self.program_type} {self.name}"
+
+    @classmethod
+    def split_type_prefix(cls, name):
+        """لو الاسم بادئ بـ«دبلوم» أو «دورة»، بنرجع (النوع، الاسم من غيره). غير كده (None، الاسم)."""
+        name = (name or '').strip()
+        prefixes = {'دبلوم': 'دبلوم', 'دورة': 'دورة', 'دوره': 'دورة'}
+        for prefix, program_type in prefixes.items():
+            if name.startswith(prefix + ' ') and name[len(prefix):].strip():
+                return program_type, name[len(prefix):].strip()
+        return None, name
 
 
 class Course(models.Model):
@@ -86,7 +100,7 @@ class Course(models.Model):
     def __str__(self):
         if self.name:
             return f"{self.code} - {self.name}"
-        return f"{self.code} - {self.master.name}"
+        return f"{self.code} - {self.master.get_display_name()}"
 
     def get_full_key(self):
         """Generate unique key: Branch-Master-Course"""

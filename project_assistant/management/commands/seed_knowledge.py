@@ -9,7 +9,7 @@ KNOWLEDGE_DATA = [
         'category': 'general',
         'content': (
             "Smart Offer هو نظام متكامل لإدارة المعاهد والمراكز التدريبية.\n"
-            "يوفر إدارة للطلاب والدورات والتسجيلات والمدفوعات وعروض الأسعار.\n"
+            "يوفر إدارة للطلاب والتخصصات والدورات والتسجيلات وعروض الأسعار.\n"
             "التقنيات: Python 3.11, Django 6, PostgreSQL (أو SQLite للتطوير), React 19, Vite, Tailwind CSS.\n"
             "الواجهة الأمامية تشتغل على http://localhost:5173 والخلفية على http://localhost:8000"
         ),
@@ -53,7 +53,6 @@ KNOWLEDGE_DATA = [
             "├── students/         الطلاب وجهات الاتصال\n"
             "├── courses/          التخصصات (Masters) والدورات (Courses)\n"
             "├── registrations/    تسجيل الطلاب في الدورات + المرفقات والشروط\n"
-            "├── finance/          المدفوعات (سندات القبض/الصرف) والإيداعات والسحوبات وفواتير الشراء وعروض الأسعار\n"
             "├── offers/           العروض التسويقية للطلاب والحملات\n"
             "├── messaging/        الرسائل الداخلية بين الموظفين\n"
             "├── notifications/    إشعارات التطبيق\n"
@@ -91,14 +90,13 @@ KNOWLEDGE_DATA = [
         'content': (
             "المستخدم يمثل بـ Person (مخصص بدلاً من User الافتراضي).\n"
             "• Person: يحتوي على بيانات الاتصال (4 أسماء، موبايل، صورة...)\n"
-            "• Team: فريق عمل مرتبط بدور افتراضي وفرع افتراضي\n"
             "• Role: دور/منصب مع صلاحيات (Permission) Many-to-Many\n"
             "• Permission: صلاحية ديناميكية (view, add, change, delete) لكل موديل\n"
             "• EmployeeRole: ربط Person + Role + Branch\n"
             "• BranchAccess: صلاحية وصول المستخدم لأكتر من فرع\n"
             "• EmployeePerformance: أداء موظف شهري (عروض، تفاعلات، اشتراكات)"
         ),
-        'keywords': 'accounts users persons roles permissions teams employees صلاحيات مستخدمين فريق',
+        'keywords': 'accounts users persons roles permissions employees صلاحيات مستخدمين دور',
         'order': 1,
     },
     {
@@ -110,7 +108,7 @@ KNOWLEDGE_DATA = [
             "3. EmployeeRole: يربط الموظف بدوره في فرع معين\n"
             "4. Person.has_perm(codename): يتحقق إذا كان الموظف لديه صلاحية معينة عبر أدواره\n"
             "5. Person.is_superuser = True → كل الصلاحيات\n"
-            "6. الفريق (Team) عنده default_role و default_branch، وعند حفظ Person يتم إنشاء EmployeeRole تلقائياً"
+            "6. الدور بيتحدد للموظف وهو بيتعمل، وبيتطبق على فرعه الرئيسي"
         ),
         'keywords': 'صلاحيات permissions roles employees authorization auth كيف يعمل',
         'order': 2,
@@ -173,7 +171,6 @@ KNOWLEDGE_DATA = [
             "  - course_price, course_discount_amount, course_profit_amount, course_credit_amount\n"
             "  - get_key(): Year-Branch-Master-Course-Account\n"
             "  - get_required_price(): حساب السعر حسب نوع الدفع\n"
-            "  - get_paid_price(): مجموع سندات القبض من نوع 'ايرادات اساسية'\n"
             "  - get_remain_price(): المتبقي\n"
             "• AttachType / Attach: المرفقات (Base64)\n"
             "• AccountAttach: ربط مرفق بتسجيل\n"
@@ -184,42 +181,6 @@ KNOWLEDGE_DATA = [
         'order': 1,
     },
 
-    # Finance
-    {
-        'title': 'النظام المالي (finance) - سندات القبض والصرف',
-        'category': 'finance',
-        'content': (
-            "• Payment (سند قبض):\n"
-            "  - account (التسجيل)، code، date، amount_number، amount_string\n"
-            "  - type: ايرادات اساسية / ايرادات اخرى\n"
-            "  - payment_method: CASH, BANK, CHEQUE, CARD, ONLINE\n"
-            "  - get_tax(): 5% ضريبة\n"
-            "  - get_amount_with_tax(): المبلغ + الضريبة\n"
-            "• PaymentOut (سند صرف): code، date، amount، receiver_name، reason\n"
-            "• Deposit (إيداع): code، date، amount، bank\n"
-            "• Withdraw (سحب): code، date، amount، bank\n"
-            "• BillBuyType / BillBuy: فواتير الشراء\n"
-            "• Offer (عرض سعر لعميل): مشابه لسعر التسجيل لكن للعملاء المحتملين\n"
-            "• Call (مكالمة متابعة): واردة/صادرة مرتبطة بعرض سعر"
-        ),
-        'keywords': 'finance مدفوعات سند قبض صرف إيداع سحب فاتورة شراء عرض سعر مكالمة',
-        'order': 1,
-    },
-    {
-        'title': 'طرق الدفع في النظام',
-        'category': 'finance',
-        'content': (
-            "طرق الدفع المدعومة:\n"
-            "• CASH / نقدي\n"
-            "• BANK_TRANSFER / تحويل بنكي\n"
-            "• CHEQUE / شيك\n"
-            "• CREDIT_CARD / بطاقة ائتمان\n"
-            "• ONLINE / دفع إلكتروني\n"
-            "يتم تخزينها في PaymentMethod (TextChoices) وتستخدم في Payment و PaymentOut."
-        ),
-        'keywords': 'payment method طرق دفع cash bank cheque card online',
-        'order': 2,
-    },
 
     # Offers
     {
@@ -296,7 +257,7 @@ KNOWLEDGE_DATA = [
             "• /admin/ → لوحة الإدارة\n"
             "• /login/, /logout/ → تسجيل الدخول/الخروج\n"
             "• / → Dashboard الرئيسي\n"
-            "• كل تطبيق ليه URLs مدمجة في الـ root (accounts/, core/, students/, courses/, registrations/, finance/, offers/, messaging/, notifications/, reports/)\n"
+            "• كل تطبيق ليه URLs مدمجة في الـ root (accounts/, core/, students/, courses/, registrations/, offers/, messaging/, notifications/, reports/)\n"
             "• /api/project-assistant/chat/ → API الشات بوت"
         ),
         'keywords': 'urls روابط routes links admin login dashboard api',
@@ -312,7 +273,6 @@ KNOWLEDGE_DATA = [
             "2. إنشاء Master (تخصص: دبلوم أو دورة) → Course (دورة)\n"
             "3. إنشاء Contact → Student (طالب)\n"
             "4. Account: تسجيل الطالب في الدورة (يحدد نوع الدفع والسعر)\n"
-            "5. Payment: تسجيل سند قبض للطالب (يتم خصم المتبقي تلقائياً)\n"
             "6. AccountCondition: إضافة شروط للتسجيل إن لزم\n"
             "7. AccountAttach: رفع مرفقات (Base64)"
         ),
@@ -327,10 +287,9 @@ KNOWLEDGE_DATA = [
             "2. تحديد بيانات العميل (اسم، موبايل، إيميل)\n"
             "3. تحديد نوع الدفع والسعر والخصم\n"
             "4. إرسال العرض (email/sms/whatsapp)\n"
-            "5. Call: تسجيل مكالمات متابعة\n"
             "6. إذا قبل العرض → يتم التسجيل (Account) وتحويل Offer لـ registered=True"
         ),
-        'keywords': 'عرض سعر offer تسجيل اشتراك عميل مكالمة متابعة flow',
+        'keywords': 'عرض سعر offer تسجيل اشتراك عميل متابعة flow',
         'order': 11,
     },
     {
@@ -369,7 +328,7 @@ KNOWLEDGE_DATA = [
         'category': 'howto',
         'content': (
             "خطوات إنشاء عرض سعر جديد في النظام:\n\n"
-            "1. من القائمة الجانبية، اذهب إلى **المدفوعات** ثم **عروض الأسعار**.\n"
+            "1. من القائمة الجانبية، اذهب إلى **عروض الأسعار**.\n"
             "2. اضغط على زر **إضافة عرض سعر جديد**.\n"
             "3. اختر **التخصص (Master)** المرتبط بالعرض.\n"
             "4. أدخل بيانات العميل: الاسم، رقم الموبايل، البريد الإلكتروني.\n"
@@ -378,7 +337,6 @@ KNOWLEDGE_DATA = [
             "7. اضغط **حفظ**.\n\n"
             "بعد الحفظ، يمكنك:\n"
             "• إرسال العرض للعميل عبر البريد أو الواتساب.\n"
-            "• تسجيل **مكالمة متابعة** (Call) لمعرفة رد العميل.\n"
             "• إذا وافق العميل، قم بتحويله إلى **تسجيل** (Account) في الدورة."
         ),
         'keywords': 'إزاي كيف عمل إنشاء عرض سعر offer تسعير عميل خطوات add create price quotation',
@@ -399,32 +357,10 @@ KNOWLEDGE_DATA = [
             "8. اضغط **حفظ**.\n\n"
             "بعد التسجيل:\n"
             "• سيظهر رقم التسجيل تلقائياً (مثلاً: 2025-1-101-201-301-1).\n"
-            "• يمكنك إضافة **سند قبض** (Payment) لتسديد المبلغ.\n"
             "• يمكنك إضافة **شروط** (AccountCondition) أو **مرفقات** (AccountAttach)."
         ),
         'keywords': 'إزاي كيف تسجيل طالب دورة course student registration account enroll خطوات add register',
         'order': 2,
-    },
-    {
-        'title': 'كيفية إضافة سند قبض (Payment)',
-        'category': 'howto',
-        'content': (
-            "خطوات تسجيل سند قبض للطالب:\n\n"
-            "1. اذهب إلى **المدفوعات** من القائمة الجانبية.\n"
-            "2. اضغط **سند قبض جديد**.\n"
-            "3. اختر **التسجيل (Account)** الخاص بالطالب.\n"
-            "4. أدخل **المبلغ** رقماً وكتابة.\n"
-            "5. اختر **نوع السند**: ايرادات اساسية / ايرادات اخرى.\n"
-            "6. اختر **طريقة الدفع**: نقدي / تحويل بنكي / شيك / بطاقة / دفع إلكتروني.\n"
-            "7. حدد **التاريخ**.\n"
-            "8. اضغط **حفظ**.\n\n"
-            "ملاحظات:\n"
-            "• إذا كانت 'ايرادات اساسية'، يتم احتسابها ضمن سعر الدورة.\n"
-            "• الضريبة 5% تُحسب تلقائياً.\n"
-            "• يمكنك رؤية **المتبقي** على التسجيل بعد كل سند قبض."
-        ),
-        'keywords': 'إزاي كيف إضافة سند قبض payment دفع مبلغ طالب خطوات create إيصال استلام',
-        'order': 3,
     },
     {
         'title': 'كيفية إضافة طالب جديد',
@@ -495,12 +431,12 @@ KNOWLEDGE_DATA = [
             "2. اضغط **موظف جديد**.\n"
             "3. أدخل **البريد الإلكتروني** و**كلمة المرور**.\n"
             "4. أدخل **الاسم الرباعي** و**رقم الموبايل**.\n"
-            "5. حدد **الفريق (Team)** و**الفرع الافتراضي**.\n"
+            "5. حدد **الفرع الرئيسي** و**الدور**.\n"
             "6. حدد **الحالة**: نشط / غير نشط.\n"
             "7. حدد **صلاحيات المستخدم**: staff / superuser (إن لزم).\n"
             "8. اضغط **حفظ**.\n\n"
             "بعد الحفظ:\n"
-            "• يتم إنشاء **EmployeeRole** تلقائياً بناءً على الفريق.\n"
+            "• الدور بيتطبق تلقائياً على الفرع الرئيسي للموظف.\n"
             "• يمكنك من صفحة الموظف إضافة **أدوار إضافية** أو **صلاحيات خاصة**.\n"
             "• يمكن إعطاؤه صلاحية وصول لأكثر من فرع عبر **BranchAccess**."
         ),
@@ -569,41 +505,6 @@ KNOWLEDGE_DATA = [
         'order': 10,
     },
     {
-        'title': 'كيفية تسجيل مكالمة متابعة (Call)',
-        'category': 'howto',
-        'content': (
-            "خطوات تسجيل مكالمة متابعة مع عميل:\n\n"
-            "1. اذهب إلى **المدفوعات** → **المكالمات**.\n"
-            "2. اضغط **مكالمة جديدة**.\n"
-            "3. اختر **عرض السعر (Offer)** المرتبط بالعميل.\n"
-            "4. اختر **الموظف** الذي أجرى المكالمة.\n"
-            "5. حدد **نوع المكالمة**: واردة / صادرة.\n"
-            "6. أدخل **تاريخ ووقت** المكالمة.\n"
-            "7. اكتب **ملاحظات** عن نتيجة المكالمة.\n"
-            "8. اضغط **حفظ**.\n\n"
-            "المكالمات تساعد في متابعة رحلة العميل من عرض السعر حتى الاشتراك."
-        ),
-        'keywords': 'إزاي كيف تسجيل مكالمة call متابعة عميل offer خطوات create add follow up',
-        'order': 11,
-    },
-    {
-        'title': 'كيفية إضافة سند صرف (PaymentOut)',
-        'category': 'howto',
-        'content': (
-            "خطوات إضافة سند صرف:\n\n"
-            "1. اذهب إلى **المدفوعات** من القائمة الجانبية.\n"
-            "2. اضغط **سند صرف جديد**.\n"
-            "3. أدخل **الكود** و**التاريخ**.\n"
-            "4. أدخل **المبلغ** و**اسم المستلم**.\n"
-            "5. اكتب **سبب الصرف** بالتفصيل.\n"
-            "6. اختر **طريقة الدفع**: نقدي / تحويل بنكي / شيك.\n"
-            "7. اضغط **حفظ**.\n\n"
-            "ملاحظة: سند الصرف لا يرتبط بتسجيل طالب، بل هو مصروفات عامة."
-        ),
-        'keywords': 'إزاي كيف إضافة سند صرف paymentout دفع مصروفات خطوات create add',
-        'order': 12,
-    },
-    {
         'title': 'كيفية إنشاء تقرير (ReportSnapshot)',
         'category': 'howto',
         'content': (
@@ -616,7 +517,6 @@ KNOWLEDGE_DATA = [
             "6. النظام يحسب البيانات ويخزنها كـ JSON.\n"
             "7. يمكنك رؤية التقرير في قائمة **لقطات التقارير**.\n\n"
             "التقارير تتضمن:\n"
-            "• إجمالي المدفوعات\n"
             "• عدد التسجيلات والعروض\n"
             "• أداء الفروع والموظفين"
         ),
@@ -632,13 +532,13 @@ KNOWLEDGE_DATA = [
             "1. اذهب إلى **الإدارة** → **الأدوار**.\n"
             "2. اضغط **دور جديد**.\n"
             "3. أدخل **الاسم** (مثلاً: مدير فرع، موظف استقبال).\n"
-            "4. اختر **الصلاحيات** من القائمة (view_student, add_payment, إلخ).\n"
+            "4. اختر **الصلاحيات** من القائمة (view_student, add_studentoffer, إلخ).\n"
             "5. اضغط **حفظ**.\n\n"
             "**إضافة صلاحية (Permission) جديدة:**\n"
             "1. اذهب إلى **الإدارة** → **الصلاحيات**.\n"
             "2. اضغط **صلاحية جديدة**.\n"
-            "3. أدخل **app_label** (مثلاً: students, finance).\n"
-            "4. أدخل **model_name** (مثلاً: student, payment).\n"
+            "3. أدخل **app_label** (مثلاً: students, offers).\n"
+            "4. أدخل **model_name** (مثلاً: student, studentoffer).\n"
             "5. اختر **الإجراء**: view / add / change / delete.\n"
             "6. اضغط **حفظ**.\n\n"
             "بعدها يمكنك ربط الدور بالموظف عبر **أدوار الموظفين**."
