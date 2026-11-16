@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<style>
+    {{ font_css|safe }}
+    @page { size: A4; margin: 1.5cm; }
+    body { font-family: {{ font_stack|safe }}; color: #333; line-height: 1.7; direction: rtl; }
+    .box { border: 2px solid #1e3a8a; padding: 24px; min-height: 24cm; position: relative; }
+    .header { text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 16px; }
+    .logo { height: 80px; margin-bottom: 8px; }
+    h2 { margin: 4px 0; }
+    .title { font-size: 22px; color: #1e3a8a; margin-top: 16px; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 28px; }
+    td { padding: 9px 6px; border-bottom: 1px solid #eee; }
+    td.label { width: 32%; font-weight: bold; color: #555; }
+    .footer { margin-top: 70px; width: 100%; }
+    .footer td { border: none; text-align: center; vertical-align: top; }
+    .footer img { max-height: 110px; }
+</style>
+</head>
+<body>
+<div class="box">
+    <div class="header">
+        {% if logo_b64 %}<img class="logo" src="data:image/png;base64,{{ logo_b64 }}">{% endif %}
+        <h2>{{ institute.name }}</h2>
+        {% if institute.license_number %}<div>رقم الترخيص: {{ institute.license_number }}</div>{% endif %}
+        <div class="title">مشهد تسجيل</div>
+    </div>
+    <table>
+        <tr><td class="label">رقم المشهد</td><td dir="ltr" style="text-align:right">{{ permit.number }}</td></tr>
+        <tr><td class="label">اسم الطالب</td><td>{{ client.full_name }}</td></tr>
+        <tr><td class="label">رقم الهوية</td><td>{{ client.national_id|default:'-' }}</td></tr>
+        <tr><td class="label">البرنامج</td><td>{{ program.name|default:'-' }}</td></tr>
+        {% if program.duration %}<tr><td class="label">المدة</td><td>{{ program.duration }}</td></tr>{% endif %}
+        {% if permit.study_mode %}<tr><td class="label">طريقة الدراسة</td><td>{{ permit.get_study_mode_display }}</td></tr>{% endif %}
+        <tr><td class="label">تاريخ الإصدار</td><td>{{ permit.issue_date|date:'Y-m-d' }}</td></tr>
+        <tr><td class="label">صالح حتى</td><td>{{ permit.expiry_date|date:'Y-m-d' }}</td></tr>
+    </table>
+    <table class="footer">
+        <tr>
+            <td>مسؤول التسجيل<br>{{ registration_officer|default:'' }}{% if not registration_officer and issued_by %}{{ issued_by.get_full_name }}{% endif %}
+                {% if sig_b64 %}<br><img src="data:image/png;base64,{{ sig_b64 }}">{% endif %}</td>
+            <td>ختم المعهد{% if stamp_b64 %}<br><img src="data:image/png;base64,{{ stamp_b64 }}">{% endif %}</td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>

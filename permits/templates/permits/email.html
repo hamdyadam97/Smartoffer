@@ -1,0 +1,10 @@
+<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; line-height: 1.8; color: #333;">
+    <p>مرحباً {{ name }}،</p>
+    <p>تم إصدار مشهد التسجيل الخاص بك من <strong>{{ permit.branch.name }}</strong>.</p>
+    <ul>
+        <li>رقم المشهد: <strong>{{ permit.number }}</strong></li>
+        <li>البرنامج: {{ permit.program_name|default:'-' }}</li>
+        <li>صالح حتى: {{ permit.expiry_date|date:'Y-m-d' }}</li>
+    </ul>
+    <p>تجد المشهد مرفقاً بصيغة PDF.</p>
+</div>

@@ -1,0 +1,1 @@
+{% with s=permit.effective_status %}<span class="badge {% if s == 'active' %}bg-success{% elif s == 'expired' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ permit.get_effective_status_display }}</span>{% endwith %}

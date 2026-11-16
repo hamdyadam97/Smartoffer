@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}قوالب المشاهد{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-code"></i> قوالب المشاهد</h2>
+    <a href="{% url 'permit-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> المشاهد</a>
+</div>
+<p class="text-muted">كل فرع ليه قالب PDF خاص بيه. الفرع اللي مالوش قالب بيطلع بالقالب الافتراضي (فيه لوجو الفرع ورقم الترخيص والتوقيع).</p>
+
+<table class="table table-hover align-middle">
+    <thead class="table-light"><tr><th>الفرع</th><th>الخط</th><th>الاتجاه</th><th>آخر تعديل</th><th class="text-start">إجراءات</th></tr></thead>
+    <tbody>
+        {% for t in templates %}
+        <tr>
+            <td>{{ t.branch.name }}</td>
+            <td>{{ t.get_font_family_display }}</td>
+            <td>{{ t.get_orientation_display }}</td>
+            <td>{{ t.updated_at|date:'Y-m-d H:i' }}</td>
+            <td class="text-start">
+                <a href="{% url 'permittemplate-preview' t.pk %}" target="_blank" class="btn btn-sm btn-success"><i class="bi bi-eye"></i> معاينة</a>
+                <a href="{% url 'permittemplate-update' t.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+            </td>
+        </tr>
+        {% endfor %}
+        {% for b in branches_without %}
+        <tr class="text-muted">
+            <td>{{ b.name }}</td><td colspan="3">القالب الافتراضي</td>
+            <td class="text-start"><a href="{% url 'permittemplate-create' %}?branch={{ b.pk }}" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> عمل قالب</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

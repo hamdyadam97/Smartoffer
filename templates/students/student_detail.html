@@ -46,5 +46,35 @@
     </div>
 </div>
 
+<div class="row">
+    {% if student_offers is not None %}
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-tag"></i> عروض الأسعار</div>
+            <ul class="list-group list-group-flush">
+                {% for o in student_offers %}
+                <li class="list-group-item d-flex justify-content-between"><a href="{% url 'studentoffer-detail' o.slug %}">{{ o.title }}</a><small class="text-muted">{{ o.created_at|date:'Y-m-d' }}</small></li>
+                {% empty %}<li class="list-group-item text-muted">مفيش عروض</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    {% if student_permits is not None %}
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-patch-check"></i> المشاهد</span>
+                {% if can_add_permit %}<a href="{% url 'permit-create' %}?student={{ student.slug|urlencode }}" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> إصدار مشهد</a>{% endif %}
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for permit in student_permits %}
+                <li class="list-group-item d-flex justify-content-between"><span><a href="{% url 'permit-detail' permit.pk %}" dir="ltr">{{ permit.number }}</a> - {{ permit.program_name }}</span>{% include 'permits/_status_badge.html' %}</li>
+                {% empty %}<li class="list-group-item text-muted">مفيش مشاهد</li>{% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
 {% include "includes/student_modal.html" %}
 {% endblock %}

@@ -26,6 +26,9 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = ['*']
 
+# في النسخة التجريبية: SITE_BANNER=نسخة تجريبية - البيانات هنا للتجربة بس
+SITE_BANNER = os.environ.get('SITE_BANNER', '')
+
 if not DEBUG:
     # السيرفر شغال HTTPS ورا reverse proxy
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -58,6 +61,7 @@ LOCAL_APPS = [
     'registrations',
     'finance',  # فاضل بس عشان migration مسح الجداول المالية
     'offers',
+    'permits',
     'messaging',
     'reports',
     'notifications',

@@ -724,6 +724,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    {% if site_banner %}<div style="background:#f59e0b;color:#111;text-align:center;font-weight:bold;padding:4px 8px;font-size:14px;">{{ site_banner }}</div>{% endif %}
     <nav class="navbar navbar-expand-lg navbar-custom">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'dashboard' %}"><i class="bi bi-grid-fill"></i> Smart Offer</a>
@@ -738,6 +739,7 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'course-list' %}">التخصصات</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'registration-list' %}">التسجيلات</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'studentoffer-list' %}">عروض الأسعار</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'permit-list' %}">المشاهد</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'person-list' %}">الموظفين</a></li>
                     {% endif %}
                 </ul>
@@ -805,6 +807,7 @@
                     {% if user|has_perm:'view_course' %}<li class="nav-item"><a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'course-list' %}"><i class="bi bi-journal-bookmark"></i> التخصصات</a></li>{% endif %}
                     {% if user|has_perm:'view_registration' %}<li class="nav-item"><a class="nav-link {% if '/registrations/' in request.path %}active{% endif %}" href="{% url 'registration-list' %}"><i class="bi bi-journal-check"></i> التسجيلات</a></li>{% endif %}
                     {% if user|has_perm:'view_studentoffer' %}<li class="nav-item"><a class="nav-link {% if '/student-offers/' in request.path %}active{% endif %}" href="{% url 'studentoffer-list' %}"><i class="bi bi-tag"></i> عروض الأسعار</a></li>{% endif %}
+                    {% if user|has_perm:'view_permit' %}<li class="nav-item"><a class="nav-link {% if '/permits/' in request.path %}active{% endif %}" href="{% url 'permit-list' %}"><i class="bi bi-patch-check"></i> المشاهد</a></li>{% endif %}
                     {% if user|has_perm:'view_reportsnapshot' %}<li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reportsnapshot-list' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link {% if '/project-assistant/' in request.path %}active{% endif %}" href="{% url 'project_assistant:chat_page' %}"><i class="bi bi-robot"></i> مساعد المشروع</a></li>
                 </ul>

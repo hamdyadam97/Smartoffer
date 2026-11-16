@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}قالب مشهد{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-code"></i> {% if object %}قالب مشهد {{ object.branch.name }}{% else %}قالب مشهد جديد{% endif %}</h2>
+    <div class="d-flex gap-2">
+        {% if object %}<a href="{% url 'permittemplate-preview' object.pk %}" target="_blank" class="btn btn-success"><i class="bi bi-eye"></i> معاينة</a>{% endif %}
+        <a href="{% url 'permittemplate-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
+    </div>
+</div>
+
+<div class="alert alert-light border small">{% verbatim %}
+    المتغيرات المتاحة جوه الـ HTML:
+    <code>{{ client.full_name }}</code> <code>{{ client.national_id }}</code> <code>{{ program.name }}</code>
+    <code>{{ program.duration }}</code> <code>{{ program.start_date }}</code> <code>{{ permit.number }}</code>
+    <code>{{ permit.issue_date }}</code> <code>{{ permit.expiry_date }}</code> <code>{{ institute.name }}</code>
+    <code>{{ institute.license_number }}</code> <code>{{ today }}</code> <code>{{ registration_officer }}</code>
+    والصور: <code>&lt;img src="data:image/png;base64,{{ sig_b64 }}"&gt;</code> (و <code>stamp_b64</code> و <code>logo_b64</code>).
+{% endverbatim %}</div>
+
+<div class="card"><div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="row g-3">
+            {% for field in form %}
+            <div class="{% if 'content' in field.name or field.name == 'custom_css' %}col-12{% else %}col-md-4{% endif %}">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary mt-4"><i class="bi bi-check-lg"></i> حفظ</button>
+    </form>
+</div></div>
+{% endblock %}

@@ -67,6 +67,14 @@ class StudentDetailView(BranchPermissionMixin, DetailView):
             context['branches'] = Branch.objects.all().order_by('code', 'name')
         else:
             context['branches'] = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
+        user, student = self.request.user, self.object
+        # عروض الطالب ومشاهده في نفس الصفحة
+        if user.has_perm('view_studentoffer', branch=student.branch):
+            from offers.models import StudentOffer
+            context['student_offers'] = StudentOffer.objects.filter(recipients__student=student).distinct()
+        if user.has_perm('view_permit', branch=student.branch):
+            context['student_permits'] = student.permits.select_related('branch')
+            context['can_add_permit'] = user.has_perm('add_permit', branch=student.branch)
         return context
 
 
