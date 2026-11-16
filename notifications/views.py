@@ -1,4 +1,4 @@
-from accounts.mixins import BranchPermissionMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
@@ -7,16 +7,22 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .models import AppNotification
 from .forms import AppNotificationForm
 
+# الإشعارات شخصية: كل موظف بيشوف ويعدل ويمسح إشعاراته هو بس، وأي إشعار تاني بيرجع 404.
 
-class AppNotificationListView(BranchPermissionMixin, ListView):
+
+class OwnNotificationsMixin(LoginRequiredMixin):
+    def get_queryset(self):
+        return AppNotification.objects.filter(user=self.request.user)
+
+
+class AppNotificationListView(OwnNotificationsMixin, ListView):
     model = AppNotification
     template_name = 'notifications/appnotification_list.html'
     context_object_name = 'notifications'
     paginate_by = 25
-    required_perm = 'view_appnotification'
 
     def get_queryset(self):
-        queryset = AppNotification.objects.filter(user=self.request.user)
+        queryset = super().get_queryset()
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
@@ -26,45 +32,41 @@ class AppNotificationListView(BranchPermissionMixin, ListView):
         return queryset
 
 
-class AppNotificationDetailView(BranchPermissionMixin, DetailView):
+class AppNotificationDetailView(OwnNotificationsMixin, DetailView):
     model = AppNotification
     template_name = 'notifications/appnotification_detail.html'
     context_object_name = 'notification'
-    required_perm = 'view_appnotification'
 
     def get(self, request, *args, **kwargs):
         obj = self.get_object()
-        if obj.user == request.user and not obj.is_read:
+        if not obj.is_read:
             obj.is_read = True
             obj.save()
         return super().get(request, *args, **kwargs)
 
 
-class AppNotificationCreateView(BranchPermissionMixin, SuccessMessageMixin, CreateView):
+class AppNotificationCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
     model = AppNotification
     form_class = AppNotificationForm
     template_name = 'notifications/appnotification_form.html'
     success_url = reverse_lazy('appnotification-list')
     success_message = 'تم إنشاء الإشعار بنجاح.'
-    required_perm = 'add_appnotification'
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super().form_valid(form)
 
 
-class AppNotificationUpdateView(BranchPermissionMixin, SuccessMessageMixin, UpdateView):
+class AppNotificationUpdateView(OwnNotificationsMixin, SuccessMessageMixin, UpdateView):
     model = AppNotification
     form_class = AppNotificationForm
     template_name = 'notifications/appnotification_form.html'
     success_url = reverse_lazy('appnotification-list')
     success_message = 'تم تحديث الإشعار بنجاح.'
-    required_perm = 'change_appnotification'
 
 
-class AppNotificationDeleteView(BranchPermissionMixin, SuccessMessageMixin, DeleteView):
+class AppNotificationDeleteView(OwnNotificationsMixin, SuccessMessageMixin, DeleteView):
     model = AppNotification
     template_name = 'notifications/appnotification_confirm_delete.html'
     success_url = reverse_lazy('appnotification-list')
     success_message = 'تم حذف الإشعار بنجاح.'
-    required_perm = 'delete_appnotification'

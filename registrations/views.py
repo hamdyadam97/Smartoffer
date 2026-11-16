@@ -51,8 +51,9 @@ class AccountListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['courses'] = Course.objects.select_related('master').all()
-        context['students'] = Student.objects.select_related('contact').all()
+        user = self.request.user
+        context['courses'] = filter_by_branch(Course.objects.select_related('master'), user, 'branch', perm='add_registration')
+        context['students'] = filter_by_branch(Student.objects.select_related('contact'), user, 'branch', perm='add_registration')
         return context
 
 
@@ -70,8 +71,9 @@ class AccountDetailView(BranchPermissionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['courses'] = Course.objects.select_related('master').all()
-        context['students'] = Student.objects.select_related('contact').all()
+        user = self.request.user
+        context['courses'] = filter_by_branch(Course.objects.select_related('master'), user, 'branch', perm='change_registration')
+        context['students'] = filter_by_branch(Student.objects.select_related('contact'), user, 'branch', perm='change_registration')
         return context
 
 

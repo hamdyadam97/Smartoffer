@@ -20,8 +20,7 @@ class BaseTestCase(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(
             email='test@test.com', password='test123',
-            first_name='Test', forth_name='User',
-            is_staff=True
+            first_name='Test', forth_name='User', is_superuser=True
         )
         self.client.force_login(self.user)
 
@@ -88,13 +87,10 @@ class OfferRecipientModelTests(BaseTestCase):
         expected = f"{self.student.get_full_name()} - {self.offer.title}"
         self.assertEqual(str(self.recipient), expected)
 
-    def test_unique_together(self):
-        with self.assertRaises(Exception):
-            OfferRecipient.objects.create(
-                offer=self.offer,
-                student=self.student,
-                channel='email',
-            )
+    def test_same_student_can_receive_offer_on_two_channels(self):
+        # unique_together اتشال (migration 0007): نفس الطالب ممكن ياخد العرض واتساب وإيميل
+        OfferRecipient.objects.create(offer=self.offer, student=self.student, channel='whatsapp')
+        self.assertEqual(self.offer.recipients.filter(student=self.student).count(), 2)
 
     def test_offer_cascade(self):
         # After changing on_delete to CASCADE, deleting offer deletes recipients
@@ -134,6 +130,7 @@ class StudentOfferFormTests(BaseTestCase):
             'content': 'Offer content',
             'branch': self.branch.id,
             'course': self.course.id,
+            'price': '0',
             'status': 'مسودة',
         }
         form = StudentOfferForm(data=data)
@@ -145,6 +142,7 @@ class StudentOfferFormTests(BaseTestCase):
             'content': 'Offer content',
             'branch': self.branch.id,
             'course': '',
+            'price': '0',
             'status': 'مجدولة',
             'scheduled_at': '2024-12-01T10:00',
         }
@@ -192,15 +190,18 @@ class OfferRecipientFormTests(BaseTestCase):
         form = OfferRecipientForm(data=data)
         self.assertTrue(form.is_valid())
 
-    def test_invalid_missing_student(self):
+    def test_recipient_without_student_is_allowed(self):
+        # المستلم ممكن يبقى من غير طالب مسجل (اسم وجوال بس)
         data = {
             'offer': self.offer.id,
             'student': '',
-            'channel': 'email',
+            'contact_name': 'Ali',
+            'contact_phone': '966500000000',
+            'channel': 'whatsapp',
+            'status': 'مرسل',
         }
         form = OfferRecipientForm(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn('student', form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_invalid_missing_channel(self):
         data = {
@@ -265,12 +266,6 @@ class StudentOfferViewTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_export_pdf(self):
-        from accounts.models import Role, EmployeeRole, Permission
-        role = Role.objects.create(name='offer_viewer_test')
-        perm = Permission.objects.get(codename='view_studentoffer')
-        role.permissions.add(perm)
-        EmployeeRole.objects.create(person=self.user, role=role, branch=self.branch)
-
         response = self.client.get(reverse('studentoffer-export-pdf', kwargs={'slug': self.offer.slug}))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
@@ -286,6 +281,7 @@ class StudentOfferViewTests(BaseTestCase):
             'content': 'Winter discount',
             'branch': self.branch.id,
             'course': self.course.id,
+            'price': '0',
             'status': 'مسودة',
         }
         response = self.client.post(reverse('studentoffer-create'), data)
@@ -302,6 +298,7 @@ class StudentOfferViewTests(BaseTestCase):
             'content': 'Updated discount',
             'branch': self.branch.id,
             'course': self.course.id,
+            'price': '0',
             'status': 'مجدولة',
             'scheduled_at': '2024-12-01T10:00',
         }

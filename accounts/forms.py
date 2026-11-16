@@ -55,6 +55,8 @@ class PersonCreationForm(forms.ModelForm):
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
                 self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
+                # مدير النظام بس هو اللي يقدر يعمل مدير نظام
+                del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
             self.fields['team'].queryset = Team.objects.all().order_by('name')
@@ -122,6 +124,8 @@ class PersonChangeForm(forms.ModelForm):
                 allowed_ids = [b.pk for b in allowed]
                 self.fields['branch'].queryset = Branch.objects.filter(pk__in=allowed_ids).order_by('code', 'name')
                 self.fields['team'].queryset = Team.objects.filter(default_branch__pk__in=allowed_ids).order_by('name')
+                # مدير النظام بس هو اللي يقدر يعمل مدير نظام أو يشيلها
+                del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
             self.fields['team'].queryset = Team.objects.all().order_by('name')

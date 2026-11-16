@@ -11,6 +11,16 @@ from .forms import (
 User = get_user_model()
 
 
+def get_perm(codename):
+    """الصلاحيات بتتعمل بسكريبت seed_permissions، فمش موجودة في قاعدة بيانات التيستات."""
+    action, model_name = codename.split('_', 1)
+    perm, _ = Permission.objects.get_or_create(
+        codename=codename,
+        defaults={'name': codename, 'app_label': 'test', 'model_name': model_name, 'action': action},
+    )
+    return perm
+
+
 # ============================================================
 # Model Tests
 # ============================================================
@@ -74,7 +84,7 @@ class RoleModelTest(TestCase):
         )
 
     def test_role_creation(self):
-        self.assertEqual(self.role.name, 'مدير فرع')
+        self.assertEqual(self.role.name, 'مدير_فرع')
 
 
 class EmployeeRoleModelTest(TestCase):
@@ -183,8 +193,8 @@ class BranchScopePermissionTest(TestCase):
             forth_name='User'
         )
         self.role = Role.objects.create(name=f'student_manager_{self.suffix}')
-        self.view_student = Permission.objects.get(codename='view_student')
-        self.change_student = Permission.objects.get(codename='change_student')
+        self.view_student = get_perm('view_student')
+        self.change_student = get_perm('change_student')
         self.role.permissions.add(self.view_student, self.change_student)
         EmployeeRole.objects.create(person=self.user, role=self.role, branch=self.branch_a)
 
@@ -234,7 +244,8 @@ class PersonModelEdgeCaseTest(TestCase):
             forth_name=''
         )
         self.assertEqual(user.get_full_name(), '')
-        self.assertEqual(user.get_short_name(), '')
+        # من غير اسم، الاسم المختصر بيرجع الإيميل عشان الموظف يبان في القوايم
+        self.assertEqual(user.get_short_name(), 'empty@test.com')
 
     def test_short_name_with_only_first_name(self):
         user = User.objects.create_user(
@@ -305,11 +316,11 @@ class TeamModelEdgeCaseTest(TestCase):
 class RoleModelEdgeCaseTest(TestCase):
     def test_role_permissions_default(self):
         role = Role.objects.create(name='مدير_نظام')
-        self.assertEqual(role.permissions, [])
+        self.assertEqual(role.permissions.count(), 0)
 
     def test_role_str_display(self):
         role = Role.objects.create(name='موظف_متابعة')
-        self.assertEqual(str(role), 'موظف متابعة')
+        self.assertEqual(str(role), 'موظف_متابعة')
 
 
 class EmployeePerformanceModelEdgeCaseTest(TestCase):
@@ -504,12 +515,12 @@ class BranchAccessFormTest(TestCase):
 
 class RoleFormTest(TestCase):
     def test_valid_role_form(self):
-        data = {'name': 'مدير_فرع', 'description': 'وصف', 'permissions': '[]'}
+        data = {'name': 'مدير_فرع', 'description': 'وصف'}
         form = RoleForm(data=data)
         self.assertTrue(form.is_valid())
 
     def test_invalid_role_form_missing_name(self):
-        data = {'name': '', 'description': 'وصف', 'permissions': '[]'}
+        data = {'name': '', 'description': 'وصف'}
         form = RoleForm(data=data)
         self.assertFalse(form.is_valid())
 
@@ -591,7 +602,8 @@ class AccountsBaseViewTest(TestCase):
             password='testpass123',
             first_name='Test',
             forth_name='User',
-            is_staff=True
+            is_staff=True,
+            is_superuser=True,
         )
         self.client.force_login(self.user)
 
@@ -660,7 +672,7 @@ class PersonViewTest(AccountsBaseViewTest):
         self.assertContains(response, 'other@test.com')
 
     def test_person_detail_get(self):
-        response = self.client.get(reverse('person-detail', kwargs={'pk': self.other_user.pk}))
+        response = self.client.get(reverse('person-detail', kwargs={'slug': self.other_user.slug}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'other@test.com')
 
@@ -684,7 +696,7 @@ class PersonViewTest(AccountsBaseViewTest):
         self.assertTrue(User.objects.filter(email='created@test.com').exists())
 
     def test_person_update_get(self):
-        response = self.client.get(reverse('person-update', kwargs={'pk': self.other_user.pk}))
+        response = self.client.get(reverse('person-update', kwargs={'slug': self.other_user.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_person_update_post(self):
@@ -696,17 +708,17 @@ class PersonViewTest(AccountsBaseViewTest):
             'is_active': True,
             'is_superuser': False,
         }
-        response = self.client.post(reverse('person-update', kwargs={'pk': self.other_user.pk}), data)
+        response = self.client.post(reverse('person-update', kwargs={'slug': self.other_user.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.other_user.refresh_from_db()
         self.assertEqual(self.other_user.first_name, 'Updated')
 
     def test_person_delete_get(self):
-        response = self.client.get(reverse('person-delete', kwargs={'pk': self.other_user.pk}))
+        response = self.client.get(reverse('person-delete', kwargs={'slug': self.other_user.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_person_delete_post(self):
-        response = self.client.post(reverse('person-delete', kwargs={'pk': self.other_user.pk}))
+        response = self.client.post(reverse('person-delete', kwargs={'slug': self.other_user.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(User.objects.filter(pk=self.other_user.pk).exists())
 
@@ -714,10 +726,10 @@ class PersonViewTest(AccountsBaseViewTest):
         self.client.logout()
         urls = [
             reverse('person-list'),
-            reverse('person-detail', kwargs={'pk': self.other_user.pk}),
+            reverse('person-detail', kwargs={'slug': self.other_user.slug}),
             reverse('person-create'),
-            reverse('person-update', kwargs={'pk': self.other_user.pk}),
-            reverse('person-delete', kwargs={'pk': self.other_user.pk}),
+            reverse('person-update', kwargs={'slug': self.other_user.slug}),
+            reverse('person-delete', kwargs={'slug': self.other_user.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -775,15 +787,15 @@ class PersonViewEdgeCaseTest(AccountsBaseViewTest):
         self.assertTrue(response.url.startswith('/login/'))
 
     def test_person_update_404(self):
-        response = self.client.get(reverse('person-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('person-update', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_person_delete_404(self):
-        response = self.client.get(reverse('person-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('person-delete', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_person_detail_404(self):
-        response = self.client.get(reverse('person-detail', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('person-detail', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_redirect_after_create(self):
@@ -809,11 +821,11 @@ class PersonViewEdgeCaseTest(AccountsBaseViewTest):
             'is_active': True,
             'is_superuser': False,
         }
-        response = self.client.post(reverse('person-update', kwargs={'pk': self.other_user.pk}), data)
+        response = self.client.post(reverse('person-update', kwargs={'slug': self.other_user.slug}), data)
         self.assertRedirects(response, reverse('person-list'))
 
     def test_redirect_after_delete(self):
-        response = self.client.post(reverse('person-delete', kwargs={'pk': self.other_user.pk}))
+        response = self.client.post(reverse('person-delete', kwargs={'slug': self.other_user.slug}))
         self.assertRedirects(response, reverse('person-list'))
 
 
@@ -828,7 +840,7 @@ class TeamViewTest(AccountsBaseViewTest):
         self.assertContains(response, 'فريق')
 
     def test_team_detail_get(self):
-        response = self.client.get(reverse('team-detail', kwargs={'pk': self.team.pk}))
+        response = self.client.get(reverse('team-detail', kwargs={'slug': self.team.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_team_create_get(self):
@@ -842,22 +854,22 @@ class TeamViewTest(AccountsBaseViewTest):
         self.assertTrue(Team.objects.filter(code='NEW').exists())
 
     def test_team_update_get(self):
-        response = self.client.get(reverse('team-update', kwargs={'pk': self.team.pk}))
+        response = self.client.get(reverse('team-update', kwargs={'slug': self.team.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_team_update_post(self):
         data = {'name': 'فريق محدث', 'code': 'T1', 'description': 'وصف'}
-        response = self.client.post(reverse('team-update', kwargs={'pk': self.team.pk}), data)
+        response = self.client.post(reverse('team-update', kwargs={'slug': self.team.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.team.refresh_from_db()
         self.assertEqual(self.team.name, 'فريق محدث')
 
     def test_team_delete_get(self):
-        response = self.client.get(reverse('team-delete', kwargs={'pk': self.team.pk}))
+        response = self.client.get(reverse('team-delete', kwargs={'slug': self.team.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_team_delete_post(self):
-        response = self.client.post(reverse('team-delete', kwargs={'pk': self.team.pk}))
+        response = self.client.post(reverse('team-delete', kwargs={'slug': self.team.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Team.objects.filter(pk=self.team.pk).exists())
 
@@ -865,10 +877,10 @@ class TeamViewTest(AccountsBaseViewTest):
         self.client.logout()
         urls = [
             reverse('team-list'),
-            reverse('team-detail', kwargs={'pk': self.team.pk}),
+            reverse('team-detail', kwargs={'slug': self.team.slug}),
             reverse('team-create'),
-            reverse('team-update', kwargs={'pk': self.team.pk}),
-            reverse('team-delete', kwargs={'pk': self.team.pk}),
+            reverse('team-update', kwargs={'slug': self.team.slug}),
+            reverse('team-delete', kwargs={'slug': self.team.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -885,11 +897,11 @@ class TeamViewEdgeCaseTest(AccountsBaseViewTest):
         self.assertEqual(response.status_code, 200)
 
     def test_team_update_404(self):
-        response = self.client.get(reverse('team-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('team-update', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_team_delete_404(self):
-        response = self.client.get(reverse('team-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('team-delete', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_team_redirect_after_create(self):
@@ -899,7 +911,7 @@ class TeamViewEdgeCaseTest(AccountsBaseViewTest):
 
     def test_team_redirect_after_delete(self):
         team = Team.objects.create(name='فريق مؤقت', code='TMP')
-        response = self.client.post(reverse('team-delete', kwargs={'pk': team.pk}))
+        response = self.client.post(reverse('team-delete', kwargs={'slug': team.slug}))
         self.assertRedirects(response, reverse('team-list'))
 
 
@@ -1021,7 +1033,7 @@ class RoleViewTest(AccountsBaseViewTest):
         self.assertEqual(response.status_code, 200)
 
     def test_role_detail_get(self):
-        response = self.client.get(reverse('role-detail', kwargs={'pk': self.role.pk}))
+        response = self.client.get(reverse('role-detail', kwargs={'slug': self.role.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_role_create_get(self):
@@ -1029,28 +1041,28 @@ class RoleViewTest(AccountsBaseViewTest):
         self.assertEqual(response.status_code, 200)
 
     def test_role_create_post(self):
-        data = {'name': 'موظف_متابعة', 'description': 'وصف', 'permissions': '[]'}
+        data = {'name': 'موظف_متابعة', 'description': 'وصف'}
         response = self.client.post(reverse('role-create'), data)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Role.objects.filter(name='موظف_متابعة').exists())
 
     def test_role_update_get(self):
-        response = self.client.get(reverse('role-update', kwargs={'pk': self.role.pk}))
+        response = self.client.get(reverse('role-update', kwargs={'slug': self.role.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_role_update_post(self):
-        data = {'name': 'مدير_فرع', 'description': 'وصف محدث', 'permissions': '[]'}
-        response = self.client.post(reverse('role-update', kwargs={'pk': self.role.pk}), data)
+        data = {'name': 'مدير_فرع', 'description': 'وصف محدث'}
+        response = self.client.post(reverse('role-update', kwargs={'slug': self.role.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.role.refresh_from_db()
         self.assertEqual(self.role.description, 'وصف محدث')
 
     def test_role_delete_get(self):
-        response = self.client.get(reverse('role-delete', kwargs={'pk': self.role.pk}))
+        response = self.client.get(reverse('role-delete', kwargs={'slug': self.role.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_role_delete_post(self):
-        response = self.client.post(reverse('role-delete', kwargs={'pk': self.role.pk}))
+        response = self.client.post(reverse('role-delete', kwargs={'slug': self.role.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Role.objects.filter(pk=self.role.pk).exists())
 
@@ -1058,10 +1070,10 @@ class RoleViewTest(AccountsBaseViewTest):
         self.client.logout()
         urls = [
             reverse('role-list'),
-            reverse('role-detail', kwargs={'pk': self.role.pk}),
+            reverse('role-detail', kwargs={'slug': self.role.slug}),
             reverse('role-create'),
-            reverse('role-update', kwargs={'pk': self.role.pk}),
-            reverse('role-delete', kwargs={'pk': self.role.pk}),
+            reverse('role-update', kwargs={'slug': self.role.slug}),
+            reverse('role-delete', kwargs={'slug': self.role.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -1073,26 +1085,26 @@ class RoleViewTest(AccountsBaseViewTest):
 class RoleViewEdgeCaseTest(AccountsBaseViewTest):
     def test_role_create_post_duplicate_name(self):
         Role.objects.create(name='مدير_فرع')
-        data = {'name': 'مدير_فرع', 'description': 'وصف', 'permissions': '[]'}
+        data = {'name': 'مدير_فرع', 'description': 'وصف'}
         response = self.client.post(reverse('role-create'), data)
         self.assertEqual(response.status_code, 200)
 
     def test_role_update_404(self):
-        response = self.client.get(reverse('role-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('role-update', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_role_delete_404(self):
-        response = self.client.get(reverse('role-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('role-delete', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_role_redirect_after_create(self):
-        data = {'name': 'موظف_متابعة', 'description': '', 'permissions': '[]'}
+        data = {'name': 'موظف_متابعة', 'description': ''}
         response = self.client.post(reverse('role-create'), data)
         self.assertRedirects(response, reverse('role-list'))
 
     def test_role_redirect_after_delete(self):
         role = Role.objects.create(name='مدير_نظام')
-        response = self.client.post(reverse('role-delete', kwargs={'pk': role.pk}))
+        response = self.client.post(reverse('role-delete', kwargs={'slug': role.slug}))
         self.assertRedirects(response, reverse('role-list'))
 
 

@@ -1,10 +1,13 @@
 """
 URL configuration for smartoffer_django project.
 """
+import re
+
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 
 from accounts.views import login_view, logout_view
 from core.views import dashboard
@@ -32,4 +35,9 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# الملفات المرفوعة (الشعارات والتوقيعات والصور) بتتعرض من Django حتى لو DEBUG مقفول،
+# لأن السيرفر مش متظبط يعرضها من nginx
+urlpatterns += [
+    re_path(r'^%s(?P<path>.*)$' % re.escape(settings.MEDIA_URL.lstrip('/')), serve, {'document_root': settings.MEDIA_ROOT}),
+]

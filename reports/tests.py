@@ -11,8 +11,7 @@ User = get_user_model()
 class ReportSnapshotModelTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email='t@t.com', password='123', first_name='A', forth_name='B'
-        )
+            email='t@t.com', password='123', first_name='A', forth_name='B', is_superuser=True)
         self.company = Company.objects.create(name='Test Co')
         self.branch = Branch.objects.create(name='Main', code=1, company=self.company)
 
@@ -74,8 +73,7 @@ class ReportSnapshotViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            email='t@t.com', password='123', first_name='A', forth_name='B'
-        )
+            email='t@t.com', password='123', first_name='A', forth_name='B', is_superuser=True)
         self.user2 = User.objects.create_user(
             email='t2@t.com', password='123', first_name='C', forth_name='D'
         )

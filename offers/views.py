@@ -453,6 +453,7 @@ def build_offer_pdf(offer, recipient=None):
     return buffer
 
 
+@login_required
 def export_studentoffer_pdf(request, slug):
     """Export offer as a clean, modern one-page PDF."""
     offer = get_object_or_404(StudentOffer, slug=slug)
@@ -549,7 +550,6 @@ def send_offer_email(offer, recipient, email):
 @login_required
 def send_offer_to_recipient(request, slug, recipient_pk):
     """Send an offer to a single recipient via their preferred channel."""
-    print(""""Send an offer to a single recipient via their preferred channel.""");
     offer = get_object_or_404(StudentOffer, slug=slug)
     if not request.user.has_perm('change_studentoffer', branch=offer.branch):
         raise PermissionDenied('غير مسموح لك دخول هنا')

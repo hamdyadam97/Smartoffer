@@ -106,6 +106,15 @@ class BranchPermissionMixin(LoginRequiredMixin):
         return obj
 
 
+class ExecutiveOnlyMixin:
+    """للحاجات اللي بتأثر على كل الفروع (زي الأدوار والصلاحيات): مدير النظام بس."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not request.user.is_executive():
+            raise PermissionDenied('غير مسموح لك دخول هنا')
+        return super().dispatch(request, *args, **kwargs)
+
+
 def filter_by_branch(qs, user, branch_path='branch', perm=None):
     """Filter a queryset by the user's permission-scoped branches.
 

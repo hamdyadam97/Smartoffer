@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -152,6 +153,7 @@ class StudentDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def student_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_student'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -186,6 +188,7 @@ def student_create_ajax(request):
 
 
 @require_POST
+@login_required
 def student_update_ajax(request, pk):
     student = get_object_or_404(Student, pk=pk)
     if not request.user.has_perm('change_student', branch=student.branch):

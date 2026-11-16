@@ -6,8 +6,10 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-envelope"></i> {{ message_obj.subject }}</h2>
     <div>
+        {% if message_obj.sender == request.user %}
         <a href="{% url 'internalmessage-update' message_obj.pk %}" class="btn btn-warning"><i class="bi bi-pencil"></i> تعديل</a>
         <a href="{% url 'internalmessage-delete' message_obj.pk %}" class="btn btn-danger"><i class="bi bi-trash"></i> حذف</a>
+        {% endif %}
         <a href="{% url 'internalmessage-list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right"></i> رجوع</a>
     </div>
 </div>

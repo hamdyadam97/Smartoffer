@@ -1,6 +1,8 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView
 )
@@ -10,7 +12,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from .models import Person, Team, BranchAccess, Role, EmployeeRole, EmployeePerformance, Permission
-from accounts.mixins import BranchPermissionMixin, filter_by_branch
+from accounts.mixins import BranchPermissionMixin, ExecutiveOnlyMixin, filter_by_branch
 from .forms import (
     PersonCreationForm, PersonChangeForm, TeamForm,
     BranchAccessForm, RoleForm, EmployeeRoleForm, EmployeePerformanceForm, PermissionForm
@@ -38,6 +40,13 @@ def logout_view(request):
 # ============================================================
 # Person Views
 # ============================================================
+
+def _protect_superuser(user, person):
+    """مدير النظام محدش يعدله أو يمسحه غير مدير نظام زيه."""
+    if person.is_superuser and not user.is_executive():
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    return person
+
 
 class PersonListView(BranchPermissionMixin, ListView):
     model = Person
@@ -132,6 +141,9 @@ class PersonUpdateView(BranchPermissionMixin, UpdateView):
     required_perm = 'change_person'
     branch_field = 'branch'
 
+    def get_object(self, queryset=None):
+        return _protect_superuser(self.request.user, super().get_object(queryset))
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
@@ -151,12 +163,16 @@ class PersonDeleteView(BranchPermissionMixin, DeleteView):
     required_perm = 'delete_person'
     branch_field = 'branch'
 
+    def get_object(self, queryset=None):
+        return _protect_superuser(self.request.user, super().get_object(queryset))
+
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'تم حذف المستخدم بنجاح')
         return super().delete(request, *args, **kwargs)
 
 
 @require_POST
+@login_required
 def person_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_person'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -168,9 +184,10 @@ def person_create_ajax(request):
 
 
 @require_POST
+@login_required
 def person_update_ajax(request, pk):
     person = get_object_or_404(Person, pk=pk)
-    if not request.user.is_executive() and person.branch is None:
+    if not request.user.is_executive() and (person.branch is None or person.is_superuser):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     if not request.user.has_perm('change_person', branch=person.branch):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -273,6 +290,7 @@ class TeamDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def team_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_team'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -284,6 +302,7 @@ def team_create_ajax(request):
 
 
 @require_POST
+@login_required
 def team_update_ajax(request, pk):
     team = get_object_or_404(Team, pk=pk)
     if not request.user.is_executive() and team.default_branch is None:
@@ -408,7 +427,7 @@ class RoleDetailView(BranchPermissionMixin, DetailView):
     branch_field = None
 
 
-class RoleCreateView(BranchPermissionMixin, CreateView):
+class RoleCreateView(ExecutiveOnlyMixin, BranchPermissionMixin, CreateView):
     model = Role
     form_class = RoleForm
     template_name = 'accounts/role_form.html'
@@ -438,7 +457,7 @@ class RoleCreateView(BranchPermissionMixin, CreateView):
         return super().form_valid(form)
 
 
-class RoleUpdateView(BranchPermissionMixin, UpdateView):
+class RoleUpdateView(ExecutiveOnlyMixin, BranchPermissionMixin, UpdateView):
     model = Role
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -470,7 +489,7 @@ class RoleUpdateView(BranchPermissionMixin, UpdateView):
         return super().form_valid(form)
 
 
-class RoleDeleteView(BranchPermissionMixin, DeleteView):
+class RoleDeleteView(ExecutiveOnlyMixin, BranchPermissionMixin, DeleteView):
     model = Role
     slug_field = 'slug'
     slug_url_kwarg = 'slug'
@@ -485,8 +504,9 @@ class RoleDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def role_create_ajax(request):
-    if not request.user.has_perm_on_any_branch('add_role'):
+    if not request.user.is_executive():
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     form = RoleForm(request.POST, user=request.user)
     if form.is_valid():
@@ -496,9 +516,10 @@ def role_create_ajax(request):
 
 
 @require_POST
+@login_required
 def role_update_ajax(request, pk):
     role = get_object_or_404(Role, pk=pk)
-    if not request.user.has_perm('change_role'):
+    if not request.user.is_executive():
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     form = RoleForm(request.POST, instance=role, user=request.user)
     if form.is_valid():
@@ -540,7 +561,7 @@ class PermissionListView(BranchPermissionMixin, ListView):
         return context
 
 
-class PermissionCreateView(BranchPermissionMixin, CreateView):
+class PermissionCreateView(ExecutiveOnlyMixin, BranchPermissionMixin, CreateView):
     model = Permission
     form_class = PermissionForm
     template_name = 'accounts/permission_form.html'
@@ -558,7 +579,7 @@ class PermissionCreateView(BranchPermissionMixin, CreateView):
         return super().form_valid(form)
 
 
-class PermissionUpdateView(BranchPermissionMixin, UpdateView):
+class PermissionUpdateView(ExecutiveOnlyMixin, BranchPermissionMixin, UpdateView):
     model = Permission
     form_class = PermissionForm
     template_name = 'accounts/permission_form.html'
@@ -576,7 +597,7 @@ class PermissionUpdateView(BranchPermissionMixin, UpdateView):
         return super().form_valid(form)
 
 
-class PermissionDeleteView(BranchPermissionMixin, DeleteView):
+class PermissionDeleteView(ExecutiveOnlyMixin, BranchPermissionMixin, DeleteView):
     model = Permission
     template_name = 'accounts/permission_confirm_delete.html'
     success_url = reverse_lazy('permission-list')
@@ -589,8 +610,9 @@ class PermissionDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def permission_create_ajax(request):
-    if not request.user.has_perm_on_any_branch('add_permission'):
+    if not request.user.is_executive():
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     form = PermissionForm(request.POST, user=request.user)
     if form.is_valid():
@@ -600,9 +622,10 @@ def permission_create_ajax(request):
 
 
 @require_POST
+@login_required
 def permission_update_ajax(request, pk):
     perm = get_object_or_404(Permission, pk=pk)
-    if not request.user.has_perm('change_permission'):
+    if not request.user.is_executive():
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     form = PermissionForm(request.POST, instance=perm, user=request.user)
     if form.is_valid():
@@ -704,6 +727,7 @@ class EmployeeRoleDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def employeerole_bulk_create(request):
     """Assign a role to person(s) across multiple branches."""
     if not request.user.has_perm_on_any_branch('add_employeerole'):

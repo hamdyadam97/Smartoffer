@@ -26,8 +26,7 @@ class BaseTestCase(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(
             email='test@test.com', password='test123',
-            first_name='Test', forth_name='User',
-            is_staff=True
+            first_name='Test', forth_name='User', is_superuser=True
         )
         self.client.force_login(self.user)
 

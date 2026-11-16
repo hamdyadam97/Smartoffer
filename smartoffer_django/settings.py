@@ -14,10 +14,26 @@ if os.path.exists('.env.production'):
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
+# DEBUG بيتقرا من الـ .env (DEBUG=True على جهاز التطوير بس). لو مش موجود يبقى مقفول.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', '')
+if not SECRET_KEY:
+    if not DEBUG:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('SECRET_KEY لازم يتحط في ملف .env على السيرفر.')
+    SECRET_KEY = 'django-insecure-local-development-only'
+
 ALLOWED_HOSTS = ['*']
+
+if not DEBUG:
+    # السيرفر شغال HTTPS ورا reverse proxy
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', 3600))
+    # التحويل لـ HTTPS بيعمله الـ proxy عادةً؛ فعّله من الـ .env لو محتاج
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 
 # Application definition
 DJANGO_APPS = [
@@ -124,7 +140,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = 'media/'

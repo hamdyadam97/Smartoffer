@@ -8,6 +8,13 @@ from .forms import StudentForm
 User = get_user_model()
 
 
+def default_branch():
+    """الطالب لازم يبقى تابع لفرع."""
+    company, _ = Company.objects.get_or_create(name='Test Co')
+    branch, _ = Branch.objects.get_or_create(code=1, defaults={'company': company, 'name': 'Main'})
+    return branch
+
+
 # ============================================================
 # Model Tests
 # ============================================================
@@ -59,7 +66,7 @@ class StudentModelTest(TestCase):
             mobile='0501234567',
             identity_number='1234567890'
         )
-        self.student = Student.objects.create(
+        self.student = Student.objects.create(branch=default_branch(), 
             contact=self.contact,
             level='مبتدئ',
             preferred_contact='whatsapp'
@@ -79,7 +86,7 @@ class StudentModelTest(TestCase):
             forth_name='خالد',
             mobile='0509876543'
         )
-        student = Student.objects.create(contact=contact)
+        student = Student.objects.create(branch=default_branch(), contact=contact)
         self.assertEqual(student.level, 'مبتدئ')
 
     def test_student_default_preferred_contact(self):
@@ -88,7 +95,7 @@ class StudentModelTest(TestCase):
             forth_name='خالد',
             mobile='0509876543'
         )
-        student = Student.objects.create(contact=contact)
+        student = Student.objects.create(branch=default_branch(), contact=contact)
         self.assertEqual(student.preferred_contact, 'whatsapp')
 
 
@@ -134,7 +141,7 @@ class StudentModelEdgeCaseTest(TestCase):
             forth_name='أحمد',
             mobile='0501234567'
         )
-        student = Student.objects.create(contact=contact)
+        student = Student.objects.create(branch=default_branch(), contact=contact)
         student_pk = student.pk
         contact.delete()
         self.assertFalse(Student.objects.filter(pk=student_pk).exists())
@@ -144,7 +151,7 @@ class StudentModelEdgeCaseTest(TestCase):
         for level in ['مبتدئ', 'متوسط', 'متقدم']:
             with self.subTest(level=level):
                 c = Contact.objects.create(first_name=f'ت{level}', forth_name='ت')
-                student = Student.objects.create(contact=c, level=level)
+                student = Student.objects.create(branch=default_branch(), contact=c, level=level)
                 self.assertEqual(student.level, level)
 
     def test_student_preferred_contact_choices(self):
@@ -152,7 +159,7 @@ class StudentModelEdgeCaseTest(TestCase):
         for method in ['email', 'whatsapp', 'app']:
             with self.subTest(method=method):
                 c = Contact.objects.create(first_name=f'ت{method}', forth_name='ت')
-                student = Student.objects.create(contact=c, preferred_contact=method)
+                student = Student.objects.create(branch=default_branch(), contact=c, preferred_contact=method)
                 self.assertEqual(student.preferred_contact, method)
 
 
@@ -166,6 +173,7 @@ class StudentFormTest(TestCase):
             'first_name': 'محمد',
             'forth_name': 'أحمد',
             'mobile': '0501234567',
+            'branch': default_branch().pk,
             'level': 'مبتدئ',
             'preferred_contact': 'whatsapp',
         }
@@ -189,6 +197,7 @@ class StudentFormTest(TestCase):
             'birth_location': 'جدة',
             'qualification': 'بكالوريوس',
             'photo': '',
+            'branch': default_branch().pk,
             'level': 'متوسط',
             'preferred_contact': 'email',
         }
@@ -199,6 +208,7 @@ class StudentFormTest(TestCase):
         data = {
             'first_name': '',
             'forth_name': 'أحمد',
+            'branch': default_branch().pk,
             'level': 'مبتدئ',
             'preferred_contact': 'whatsapp',
         }
@@ -209,6 +219,7 @@ class StudentFormTest(TestCase):
         data = {
             'first_name': 'محمد',
             'forth_name': '',
+            'branch': default_branch().pk,
             'level': 'مبتدئ',
             'preferred_contact': 'whatsapp',
         }
@@ -233,7 +244,7 @@ class StudentFormTest(TestCase):
             qualification='بكالوريوس',
             photo='data:image/png;base64,abc',
         )
-        student = Student.objects.create(contact=contact, level='متقدم', preferred_contact='app')
+        student = Student.objects.create(branch=default_branch(), contact=contact, level='متقدم', preferred_contact='app')
         form = StudentForm(instance=student)
         self.assertEqual(form.fields['first_name'].initial, 'محمد')
         self.assertEqual(form.fields['second_name'].initial, 'علي')
@@ -263,8 +274,7 @@ class StudentViewTest(TestCase):
             email='test@test.com',
             password='testpass123',
             first_name='Test',
-            forth_name='User',
-            is_staff=True
+            forth_name='User', is_superuser=True
         )
         self.client.force_login(self.user)
         self.contact = Contact.objects.create(
@@ -273,7 +283,7 @@ class StudentViewTest(TestCase):
             mobile='0501234567',
             identity_number='1234567890'
         )
-        self.student = Student.objects.create(
+        self.student = Student.objects.create(branch=default_branch(), 
             contact=self.contact,
             level='مبتدئ',
             preferred_contact='whatsapp'
@@ -284,7 +294,7 @@ class StudentViewTest(TestCase):
             mobile='0509876543',
             identity_number='0987654321'
         )
-        self.student2 = Student.objects.create(
+        self.student2 = Student.objects.create(branch=default_branch(), 
             contact=self.contact2,
             level='متوسط',
             preferred_contact='email'
@@ -322,7 +332,7 @@ class StudentViewTest(TestCase):
         self.assertContains(response, 'علي خالد')
 
     def test_student_detail_get(self):
-        response = self.client.get(reverse('student-detail', kwargs={'pk': self.student.pk}))
+        response = self.client.get(reverse('student-detail', kwargs={'slug': self.student.slug}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'محمد أحمد')
 
@@ -347,6 +357,7 @@ class StudentViewTest(TestCase):
             'birth_location': '',
             'qualification': '',
             'photo': '',
+            'branch': default_branch().pk,
             'level': 'متقدم',
             'preferred_contact': 'app',
         }
@@ -355,7 +366,7 @@ class StudentViewTest(TestCase):
         self.assertTrue(Student.objects.filter(contact__first_name='خالد', contact__forth_name='سالم').exists())
 
     def test_student_update_get(self):
-        response = self.client.get(reverse('student-update', kwargs={'pk': self.student.pk}))
+        response = self.client.get(reverse('student-update', kwargs={'slug': self.student.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_student_update_post(self):
@@ -375,10 +386,11 @@ class StudentViewTest(TestCase):
             'birth_location': '',
             'qualification': '',
             'photo': '',
+            'branch': default_branch().pk,
             'level': 'متوسط',
             'preferred_contact': 'email',
         }
-        response = self.client.post(reverse('student-update', kwargs={'pk': self.student.pk}), data)
+        response = self.client.post(reverse('student-update', kwargs={'slug': self.student.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.student.refresh_from_db()
         self.contact.refresh_from_db()
@@ -386,11 +398,11 @@ class StudentViewTest(TestCase):
         self.assertEqual(self.contact.address, 'الدمام')
 
     def test_student_delete_get(self):
-        response = self.client.get(reverse('student-delete', kwargs={'pk': self.student.pk}))
+        response = self.client.get(reverse('student-delete', kwargs={'slug': self.student.slug}))
         self.assertEqual(response.status_code, 200)
 
     def test_student_delete_post(self):
-        response = self.client.post(reverse('student-delete', kwargs={'pk': self.student.pk}))
+        response = self.client.post(reverse('student-delete', kwargs={'slug': self.student.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Student.objects.filter(pk=self.student.pk).exists())
         # Contact is NOT cascade-deleted when student is deleted (CASCADE is on Student side)
@@ -400,10 +412,10 @@ class StudentViewTest(TestCase):
         self.client.logout()
         urls = [
             reverse('student-list'),
-            reverse('student-detail', kwargs={'pk': self.student.pk}),
+            reverse('student-detail', kwargs={'slug': self.student.slug}),
             reverse('student-create'),
-            reverse('student-update', kwargs={'pk': self.student.pk}),
-            reverse('student-delete', kwargs={'pk': self.student.pk}),
+            reverse('student-update', kwargs={'slug': self.student.slug}),
+            reverse('student-delete', kwargs={'slug': self.student.slug}),
         ]
         for url in urls:
             with self.subTest(url=url):
@@ -423,8 +435,7 @@ class StudentViewEdgeCaseTest(TestCase):
             email='test@test.com',
             password='testpass123',
             first_name='Test',
-            forth_name='User',
-            is_staff=True
+            forth_name='User', is_superuser=True
         )
         self.client.force_login(self.user)
         self.contact = Contact.objects.create(
@@ -432,7 +443,7 @@ class StudentViewEdgeCaseTest(TestCase):
             forth_name='أحمد',
             mobile='0501234567',
         )
-        self.student = Student.objects.create(
+        self.student = Student.objects.create(branch=default_branch(), 
             contact=self.contact,
             level='مبتدئ',
             preferred_contact='whatsapp'
@@ -442,7 +453,7 @@ class StudentViewEdgeCaseTest(TestCase):
             forth_name='خالد',
             mobile='0509876543',
         )
-        self.student2 = Student.objects.create(
+        self.student2 = Student.objects.create(branch=default_branch(), 
             contact=self.contact2,
             level='متوسط',
             preferred_contact='email'
@@ -477,6 +488,7 @@ class StudentViewEdgeCaseTest(TestCase):
             'first_name': '',
             'forth_name': 'أحمد',
             'mobile': '0501234567',
+            'branch': default_branch().pk,
             'level': 'مبتدئ',
             'preferred_contact': 'whatsapp',
         }
@@ -489,6 +501,7 @@ class StudentViewEdgeCaseTest(TestCase):
         data = {
             'first_name': 'Anon',
             'forth_name': 'User',
+            'branch': default_branch().pk,
             'level': 'مبتدئ',
             'preferred_contact': 'whatsapp',
         }
@@ -500,24 +513,25 @@ class StudentViewEdgeCaseTest(TestCase):
         data = {
             'first_name': '',
             'forth_name': 'أحمد',
+            'branch': default_branch().pk,
             'level': 'متوسط',
             'preferred_contact': 'email',
         }
-        response = self.client.post(reverse('student-update', kwargs={'pk': self.student.pk}), data)
+        response = self.client.post(reverse('student-update', kwargs={'slug': self.student.slug}), data)
         self.assertEqual(response.status_code, 200)
         self.student.refresh_from_db()
         self.assertEqual(self.student.level, 'مبتدئ')
 
     def test_student_update_404(self):
-        response = self.client.get(reverse('student-update', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('student-update', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_student_delete_404(self):
-        response = self.client.get(reverse('student-delete', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('student-delete', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_student_detail_404(self):
-        response = self.client.get(reverse('student-detail', kwargs={'pk': 99999}))
+        response = self.client.get(reverse('student-detail', kwargs={'slug': 'no-such-slug'}))
         self.assertEqual(response.status_code, 404)
 
     def test_redirect_after_create(self):
@@ -525,6 +539,7 @@ class StudentViewEdgeCaseTest(TestCase):
             'first_name': 'Redirect',
             'forth_name': 'Test',
             'mobile': '0500000000',
+            'branch': default_branch().pk,
             'level': 'متقدم',
             'preferred_contact': 'app',
         }
@@ -536,14 +551,15 @@ class StudentViewEdgeCaseTest(TestCase):
             'first_name': 'محمد',
             'forth_name': 'أحمد',
             'mobile': '0501234567',
+            'branch': default_branch().pk,
             'level': 'متوسط',
             'preferred_contact': 'email',
         }
-        response = self.client.post(reverse('student-update', kwargs={'pk': self.student.pk}), data)
+        response = self.client.post(reverse('student-update', kwargs={'slug': self.student.slug}), data)
         self.assertRedirects(response, reverse('student-list'))
 
     def test_redirect_after_delete(self):
-        response = self.client.post(reverse('student-delete', kwargs={'pk': self.student.pk}))
+        response = self.client.post(reverse('student-delete', kwargs={'slug': self.student.slug}))
         self.assertRedirects(response, reverse('student-list'))
 
     def test_anonymous_post_update_redirects(self):
@@ -551,15 +567,16 @@ class StudentViewEdgeCaseTest(TestCase):
         data = {
             'first_name': 'محمد',
             'forth_name': 'أحمد',
+            'branch': default_branch().pk,
             'level': 'متوسط',
             'preferred_contact': 'email',
         }
-        response = self.client.post(reverse('student-update', kwargs={'pk': self.student.pk}), data)
+        response = self.client.post(reverse('student-update', kwargs={'slug': self.student.slug}), data)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith('/login/'))
 
     def test_anonymous_post_delete_redirects(self):
         self.client.logout()
-        response = self.client.post(reverse('student-delete', kwargs={'pk': self.student.pk}))
+        response = self.client.post(reverse('student-delete', kwargs={'slug': self.student.slug}))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith('/login/'))

@@ -30,8 +30,7 @@ class FinanceBaseTest(TestCase):
             email='test@test.com',
             password='testpass123',
             first_name='Test',
-            forth_name='User'
-        )
+            forth_name='User', is_superuser=True)
         self.client.login(username='test@test.com', password='testpass123')
 
         self.master = Master.objects.create(
@@ -704,6 +703,7 @@ class OfferFormTest(FinanceBaseTest):
     def test_valid_offer_form(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 2,
             'customer_name': 'عميل جديد',
             'customer_identity_number': '',
@@ -727,6 +727,7 @@ class OfferFormTest(FinanceBaseTest):
     def test_invalid_offer_form_missing_customer_name(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 2,
             'customer_name': '',
             'master_payment_type': 'نقدي',
@@ -1708,6 +1709,7 @@ class OfferViewTest(FinanceBaseTest):
     def test_offer_create_post(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 3,
             'customer_name': 'عميل جديد',
             'customer_identity_number': '',
@@ -1736,6 +1738,7 @@ class OfferViewTest(FinanceBaseTest):
     def test_offer_update_post(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 1,
             'customer_name': 'عميل محدث',
             'customer_identity_number': '',
@@ -1808,6 +1811,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
     def test_offer_create_post_invalid(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 3,
             'customer_name': '',
             'master_payment_type': 'نقدي',
@@ -1820,6 +1824,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
     def test_offer_create_sets_last_person(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 3,
             'customer_name': 'عميل جديد',
             'customer_identity_number': '',
@@ -1844,6 +1849,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
     def test_offer_update_sets_last_person(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 1,
             'customer_name': 'عميل محدث',
             'customer_identity_number': '',
@@ -1868,6 +1874,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
     def test_offer_redirect_after_create(self):
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 4,
             'customer_name': 'عميل redirect',
             'customer_identity_number': '',
@@ -1904,6 +1911,7 @@ class OfferViewEdgeCaseTest(FinanceBaseTest):
         self.client.logout()
         data = {
             'master': self.master.pk,
+            'branch': self.branch.pk,
             'code': 5,
             'customer_name': 'عميل',
             'master_payment_type': 'نقدي',
@@ -1955,8 +1963,8 @@ class CallViewTest(FinanceBaseTest):
     def test_call_list_filter_by_offer(self):
         response = self.client.get(reverse('call-list'), {'offer': self.offer2.pk})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'عميل آخر')
-        self.assertNotContains(response, 'عميل تجريبي')
+        # نافذة إضافة مكالمة بتعرض كل العروض، فبنشيك على الجدول نفسه
+        self.assertEqual({c.offer for c in response.context['calls']}, {self.offer2})
 
     def test_call_list_filter_by_person(self):
         response = self.client.get(reverse('call-list'), {'person': self.user.pk})

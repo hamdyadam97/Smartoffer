@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -42,7 +43,10 @@ class PaymentListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['accounts'] = Account.objects.select_related('student', 'course', 'course__master').all()
+        context['accounts'] = filter_by_branch(
+            Account.objects.select_related('student', 'course', 'course__master'),
+            self.request.user, 'course__branch', perm='add_payment',
+        )
         return context
 
 
@@ -60,7 +64,10 @@ class PaymentDetailView(BranchPermissionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['accounts'] = Account.objects.select_related('student', 'course', 'course__master').all()
+        context['accounts'] = filter_by_branch(
+            Account.objects.select_related('student', 'course', 'course__master'),
+            self.request.user, 'course__branch', perm='change_payment',
+        )
         return context
 
 
@@ -113,6 +120,7 @@ class PaymentDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def payment_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_payment'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -126,6 +134,7 @@ def payment_create_ajax(request):
 
 
 @require_POST
+@login_required
 def payment_update_ajax(request, pk):
     payment = get_object_or_404(Payment, pk=pk)
     if not request.user.has_perm('change_payment', branch=payment.account.course.branch):
@@ -582,7 +591,9 @@ class CallListView(BranchPermissionMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['offers'] = Offer.objects.select_related('master').all()
+        context['offers'] = filter_by_branch(
+            Offer.objects.select_related('master'), self.request.user, 'branch', perm='add_call',
+        )
         return context
 
 
@@ -600,7 +611,9 @@ class CallDetailView(BranchPermissionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['offers'] = Offer.objects.select_related('master').all()
+        context['offers'] = filter_by_branch(
+            Offer.objects.select_related('master'), self.request.user, 'branch', perm='change_call',
+        )
         return context
 
 
@@ -653,6 +666,7 @@ class CallDeleteView(BranchPermissionMixin, DeleteView):
 
 
 @require_POST
+@login_required
 def call_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_call'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
@@ -666,6 +680,7 @@ def call_create_ajax(request):
 
 
 @require_POST
+@login_required
 def call_update_ajax(request, pk):
     call = get_object_or_404(Call, pk=pk)
     if not request.user.has_perm('change_call', branch=call.offer.branch):

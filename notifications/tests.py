@@ -10,8 +10,7 @@ User = get_user_model()
 class AppNotificationModelTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            email='t@t.com', password='123', first_name='A', forth_name='B'
-        )
+            email='t@t.com', password='123', first_name='A', forth_name='B', is_superuser=True)
 
     def test_create_app_notification(self):
         notif = AppNotification.objects.create(
@@ -65,8 +64,7 @@ class AppNotificationViewTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(
-            email='t@t.com', password='123', first_name='A', forth_name='B'
-        )
+            email='t@t.com', password='123', first_name='A', forth_name='B', is_superuser=True)
         self.user2 = User.objects.create_user(
             email='t2@t.com', password='123', first_name='C', forth_name='D'
         )
