@@ -279,8 +279,9 @@ def build_offer_pdf(offer, recipient=None):
         contact = getattr(student, 'contact', None)
         if student:
             r_name = contact.get_full_name() if contact else student.get_full_name()
-            r_phone = contact.mobile if contact else ''
-            r_email = contact.email if contact else ''
+            # جهة الاتصال مالهاش إيميل، فالإيميل بيتاخد من بيانات المستلم
+            r_phone = (contact.mobile if contact else '') or recipient.contact_phone
+            r_email = recipient.contact_email
         else:
             r_name = recipient.contact_name or 'مستلم سريع'
             r_phone = recipient.contact_phone
@@ -562,7 +563,7 @@ def send_offer_to_recipient(request, slug, recipient_pk):
         recipient_name = recipient.contact_name or recipient.contact_phone or 'مستلم سريع'
 
     if channel == 'whatsapp':
-        phone = contact.mobile if contact else recipient.contact_phone
+        phone = (contact.mobile if contact else '') or recipient.contact_phone
         if not phone:
             messages.error(request, 'لا يوجد رقم محمول مسجل لهذا المستلم.')
             return redirect('studentoffer-detail', slug=slug)
@@ -585,7 +586,7 @@ def send_offer_to_recipient(request, slug, recipient_pk):
             logger.exception('Failed to send offer WhatsApp to %s', phone)
             messages.error(request, f'فشل إرسال واتساب: {str(e)}')
     elif channel == 'email':
-        email = contact.email if contact else recipient.contact_email
+        email = recipient.contact_email
         if not email:
             messages.warning(request, 'لا يوجد بريد إلكتروني مسجل لهذا المستلم.')
         else:
@@ -679,7 +680,7 @@ def send_offer_to_all(request, slug):
         contact = getattr(student, 'contact', None)
 
         if channel == 'whatsapp':
-            phone = contact.mobile if contact else recipient.contact_phone
+            phone = (contact.mobile if contact else '') or recipient.contact_phone
             if phone:
                 try:
                     pdf_buffer = build_offer_pdf(offer, recipient)
@@ -702,7 +703,7 @@ def send_offer_to_all(request, slug):
             else:
                 failed_count += 1
         elif channel == 'email':
-            email = contact.email if contact else recipient.contact_email
+            email = recipient.contact_email
             if email:
                 try:
                     send_offer_email(offer, recipient, email)
@@ -789,6 +790,61 @@ def quick_offer_ajax(request):
     except Exception as exc:
         logger.exception('Error in quick_offer_ajax')
         return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+
+
+@login_required
+def offer_import_template(request):
+    """تنزيل قالب إكسل لاستيراد العروض."""
+    if not request.user.has_perm_on_any_branch('add_studentoffer'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    from io import BytesIO
+    from .importer import build_template
+    buffer = BytesIO()
+    build_template().save(buffer)
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="offers-template.xlsx"'
+    return response
+
+
+@require_POST
+@login_required
+def offer_import(request):
+    """استيراد عروض قديمة من إكسل: كل صف = عرض + مستلم."""
+    if not request.user.has_perm_on_any_branch('add_studentoffer'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    from .importer import import_offers
+    uploaded = request.FILES.get('file')
+    if not uploaded:
+        messages.error(request, 'اختار ملف الإكسل الأول.')
+        return redirect('studentoffer-list')
+
+    allowed = list(Branch.objects.all()) if request.user.is_executive() else request.user.get_branches_for_perm('add_studentoffer')
+    default_branch = next((b for b in allowed if str(b.pk) == request.POST.get('branch')), None)
+    result = import_offers(
+        uploaded, request.user, default_branch, allowed,
+        register_students=request.POST.get('register_students') == 'on',
+    )
+    if result.errors:
+        shown = result.errors[:15]
+        more = f' (و{len(result.errors) - 15} غلط تاني)' if len(result.errors) > 15 else ''
+        messages.error(request, 'ما اتسجلش أي عرض. صلّح الأغلاط دي في الملف وارفعه تاني: ' + ' | '.join(shown) + more)
+        return redirect('studentoffer-list')
+
+    summary = f'تم استيراد {result.offers} عرض.'
+    if result.linked_students:
+        summary += f' {result.linked_students} منهم اتربطوا بطلاب مسجلين.'
+    if result.new_students:
+        summary += f' اتسجل {result.new_students} طالب جديد.'
+    messages.success(request, summary)
+    if result.unknown_courses:
+        messages.warning(
+            request,
+            'التخصصات دي مش موجودة في البرنامج، فاتسجلت كاسم في العرض بس: ' + '، '.join(sorted(result.unknown_courses)),
+        )
+    return redirect('studentoffer-list')
 
 
 # ============================================================

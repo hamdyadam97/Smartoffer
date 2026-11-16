@@ -7,6 +7,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="bi bi-tag"></i> عروض الطلاب</h2>
     <div class="d-flex gap-2">
+        {% if user|has_perm_on_any_branch:'add_studentoffer' %}
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importOffersModal"><i class="bi bi-file-earmark-excel"></i> استيراد من إكسل</button>
+        {% endif %}
         <button type="button" class="btn btn-success" onclick="openQuickOfferModal()"><i class="bi bi-lightning"></i> عرض سريع</button>
         <button type="button" class="btn btn-primary" onclick="openStudentOfferModal()"><i class="bi bi-plus-lg"></i> عرض جديد</button>
     </div>
@@ -71,6 +74,48 @@
 {% include "includes/pagination.html" %}
 
 {% include "includes/studentoffer_modal.html" %}
+
+<!-- Import Offers Modal -->
+<div class="modal fade" id="importOffersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'studentoffer-import' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-excel text-success me-2"></i> استيراد عروض من إكسل</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">كل صف في الملف = عرض + الشخص اللي اتبعتله. لو الجوال بتاع طالب مسجل، العرض بيتربط بيه.</p>
+                    <a href="{% url 'studentoffer-import-template' %}" class="btn btn-sm btn-outline-success mb-3"><i class="bi bi-download"></i> تنزيل القالب</a>
+                    <div class="mb-3">
+                        <label class="form-label">ملف الإكسل (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الفرع الافتراضي</label>
+                        <select name="branch" class="form-select">
+                            <option value="">---------</option>
+                            {% for b in branches %}
+                            <option value="{{ b.id }}">{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">للصفوف اللي عمود «الفرع» فيها فاضي.</div>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="register_students" id="registerStudents" class="form-check-input">
+                        <label for="registerStudents" class="form-check-label">سجّل غير المسجلين كطلاب جداد</label>
+                        <div class="form-text">لو مش متعلّم: العرض بيتسجل بالاسم والجوال بس من غير ما يتعمل طالب.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> استيراد</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Quick Offer Modal -->
 <div class="modal fade" id="quickOfferModal" tabindex="-1" aria-hidden="true">
