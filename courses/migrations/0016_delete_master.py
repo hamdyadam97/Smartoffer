@@ -5,7 +5,7 @@ class Migration(migrations.Migration):
     """بعد نقل البيانات (0014) التخصص القديم مالوش لازمة."""
 
     dependencies = [
-        ('courses', '0014_merge_master_into_course'),
+        ('courses', '0015_merge_master_data'),
         ('offers', '0013_remove_studentoffer_master'),
         ('finance', '0006_delete_finance_models'),
     ]

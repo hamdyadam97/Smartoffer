@@ -4,6 +4,9 @@ from django.db import migrations, models
 
 def copy_branch_from_master(apps, schema_editor):
     """كل عرض سعر بياخد فرع التخصص بتاعه (قبل ما التخصص يبقى مشترك بين الفروع)."""
+    # Postgres: نفحص الـ foreign keys فورًا، عشان تغيير شكل الجدول بعد البيانات ما يقعش بـ «pending trigger events»
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute('SET CONSTRAINTS ALL IMMEDIATE')
     Offer = apps.get_model('finance', 'Offer')
     for offer in Offer.objects.select_related('master'):
         offer.branch_id = offer.master.branch_id

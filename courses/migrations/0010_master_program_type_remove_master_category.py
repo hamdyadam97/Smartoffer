@@ -3,6 +3,9 @@ from django.db import migrations, models
 
 def category_to_program_type(apps, schema_editor):
     """التصنيف القديم بيتحول لنوع: لو اسمه فيه «دور» يبقى دورة، غير كده دبلوم."""
+    # Postgres: نفحص الـ foreign keys فورًا، عشان تغيير شكل الجدول بعد البيانات ما يقعش بـ «pending trigger events»
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute('SET CONSTRAINTS ALL IMMEDIATE')
     Master = apps.get_model('courses', 'Master')
     for master in Master.objects.select_related('master_category').exclude(master_category__isnull=True):
         if 'دور' in master.master_category.name:

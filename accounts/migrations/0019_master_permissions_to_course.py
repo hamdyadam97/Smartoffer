@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0018_remove_teams'),
-        ('courses', '0015_delete_master'),
+        ('courses', '0016_delete_master'),
     ]
 
     operations = [

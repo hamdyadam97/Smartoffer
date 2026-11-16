@@ -4,6 +4,9 @@ from django.db import migrations, models
 
 def copy_branch_from_master(apps, schema_editor):
     """كل دورة بتاخد فرع التخصص بتاعها (قبل ما التخصص يبقى مشترك بين الفروع)."""
+    # Postgres: نفحص الـ foreign keys فورًا، عشان تغيير شكل الجدول بعد البيانات ما يقعش بـ «pending trigger events»
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute('SET CONSTRAINTS ALL IMMEDIATE')
     Course = apps.get_model('courses', 'Course')
     for course in Course.objects.select_related('master'):
         course.branch_id = course.master.branch_id

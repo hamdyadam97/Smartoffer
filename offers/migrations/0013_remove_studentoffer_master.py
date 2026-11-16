@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('offers', '0012_remove_offerrecipient_prospect'),
-        ('courses', '0014_merge_master_into_course'),
+        ('courses', '0015_merge_master_data'),
     ]
 
     operations = [
