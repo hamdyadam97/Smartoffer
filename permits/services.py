@@ -91,6 +91,13 @@ def _font_face_css(choice):
     return '\n'.join(faces), f"'{family}', 'Arial', sans-serif"
 
 
+def _months(period):
+    """قوالب البرنامج القديم بتكتب «{{ program.duration_months }} شهر»: لو المدة «24 شهر» نرجّع 24 بس."""
+    import re
+    match = re.fullmatch(r'\s*(\d+)\s*(شهر|شهور|أشهر|اشهر)?\s*', period or '')
+    return match.group(1) if match else (period or '')
+
+
 def _file_or_none(field_file):
     return field_file if field_file else None
 
@@ -107,7 +114,7 @@ def build_context(permit):
         mobile=contact.mobile, nationality=contact.nationality, birth_date=contact.birth_date,
     )
     institute = SimpleNamespace(
-        name=branch.name, sub_name=branch.sub_name, code=branch.code, license_number=branch.licence_code,
+        name=(template.institute_name if template else '') or branch.name, sub_name=branch.sub_name, code=branch.code, license_number=branch.licence_code,
         phone=branch.mobile or branch.phone1, email=branch.email, address=branch.address,
         logo=_file_or_none(branch.logo), signature_image=_file_or_none(branch.signature),
         stamp_image=_file_or_none(template.stamp_image) if template else None,
@@ -116,7 +123,7 @@ def build_context(permit):
     program = SimpleNamespace(
         name=permit.program_name or (course.get_display_name() if course else ''),
         program_type=course.program_type if course else '',
-        duration_months=course.period if course else '', duration=course.period if course else '',
+        duration_months=_months(course.period) if course else '', duration=course.period if course else '',
         hours=course.hours if course else None,
         start_date=course.start_date if course else None, end_date=course.end_date if course else None,
     )

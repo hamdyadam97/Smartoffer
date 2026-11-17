@@ -101,6 +101,8 @@ class PermitTemplate(models.Model):
     ORIENTATION_CHOICES = [('portrait', 'طولي'), ('landscape', 'عرضي')]
 
     branch = models.OneToOneField('core.Branch', on_delete=models.CASCADE, related_name='permit_template', verbose_name='الفرع')
+    institute_name = models.CharField(max_length=255, blank=True, verbose_name='اسم المعهد في المشهد',
+                                      help_text='لو فاضي بيتكتب اسم الفرع')
     header_content = models.TextField(blank=True, verbose_name='رأس الصفحة (HTML)')
     body_content = models.TextField(blank=True, verbose_name='المحتوى (HTML)')
     footer_content = models.TextField(blank=True, verbose_name='تذييل الصفحة (HTML)')
