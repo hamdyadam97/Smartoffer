@@ -127,6 +127,52 @@ class ImportMashahedTests(TestCase):
             self.run_import('--commit')
         self.assertFalse(Permit.objects.exists())
 
+    def test_empty_sqlite_is_rejected(self):
+        db = sqlite3.connect(self.path)
+        db.execute('delete from institutes_institute')
+        db.commit()
+        db.close()
+        with self.assertRaisesMessage(CommandError, 'مفيهوش بيانات البرنامج القديم'):
+            self.run_import()
+
+    def test_dumpdata_json_source(self):
+        """البرنامج القديم على Postgres: بنطلّع بياناته بـ dumpdata ونستورد من الـ JSON."""
+        import json
+        data = [
+            {'model': 'institutes.institute', 'pk': 5, 'fields': {
+                'name': 'معهد الفاو بحفر الباطن', 'city': 'حفر الباطن', 'license_number': 'LIC-H', 'phone': '', 'email': '',
+                'address': '', 'logo': '', 'signature_image': '', 'stamp_image': '', 'background_img': '',
+                'registration_officer': 7, 'is_deleted': False}},
+            {'model': 'accounts.user', 'pk': 7, 'fields': {
+                'email': '', 'username': 'u', 'first_name': 'خالد', 'last_name': 'سعد',
+                'groups': [], 'managed_institutes': [5]}},
+            {'model': 'programs.diploma', 'pk': 3, 'fields': {
+                'name': 'دبلوم سياحة وسفر', 'is_deleted': False, 'duration': None, 'duration_months': 24, 'hours': None,
+                'start_date': None, 'end_date': None, 'institutes': [5]}},
+            {'model': 'clients.client', 'pk': 9, 'fields': {
+                'institute': 5, 'national_id': '1000000009', 'phone': '0509', 'full_name': 'علي حسن',
+                'first_name': 'علي', 'last_name': 'حسن', 'birth_date': None, 'address': ''}},
+            {'model': 'permissions.permissionslip', 'pk': 1, 'fields': {
+                'permission_number': 'PERM-2026-999999', 'client': 9, 'institute': 5, 'diploma': 3, 'course': None,
+                'issue_date': '2026-07-25', 'expiry_date': '2027-07-25', 'status': 'active', 'notes': '',
+                'study_mode': '', 'issued_by': 7, 'referral_employee': None, 'issued_from_public': False,
+                'referral_code': '', 'created_at': '2026-07-25T20:06:20.783Z', 'is_deleted': False}},
+        ]
+        fd, path = tempfile.mkstemp(suffix='.json')
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
+        try:
+            out = StringIO()
+            call_command('import_mashahed', '--source', path, '--commit', stdout=out)
+        finally:
+            os.remove(path)
+        permit = Permit.objects.get(number='PERM-2026-999999')
+        self.assertEqual((permit.branch, permit.program_name), (self.hafr, 'دبلوم سياحة وسفر'))
+        self.assertEqual(permit.course.branch, self.hafr)
+        self.assertEqual(permit.student.contact.identity_number, '1000000009')
+        self.assertEqual(str(permit.created_at.date()), '2026-07-25')
+        self.assertIn('قوالب: 0', out.getvalue())
+
     def test_manual_map_and_create_branches(self):
         self.run_import('--map', '2=1', '--commit')
         self.assertEqual(Permit.objects.get(number='PERM-2026-222222').branch, self.riyadh)

@@ -36,6 +36,45 @@ class DryRun(Exception):
     pass
 
 
+# الحقول اللي هي ForeignKey في البرنامج القديم (في JSON بتيجي «institute»: 5 ← عمود institute_id)
+JSON_FOREIGN_KEYS = {'institute', 'client', 'diploma', 'course', 'issued_by', 'referral_employee',
+                     'registration_officer', 'registered_by', 'category', 'managed_institute'}
+# ManyToMany اللي محتاجينها: (الموديل، الحقل) -> جدول الربط
+JSON_M2M = {('programs.diploma', 'institutes'): ('programs_diploma_institutes', 'diploma_id'),
+            ('programs.course', 'institutes'): ('programs_course_institutes', 'course_id')}
+
+
+def sqlite_from_dumpdata(path):
+    """ملف dumpdata (JSON) من البرنامج القديم -> SQLite في الذاكرة بنفس أسماء الجداول والأعمدة.
+    كده الأمر بيشتغل مهما كانت داتابيز البرنامج القديم (Postgres أو SQLite)."""
+    import json
+    with open(path, encoding='utf-8') as f:
+        objects = json.load(f)
+    tables, links = {}, {}
+    for obj in objects:
+        label = obj['model']
+        row = {'id': obj['pk']}
+        for name, value in obj['fields'].items():
+            if (label, name) in JSON_M2M:
+                table, own_col = JSON_M2M[(label, name)]
+                links.setdefault(table, []).extend((obj['pk'], other) for other in value)
+            elif isinstance(value, list):
+                continue  # M2M مش محتاجينها (groups، صلاحيات...)
+            else:
+                row[f'{name}_id' if name in JSON_FOREIGN_KEYS else name] = value
+        tables.setdefault(label.replace('.', '_'), []).append(row)
+    db = sqlite3.connect(':memory:')
+    for table, rows in tables.items():
+        columns = sorted({c for r in rows for c in r})
+        db.execute(f'create table {table} ({", ".join(columns)})')
+        db.executemany(f'insert into {table} ({", ".join(columns)}) values ({", ".join("?" * len(columns))})',
+                       [[r.get(c) for c in columns] for r in rows])
+    for (label, _), (table, own_col) in JSON_M2M.items():
+        db.execute(f'create table if not exists {table} (id integer primary key, {own_col}, institute_id)')
+        db.executemany(f'insert into {table} ({own_col}, institute_id) values (?, ?)', links.get(table, []))
+    return db
+
+
 TYPE_PREFIXES = [('دبلومة', 'دبلوم'), ('دبلوم', 'دبلوم'), ('دورة', 'دورة'), ('دوره', 'دورة')]
 
 
@@ -65,7 +104,8 @@ class Command(BaseCommand):
     help = 'نقل بيانات برنامج المشاهد القديم (SQLite) لـ Smart Offer'
 
     def add_arguments(self, parser):
-        parser.add_argument('--source', required=True, help='مسار db.sqlite3 بتاع البرنامج القديم')
+        parser.add_argument('--source', required=True,
+                            help='db.sqlite3 بتاع البرنامج القديم، أو ملف JSON من dumpdata بتاعه')
         parser.add_argument('--media', default='', help='فولدر media بتاع البرنامج القديم (للوجو والتوقيع والختم)')
         parser.add_argument('--map', action='append', default=[], metavar='INSTITUTE_ID=BRANCH_CODE',
                             help='ربط معهد بفرع يدوي (ممكن تتكرر)')
@@ -75,7 +115,12 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------------ helpers
     def rows(self, sql, *params):
-        return [dict(r) for r in self.db.execute(sql, params)]
+        try:
+            return [dict(r) for r in self.db.execute(sql, params)]
+        except sqlite3.OperationalError as exc:
+            if 'no such table' in str(exc):  # جدول فاضي في ملف الـ JSON (مثلاً مفيش قوالب)
+                return []
+            raise
 
     def log(self, msg, style=None):
         self.stdout.write(style(msg) if style else msg)
@@ -100,8 +145,17 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         if not os.path.exists(opts['source']):
             raise CommandError(f'الملف مش موجود: {opts["source"]}')
-        self.db = sqlite3.connect(f'file:{opts["source"]}?mode=ro', uri=True)
+        if opts['source'].endswith('.json'):
+            self.db = sqlite_from_dumpdata(opts['source'])
+        else:
+            self.db = sqlite3.connect(f'file:{opts["source"]}?mode=ro', uri=True)
         self.db.row_factory = sqlite3.Row
+        missing = {'institutes_institute', 'permissions_permissionslip'} - {
+            r[0] for r in self.db.execute("select name from sqlite_master where type='table'")}
+        if missing or not self.db.execute('select count(*) from institutes_institute').fetchone()[0]:
+            self.db.close()
+            raise CommandError('الملف ده مفيهوش بيانات البرنامج القديم (مفيش معاهد). لو البرنامج شغال على Postgres '
+                               'طلّع البيانات بـ dumpdata واستخدم ملف الـ JSON.')
         self.media_root = opts['media']
         self.commit = opts['commit']
         self.warnings = []
