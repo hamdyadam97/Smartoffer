@@ -192,8 +192,12 @@ class PermitPdfTests(PermitTestBase):
         self.assertTrue(build_pdf(permit).startswith(b'%PDF'))
 
     def test_broken_template_falls_back_to_default(self):
-        PermitTemplate.objects.create(branch=self.riyadh, body_content='{% if %}')
+        template = PermitTemplate.objects.create(branch=self.riyadh, body_content='{% load hijri_tags %}')
         self.assertTrue(build_pdf(self.issue()).startswith(b'%PDF'))
+        # المعاينة بتوضح الغلط بدل ما ترجع للافتراضي
+        response = self.client.get(reverse('permittemplate-preview', args=[template.pk]), follow=True)
+        self.assertContains(response, 'القالب فيه غلط')
+        self.assertContains(response, 'hijri_tags')
 
     def test_template_create_and_edit_pages(self):
         response = self.client.get(reverse('permittemplate-create') + f'?branch={self.hafr.pk}')

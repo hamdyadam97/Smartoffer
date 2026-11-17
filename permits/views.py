@@ -284,8 +284,9 @@ def permit_template_preview(request, pk):
     template = get_object_or_404(PermitTemplate, pk=pk)
     permit = Permit.objects.filter(branch=template.branch).first() or _sample_permit(template.branch)
     try:
-        pdf = services.build_pdf(permit)
+        pdf = services.build_pdf(permit, strict=True)
     except Exception as exc:
-        messages.error(request, f'تعذّر إنشاء المعاينة: {exc}')
+        messages.error(request, f'القالب فيه غلط، والمشاهد بتطلع بالقالب الافتراضي لحد ما يتصلح: '
+                                f'{type(exc).__name__}: {exc}')
         return redirect('permittemplate-update', pk=pk)
     return HttpResponse(pdf, content_type='application/pdf')

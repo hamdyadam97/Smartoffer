@@ -170,13 +170,16 @@ def render_html(permit):
     return Template(html).render(Context(context))
 
 
-def build_pdf(permit):
-    """بيرجّع bytes الـ PDF. لو قالب الفرع فيه غلط بيرجع للقالب الافتراضي."""
+def build_pdf(permit, strict=False):
+    """بيرجّع bytes الـ PDF. لو قالب الفرع فيه غلط بيرجع للقالب الافتراضي،
+    إلا لو strict (معاينة القالب): ساعتها الغلط بيطلع عشان يتصلح."""
     from weasyprint import HTML  # تقيلة ومحتاجة مكتبات نظام، فبنستوردها وقت الحاجة بس
     try:
         html = render_html(permit)
         return HTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf()
     except Exception:
+        if strict:
+            raise
         logger.exception('Permit template failed for branch %s, using default', permit.branch_id)
         font_css, font_stack = _font_face_css('cairo')
         html = render_to_string('permits/default_pdf.html',
