@@ -113,23 +113,15 @@ def name_matches(branch_name, institute_name):
     return bool(words) and all(w in institute_name for w in words)
 
 
-def pair_by_gender(candidates):
-    """فرع واحد -> للكل. فرعين رجال ونساء -> كل واحد لنوعه. غير كده: مش واضح (None)."""
+def choose_branch(candidates):
+    """كل معهد بيروح لفرع واحد. لو في Smart Offer فرعين بنفس الاسم (رجال) و(نساء) بناخد (رجال).
+    غير كده لو أكتر من فرع: مش واضح (None) ولازم --map."""
     if len(candidates) == 1:
-        return {'male': candidates[0], 'female': candidates[0]}
+        return candidates[0]
     if len(candidates) == 2:
         by = {branch_gender(b.name): b for b in candidates}
         if set(by) == {'male', 'female'}:
-            return by
-    return None
-
-
-def client_gender(value):
-    text = str(value or '').strip().lower()
-    if text in ('female', 'f', 'أنثى', 'انثى', 'انثي', 'أنثي'):
-        return 'female'
-    if text in ('male', 'm', 'ذكر'):
-        return 'male'
+            return by['male']
     return None
 
 
@@ -209,12 +201,10 @@ class Command(BaseCommand):
         manual = {}
         for item in opts['map']:
             try:
-                inst_id, codes = item.split('=')
-                manual[int(inst_id)] = [int(c) for c in codes.split(',')]
-                assert len(manual[int(inst_id)]) in (1, 2)
-            except (ValueError, AssertionError):
-                raise CommandError('--map لازم يبقى كده: 7=3 (رقم المعهد=كود الفرع) أو 7=9,10 '
-                                   f'(كود فرع الرجال,كود فرع النساء). اللي اتكتب: {item}')
+                inst_id, code = item.split('=')
+                manual[int(inst_id)] = int(code)
+            except ValueError:
+                raise CommandError(f'--map لازم يبقى كده: 7=3 (رقم المعهد=كود الفرع). اللي اتكتب: {item}')
 
         try:
             with transaction.atomic():
@@ -237,45 +227,38 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------------ branches
     def map_branches(self, manual, create):
-        """كل معهد -> {'male': فرع, 'female': فرع}. لو الفرع مش متقسم رجال/نساء الاتنين نفس الفرع."""
+        """كل معهد -> فرع واحد."""
         institutes = self.rows('select * from institutes_institute order by id')
         branches = list(Branch.objects.all())
-        self.branches_for = {}
+        self.branch_of = {}
         problems = []
         self.log('المعاهد -> الفروع:')
         for inst in institutes:
-            pair, how = None, ''
+            branch, how = None, ''
             if inst['id'] in manual:
-                found = [Branch.objects.filter(code=code).first() for code in manual[inst['id']]]
-                if None in found:
-                    raise CommandError(f'كود فرع مش موجود في --map {inst["id"]}=...')
-                pair, how = {'male': found[0], 'female': found[-1]}, 'يدوي'
+                branch = Branch.objects.filter(code=manual[inst['id']]).first()
+                if not branch:
+                    raise CommandError(f'مفيش فرع كوده {manual[inst["id"]]} (--map {inst["id"]}=...)')
+                how = 'يدوي'
             else:
                 exact = [b for b in branches if b.name.strip() == inst['name'].strip()]
                 candidates = exact or [b for b in branches if name_matches(b.name, inst['name'])]
-                pair = pair_by_gender(candidates)
+                branch = choose_branch(candidates)
                 how = 'نفس الاسم' if exact else 'الاسم'
-                if pair is None and candidates:
+                if branch is None and candidates:
                     problems.append(f'  [{inst["id"]}] {inst["name"]}: أكتر من فرع ممكن '
                                     f'({", ".join(f"{b.code}-{b.name}" for b in candidates)}) '
-                                    f'-> --map {inst["id"]}=كود_رجال,كود_نساء')
+                                    f'-> --map {inst["id"]}=كود')
                     continue
-            if pair is None and create:
-                branch = self.create_branch(inst)
-                pair, how = {'male': branch, 'female': branch}, 'فرع جديد'
-            if pair is None:
+            if branch is None and create:
+                branch, how = self.create_branch(inst), 'فرع جديد'
+            if branch is None:
                 problems.append(f'  [{inst["id"]}] {inst["name"]}: مفيش فرع مطابق -> --map {inst["id"]}=كود '
-                                f'(أو --map {inst["id"]}=كود_رجال,كود_نساء) أو --create-branches')
+                                'أو --create-branches')
                 continue
-            self.branches_for[inst['id']] = pair
-            for branch in set(pair.values()):
-                self.fill_branch(branch, inst)
-            if pair['male'] == pair['female']:
-                target = f'{pair["male"].code} - {pair["male"].name}'
-            else:
-                target = (f'رجال: {pair["male"].code} - {pair["male"].name}  |  '
-                          f'نساء: {pair["female"].code} - {pair["female"].name}')
-            self.log(f'  [{inst["id"]}] {inst["name"]}  ->  {target}  ({how})')
+            self.branch_of[inst['id']] = branch
+            self.fill_branch(branch, inst)
+            self.log(f'  [{inst["id"]}] {inst["name"]}  ->  {branch.code} - {branch.name}  ({how})')
         if problems:
             self.log('\nمعاهد محتاجة تتربط بفرع:', self.style.ERROR)
             for p in problems:
@@ -323,8 +306,7 @@ class Command(BaseCommand):
                 links.setdefault(row['pid'], set()).add(row['institute_id'])
             for prog in self.rows(f'select * from {table}'):
                 program_type, name = split_program(prog['name'], kind)
-                branches = {b for i in links.get(prog['id'], ()) if i in self.branches_for
-                            for b in self.branches_for[i].values()}
+                branches = {self.branch_of[i] for i in links.get(prog['id'], ()) if i in self.branch_of}
                 branch = branches.pop() if len(branches) == 1 else None  # أكتر من فرع = لكل الفروع
                 existing = Course.objects.filter(program_type=program_type, name__iexact=name)
                 course = existing.filter(branch=branch).first() or existing.filter(branch__isnull=True).first()
@@ -344,15 +326,8 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ clients
     def import_clients(self):
         result = {}
-        self.gender_of = {}
-        unknown_gender = 0
         for client in self.rows('select * from clients_client'):
-            gender = client_gender(client.get('gender'))
-            pair = self.branches_for.get(client['institute_id'])
-            if pair and gender is None and pair['male'] != pair['female']:
-                unknown_gender += 1
-            self.gender_of[client['id']] = gender or 'male'
-            branch = pair[gender or 'male'] if pair else None
+            branch = self.branch_of.get(client['institute_id'])
             national_id = (client['national_id'] or '').strip()
             student = None
             if national_id:
@@ -375,8 +350,6 @@ class Command(BaseCommand):
             else:
                 self.warnings.append(f'العميل {client["full_name"]} مالوش معهد معروف، اتخطى')
             result[client['id']] = student
-        if unknown_gender:
-            self.warnings.append(f'{unknown_gender} عميل نوعهم مش متسجل (ذكر/أنثى)، اتحطوا في فرع الرجال')
         return result
 
     def create_student(self, client, branch):
@@ -401,8 +374,7 @@ class Command(BaseCommand):
                 self.stats['permits_skipped'] += 1
                 continue
             student = self.clients.get(row['client_id'])
-            pair = self.branches_for.get(row['institute_id'])
-            branch = pair[self.gender_of.get(row['client_id'], 'male')] if pair else None
+            branch = self.branch_of.get(row['institute_id'])
             if not student or not branch:
                 self.warnings.append(f'المشهد {row["permission_number"]}: الطالب أو الفرع مش معروف، اتخطى')
                 continue
@@ -434,12 +406,11 @@ class Command(BaseCommand):
         institutes = {i['id']: i for i in self.rows('select * from institutes_institute')}
         officers = {user_id: name for user_id, (_, name) in self.users.items()}
         for row in self.rows('select * from permissions_permissiontemplate where is_deleted = 0'):
-            pair = self.branches_for.get(row['institute_id'])
-            for branch in sorted(set(pair.values()), key=lambda b: b.code) if pair else ():
+            branch = self.branch_of.get(row['institute_id'])
+            if branch:
                 self.import_template(row, branch, institutes.get(row['institute_id'], {}), officers)
 
     def import_template(self, row, branch, inst, officers):
-        """نفس قالب المعهد بيتعمل لفرع الرجال وفرع النساء."""
         template = PermitTemplate.objects.filter(branch=branch).first()
         if template and not self.update_templates:
             self.warnings.append(f'الفرع {branch.name} عنده قالب مشهد بالفعل، القالب القديم ما اتنقلش '

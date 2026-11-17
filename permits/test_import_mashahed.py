@@ -184,8 +184,8 @@ class ImportMashahedTests(TestCase):
         self.assertEqual(str(permit.created_at.date()), '2026-07-25')
         self.assertIn('قوالب: 0', out.getvalue())
 
-    def test_men_and_women_branches_by_client_gender(self):
-        """زي السيرفر: «الفاو الرياض (رجال)» و«الفاو الرياض (نساء)»، والطالب بيروح لفرع نوعه."""
+    def test_institute_goes_to_one_branch(self):
+        """زي السيرفر: فيه «الفاو الرياض (رجال)» و«الفاو الرياض (نساء)»، والمعهد كله بيروح لفرع واحد (رجال)."""
         from permits.management.commands.import_mashahed import name_matches
         company = Company.objects.get()
         Student.objects.all().delete()
@@ -199,25 +199,18 @@ class ImportMashahedTests(TestCase):
         self.assertTrue(name_matches('آفاق التطور', 'معهد آفاق التطور العالي للتدريب بالدمام'))
         self.assertFalse(name_matches('الأهلي عرعر (رجال)', 'معهد المورد الوافي بعرعر'))
 
-        db = sqlite3.connect(self.path)
-        db.execute('alter table clients_client add column gender text')
-        db.execute("update clients_client set gender = 'female' where id = 1")
-        db.execute("update clients_client set gender = 'male' where id = 2")
-        db.commit()
-        db.close()
         output = self.run_import('--commit')
-        self.assertIn('رجال: 9 - الفاو الرياض (رجال)  |  نساء: 10 - الفاو الرياض (نساء)', output)
-        self.assertEqual(Permit.objects.get(number='PERM-2026-111111').branch, women)
+        self.assertIn('->  9 - الفاو الرياض (رجال)', output)
+        self.assertEqual(Permit.objects.get(number='PERM-2026-111111').branch, men)
         self.assertEqual(Permit.objects.get(number='PERM-2026-222222').branch, hafr)
-        # قالب الرياض اتعمل للفرعين
-        self.assertEqual(set(PermitTemplate.objects.values_list('branch__code', flat=True)), {9, 10})
-        # الدبلومة في معهدين = 4 فروع -> لكل الفروع
+        self.assertFalse(Permit.objects.filter(branch=women).exists())
+        self.assertEqual(set(PermitTemplate.objects.values_list('branch__code', flat=True)), {9})
+        # الدبلومة في معهدين -> لكل الفروع
         self.assertIsNone(Permit.objects.get(number='PERM-2026-111111').course.branch)
-
-    def test_manual_map_men_women_codes(self):
-        self.run_import('--map', '2=1,2', '--commit')
-        # العميل مالوش نوع -> فرع الرجال (أول كود)
-        self.assertEqual(Permit.objects.get(number='PERM-2026-222222').branch, self.riyadh)
+        # وممكن تختار الفرع التاني بإيدك
+        Permit.objects.all().delete()
+        self.run_import('--map', '1=10', '--commit')
+        self.assertEqual(Permit.objects.get(number='PERM-2026-111111').branch, women)
 
     def test_manual_map_and_create_branches(self):
         self.run_import('--map', '2=1', '--commit')
