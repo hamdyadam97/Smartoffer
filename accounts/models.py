@@ -279,3 +279,27 @@ class EmployeePerformance(models.Model):
 
     def __str__(self):
         return f"{self.person.get_short_name()} - {self.period_month}/{self.period_year}"
+
+
+class PasswordResetCode(models.Model):
+    """كود نسيان كلمة المرور اللي بيتبعت على الإيميل (متخزن مشفّر، وبيخلص بعد ربع ساعة)."""
+    VALID_MINUTES = 15
+    MAX_ATTEMPTS = 5
+
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='reset_codes')
+    code_hash = models.CharField(max_length=128)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'كود استعادة كلمة المرور'
+        verbose_name_plural = 'أكواد استعادة كلمة المرور'
+        ordering = ['-created_at']
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        return (not self.used and self.attempts < self.MAX_ATTEMPTS
+                and timezone.now() - self.created_at < timedelta(minutes=self.VALID_MINUTES))

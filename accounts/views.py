@@ -20,16 +20,29 @@ from .forms import (
 
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    email = ''
+    error = ''
     if request.method == 'POST':
-        email = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=email, password=password)
+        email = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
+        # الموبايل ساعات بيكتب أول حرف كابيتال: الإيميل مابيفرقش في الحروف الكبيرة والصغيرة
+        registered = Person.objects.filter(email__iexact=email).values_list('email', flat=True).first()
+        user = authenticate(request, username=registered or email, password=password)
         if user is not None:
             login(request, user)
+            next_url = request.GET.get('next', '')
+            if next_url.startswith('/') and not next_url.startswith('//'):
+                return redirect(next_url)
             return redirect('dashboard')
+        account = Person.objects.filter(email__iexact=email).first()
+        if account and not account.is_active and account.check_password(password):
+            error = 'الحساب ده موقوف. كلّم الإدارة عشان تفعّله.'
         else:
-            messages.error(request, 'بيانات الدخول غير صحيحة')
-    return render(request, 'registration/login.html')
+            # مابنقولش أنهي فيهم الغلط عشان محدش يعرف الإيميلات المسجلة من صفحة الدخول
+            error = 'الإيميل أو كلمة المرور غلط. اتأكد منهم وجرب تاني، أو استخدم «نسيت كلمة المرور».'
+    return render(request, 'registration/login.html', {'email': email, 'login_error': error})
 
 
 def logout_view(request):

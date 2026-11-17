@@ -22,6 +22,8 @@ MODEL_NAMES_AR = {
     'studentoffer': 'عروض الطلاب',
     'offerrecipient': 'مستلمي العروض',
     'offernote': 'ملاحظات العروض',
+    'reports': 'التقارير',
+    'branch_dashboard': 'لوحة تحكم المدير',
     'permit': 'المشاهد',
     'permittemplate': 'قوالب المشاهد',
     'internalmessage': 'الرسائل الداخلية',

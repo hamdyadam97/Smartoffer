@@ -95,8 +95,7 @@ class LiveReportTests(TestCase):
 
     def test_employee_sees_only_own_branches(self):
         role = Role.objects.create(name='r')
-        perm, _ = Permission.objects.get_or_create(codename='view_reportsnapshot', defaults={
-            'name': 'x', 'app_label': 'reports', 'model_name': 'reportsnapshot', 'action': 'view'})
+        perm = Permission.objects.get(codename='view_reports')
         role.permissions.add(perm)
         EmployeeRole.objects.create(person=self.ali, role=role, branch=self.hafr)
         self.web.force_login(self.ali)
@@ -109,3 +108,14 @@ class LiveReportTests(TestCase):
     def test_no_permission(self):
         self.web.force_login(Person.objects.create_user(email='x@example.com', password='x'))
         self.assertEqual(self.get().status_code, 403)
+
+    def test_old_report_permission_is_not_enough(self):
+        """الأدوار اللي كان فيها صلاحية التقارير القديمة مابقتش تشوف التقارير: لازم «عرض التقارير»."""
+        role = Role.objects.create(name='old')
+        perm, _ = Permission.objects.get_or_create(codename='view_reportsnapshot', defaults={
+            'name': 'x', 'app_label': 'reports', 'model_name': 'reportsnapshot', 'action': 'view'})
+        role.permissions.add(perm)
+        EmployeeRole.objects.create(person=self.ali, role=role, branch=self.riyadh)
+        self.web.force_login(self.ali)
+        self.assertEqual(self.get().status_code, 403)
+        self.assertNotContains(self.web.get(reverse('dashboard')), reverse('report-live'))

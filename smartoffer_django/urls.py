@@ -9,6 +9,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 
+from accounts import password_reset
 from accounts.views import login_view, logout_view
 from core.views import dashboard
 
@@ -20,6 +21,8 @@ urlpatterns = [
     path('', dashboard, name='dashboard'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
+    path('password-reset/', password_reset.request_code, name='password-reset'),
+    path('password-reset/verify/', password_reset.verify_code, name='password-reset-verify'),
     path('', include('accounts.urls')),
     path('', include('core.urls')),
     path('', include('students.urls')),

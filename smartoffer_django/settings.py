@@ -26,6 +26,10 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = ['*']
 
+# رسائل الخطأ بتطلع بلون Bootstrap (alert-danger)؛ «alert-error» مالوش ستايل فكانت الرسالة بتبان باهتة
+from django.contrib.messages import constants as message_constants  # noqa: E402
+MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
+
 # في النسخة التجريبية: SITE_BANNER=نسخة تجريبية - البيانات هنا للتجربة بس
 SITE_BANNER = os.environ.get('SITE_BANNER', '')
 
@@ -155,7 +159,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'  # بورت 465
+EMAIL_USE_TLS = not EMAIL_USE_SSL and os.environ.get('EMAIL_USE_TLS', 'True') == 'True'  # بورت 587
+EMAIL_TIMEOUT = 20
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@smartoffer.com')

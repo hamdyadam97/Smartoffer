@@ -202,13 +202,16 @@
             <p class="mb-0 opacity-75">
                 {% if selected_branch %}
                     نظرة عامة على فرع: <strong>{{ selected_branch.name }}</strong>
+                {% elif is_manager_view %}
+                    هذه نظرة عامة على أداء فروعك اليوم
                 {% else %}
-                    هذه نظرة عامة على أداء مراكزك التدريبية اليوم
+                    دي نظرة على شغلك انت: عروضك ومشاهدك وطلابك
                 {% endif %}
             </p>
         </div>
         <div class="col-md-4 text-md-start mt-3 mt-md-0">
             <div class="d-flex gap-2 justify-content-md-start justify-content-center flex-wrap">
+                {% if is_manager_view %}
                 <form method="get" class="d-flex gap-2">
                     <select name="branch" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 140px;">
                         <option value="">كل الفروع</option>
@@ -217,6 +220,7 @@
                         {% endfor %}
                     </select>
                 </form>
+                {% endif %}
                 <a href="{% url 'student-create' %}" class="btn btn-light text-primary fw-bold">
                     <i class="bi bi-plus-lg"></i> طالب جديد
                 </a>
@@ -251,6 +255,7 @@
             <div class="stat-label">التسجيلات</div>
         </div>
     </div>
+    {% if is_manager_view %}
     <div class="col-xl col-lg-3 col-md-4 col-6">
         <div class="stat-card bg-gradient-secondary h-100">
             <div class="icon-box"><i class="bi bi-building"></i></div>
@@ -258,11 +263,64 @@
             <div class="stat-label">الفروع</div>
         </div>
     </div>
+    {% endif %}
     <div class="col-xl col-lg-3 col-md-4 col-6">
         <div class="stat-card bg-gradient-dark h-100">
             <div class="icon-box"><i class="bi bi-send"></i></div>
             <div class="stat-value">{{ student_offers_count }}</div>
             <div class="stat-label">عروض الأسعار</div>
+        </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-6">
+        <a href="{% url 'permit-list' %}" class="text-decoration-none">
+        <div class="stat-card bg-gradient-primary h-100">
+            <div class="icon-box"><i class="bi bi-patch-check"></i></div>
+            <div class="stat-value">{{ permits_count }}</div>
+            <div class="stat-label">المشاهد <small class="opacity-75">({{ permits_active }} نشط)</small></div>
+        </div>
+        </a>
+    </div>
+</div>
+
+<!-- المشاهد -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card chart-card h-100">
+            <div class="card-header"><i class="bi bi-patch-check text-primary me-2"></i> المشاهد</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between"><span>كل المشاهد</span><strong>{{ permits_count }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span>نشطة دلوقتي</span><strong class="text-success">{{ permits_active }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span>الشهر ده</span><strong>{{ permits_this_month }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span>من البوابة العامة</span><strong>{{ permits_public }}</strong></li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card chart-card h-100">
+            <div class="card-header d-flex justify-content-between">
+                <span><i class="bi bi-clock-history text-primary me-2"></i> آخر المشاهد</span>
+                <a href="{% url 'permit-list' %}" class="small">الكل</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th>رقم المشهد</th><th>الطالب</th><th>البرنامج</th><th>الفرع</th><th>الحالة</th></tr></thead>
+                        <tbody>
+                            {% for permit in recent_permits %}
+                            <tr>
+                                <td><a href="{% url 'permit-detail' permit.pk %}" dir="ltr">{{ permit.number }}</a></td>
+                                <td>{{ permit.student.contact.get_full_name }}</td>
+                                <td>{{ permit.program_name|default:'-' }}</td>
+                                <td><span class="badge bg-secondary">{{ permit.branch.name }}</span></td>
+                                <td>{% include 'permits/_status_badge.html' %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-4">مفيش مشاهد</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -308,6 +366,7 @@
 </div>
 
 <!-- Branches Section -->
+{% if is_manager_view %}
 <div class="section-title"><i class="bi bi-building"></i> تفاصيل الفروع</div>
 <div class="row g-3 mb-4">
     {% for bs in branch_stats %}
@@ -342,6 +401,12 @@
                             <div class="mini-label">عروض</div>
                         </div>
                     </div>
+                    <div class="col-4">
+                        <div class="mini-stat">
+                            <div class="mini-value">{{ bs.permits }}</div>
+                            <div class="mini-label">مشاهد</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <small class="text-muted">نسبة التسجيلات</small>
@@ -364,6 +429,7 @@
     <div class="col-12 text-muted text-center py-4">لا يوجد فروع مسجلة</div>
     {% endfor %}
 </div>
+{% endif %}
 
 <!-- Recent Activity & Offers Row -->
 <div class="row g-4 mb-4">
@@ -464,6 +530,7 @@
 </div>
 
 <!-- Top Branches -->
+{% if is_manager_view %}
 <div class="section-title"><i class="bi bi-trophy"></i> أفضل الفروع (حسب التسجيلات)</div>
 <div class="row g-3 mb-4">
     {% for tb in top_branches %}
@@ -490,6 +557,7 @@
     <div class="col-12 text-muted text-center py-4">لا توجد بيانات كافية</div>
     {% endfor %}
 </div>
+{% endif %}
 
 {% endblock %}
 

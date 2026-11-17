@@ -32,33 +32,6 @@ def custom_permission_denied_view(request, exception=None):
     return render(request, '403.html', status=403)
 
 
-DASHBOARD_PERMS = [
-    'view_student',
-    'view_account',
-    'view_course',
-    'view_studentoffer',
-]
-
-
-def _allowed_branch_ids_union(user, perms):
-    """Return set of branch ids the user can access for any of the given perms."""
-    if user.is_executive():
-        return None
-    ids = set()
-    for perm in perms:
-        for branch in user.get_branches_for_perm(perm):
-            ids.add(branch.pk)
-    return ids
-
-
-def _allowed_branches_queryset(user, perms):
-    """Return Branch queryset scoped to the user's allowed branches."""
-    ids = _allowed_branch_ids_union(user, perms)
-    if ids is None:
-        return Branch.objects.all()
-    return Branch.objects.filter(pk__in=ids)
-
-
 def _check_perm(user, perm):
     """Raise PermissionDenied if the user does not have a permission on any branch."""
     if user.is_executive():
@@ -130,31 +103,84 @@ def _dashboard_charts(request, student_qs, account_qs, studentoffer_qs):
     }
 
 
+MANAGER_PERM = 'view_branch_dashboard'
+
+
+class DashboardScope:
+    """مين يشوف إيه في لوحة التحكم:
+    - مدير النظام: كل حاجة.
+    - المدير (صلاحية «متابعة كل بيانات الفرع»): كل بيانات الفروع اللي الصلاحية دي عليها في دوره،
+      + شغله هو في أي فرع.
+    - الموظف العادي: شغله هو بس (العروض اللي عملها، المشاهد اللي أصدرها أو جت من لينكه، وطلابهم)."""
+
+    def __init__(self, user, branch=None):
+        self.user = user
+        self.is_all = user.is_executive()
+        self.managed = Branch.objects.all() if self.is_all else Branch.objects.filter(
+            pk__in=[b.pk for b in user.get_branches_for_perm(MANAGER_PERM)])
+        self.is_manager = self.is_all or self.managed.exists()
+        self.branch = branch
+
+    def _limit(self, qs, branch_field, own_q):
+        if not self.is_all:
+            # بـ pk__in بدل distinct(): عشان العدّ والتجميع في الرسوم مايتكررش من الـ joins
+            visible = qs.model.objects.filter(Q(**{f'{branch_field}__in': self.managed}) | own_q).values('pk')
+            qs = qs.filter(pk__in=visible)
+        if self.branch is not None:
+            qs = qs.filter(**{branch_field: self.branch})
+        return qs
+
+    def offers(self):
+        return self._limit(StudentOffer.objects.all(), 'branch', Q(created_by=self.user))
+
+    def permits(self):
+        from permits.models import Permit
+        return self._limit(Permit.objects.all(), 'branch',
+                           Q(issued_by=self.user) | Q(referral_employee=self.user))
+
+    def students(self):
+        return self._limit(Student.objects.all(), 'branch',
+                           Q(offer_recipients__offer__created_by=self.user) | Q(permits__issued_by=self.user)
+                           | Q(permits__referral_employee=self.user))
+
+    def accounts(self):
+        own_students = Student.objects.filter(
+            Q(offer_recipients__offer__created_by=self.user) | Q(permits__issued_by=self.user)
+            | Q(permits__referral_employee=self.user))
+        return self._limit(Account.objects.all(), 'student__branch', Q(student__in=own_students))
+
+
+def _permit_stats(permits_qs):
+    from permits.models import Permit
+    today = timezone.localdate()
+    active = permits_qs.filter(status=Permit.STATUS_ACTIVE, expiry_date__gte=today)
+    return {
+        'permits_count': permits_qs.count(),
+        'permits_active': active.count(),
+        'permits_this_month': permits_qs.filter(issue_date__gte=today.replace(day=1)).count(),
+        'permits_public': permits_qs.filter(issued_from_public=True).count(),
+        'recent_permits': permits_qs.select_related('student__contact', 'branch').order_by('-created_at')[:6],
+    }
+
+
 @login_required
 def dashboard(request):
-    # Optional branch filter from URL ?branch=<id>
-    selected_branch_id = request.GET.get('branch')
-    allowed_ids = _allowed_branch_ids_union(request.user, DASHBOARD_PERMS)
-
+    scope = DashboardScope(request.user)
     selected_branch = None
-    if selected_branch_id:
-        selected_branch = get_object_or_404(Branch, pk=selected_branch_id)
-        if allowed_ids is not None and selected_branch.pk not in allowed_ids:
+    if request.GET.get('branch'):
+        selected_branch = get_object_or_404(Branch, pk=request.GET.get('branch'))
+        if not scope.managed.filter(pk=selected_branch.pk).exists():
             raise PermissionDenied('غير مسموح لك دخول هنا')
+        scope.branch = selected_branch
 
-    # Base querysets scoped by permission
-    student_qs = filter_by_branch(Student.objects.all(), request.user, 'branch', 'view_student')
-    course_qs = filter_by_branch(Course.objects.all(), request.user, 'branch', 'view_course')
-    account_qs = filter_by_branch(Account.objects.all(), request.user, 'student__branch', 'view_account')
-    studentoffer_qs = filter_by_branch(StudentOffer.objects.all(), request.user, 'branch', 'view_studentoffer')
-
+    student_qs, account_qs = scope.students(), scope.accounts()
+    studentoffer_qs, permits_qs = scope.offers(), scope.permits()
+    course_qs = filter_by_branch(Course.objects.all(), request.user, 'branch', 'view_course', include_shared=True)
     if selected_branch:
-        student_qs = student_qs.filter(branch=selected_branch)
-        course_qs = course_qs.filter(branch=selected_branch)
-        account_qs = account_qs.filter(student__branch=selected_branch)
-        studentoffer_qs = studentoffer_qs.filter(branch=selected_branch)
+        course_qs = course_qs.filter(Q(branch=selected_branch) | Q(branch__isnull=True))
 
-    branches = _allowed_branches_queryset(request.user, DASHBOARD_PERMS).select_related('company')
+    # تفاصيل الفروع للمديرين بس (الموظف العادي بيشوف شغله هو)
+    branches = scope.managed.select_related('company') if scope.is_manager else Branch.objects.none()
     branch_stats = []
     for branch in branches:
         branch_stats.append({
@@ -162,13 +188,14 @@ def dashboard(request):
             'registrations': account_qs.filter(student__branch=branch).count(),
             'courses': course_qs.filter(branch=branch).count(),
             'student_offers': studentoffer_qs.filter(branch=branch).count(),
+            'permits': permits_qs.filter(branch=branch).count(),
         })
-    registrations_count = account_qs.count()
 
     context = {
+        'is_manager_view': scope.is_manager,
         'students_count': student_qs.count(),
         'courses_count': course_qs.count(),
-        'registrations_count': registrations_count,
+        'registrations_count': account_qs.count(),
         'branches_count': branches.count(),
         'student_offers_count': studentoffer_qs.count(),
         'branch_stats': branch_stats,
@@ -177,6 +204,7 @@ def dashboard(request):
         'top_branches': sorted(branch_stats, key=lambda x: x['registrations'], reverse=True)[:5],
         'selected_branch': selected_branch,
         'all_branches': branches,
+        **_permit_stats(permits_qs),
         **_dashboard_charts(request, student_qs, account_qs, studentoffer_qs),
     }
     return render(request, 'core/dashboard.html', context)
@@ -184,21 +212,15 @@ def dashboard(request):
 
 @login_required
 def branch_dashboard(request, slug):
-    """لوحة تحكم مفصلة لفرع معين"""
+    """لوحة تحكم مفصلة لفرع معين: لمدير الفرع (أو مدير النظام) بس."""
     branch = get_object_or_404(Branch, slug=slug)
-
-    allowed_ids = _allowed_branch_ids_union(request.user, DASHBOARD_PERMS)
-    if allowed_ids is not None and branch.pk not in allowed_ids:
+    scope = DashboardScope(request.user, branch)
+    if not scope.managed.filter(pk=branch.pk).exists():
         raise PermissionDenied('غير مسموح لك دخول هنا')
 
-    students_qs = filter_by_branch(Student.objects.filter(branch=branch), request.user, 'branch', 'view_student')
-    courses_qs = filter_by_branch(Course.objects.filter(branch=branch), request.user, 'branch', 'view_course')
-    registrations_qs = filter_by_branch(
-        Account.objects.filter(student__branch=branch), request.user, 'student__branch', 'view_account'
-    )
-    studentoffers_qs = filter_by_branch(
-        StudentOffer.objects.filter(branch=branch), request.user, 'branch', 'view_studentoffer'
-    )
+    students_qs, registrations_qs = scope.students(), scope.accounts()
+    studentoffers_qs, permits_qs = scope.offers(), scope.permits()
+    courses_qs = Course.objects.filter(branch=branch)
 
     context = {
         'branch': branch,
@@ -206,6 +228,7 @@ def branch_dashboard(request, slug):
         'courses_count': courses_qs.count(),
         'registrations_count': registrations_qs.count(),
         'student_offers_count': studentoffers_qs.count(),
+        **_permit_stats(permits_qs),
         **_dashboard_charts(request, students_qs, registrations_qs, studentoffers_qs),
     }
     return render(request, 'core/branch_dashboard.html', context)

@@ -90,7 +90,8 @@ class BranchScopeSmokeTests(TestCase):
         self.assertEqual(set(self.client.get(reverse('course-list')).context['courses']), {mine['course'], self.shared})
         self.assertEqual(list(self.client.get(reverse('registration-list')).context['object_list']), [mine['account']])
         self.assertEqual(list(self.client.get(reverse('studentoffer-list')).context['offers']), [mine['offer']])
-        self.assertEqual(self.client.get(reverse('dashboard')).context['students_count'], 1)
+        # لوحة التحكم بتعرض شغل الموظف هو بس (مش كل بيانات الفرع)، والموظف ده ماعملش حاجة
+        self.assertEqual(self.client.get(reverse('dashboard')).context['students_count'], 0)
 
         for url in [
             reverse('course-detail', args=[other['course'].pk]),

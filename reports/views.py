@@ -203,10 +203,11 @@ def _parse_date(value):
 def live_report(request):
     from . import live
     user = request.user
-    if not user.is_executive() and not user.has_perm_on_any_branch('view_reportsnapshot'):
+    # «عرض التقارير» مابتتديش لحد غير لو مدير النظام اداها له في دوره، وعلى فروع الدور بس
+    if not user.is_executive() and not user.has_perm_on_any_branch('view_reports'):
         raise PermissionDenied('غير مسموح لك دخول هنا')
     allowed = Branch.objects.all() if user.is_executive() else Branch.objects.filter(
-        pk__in=[b.pk for b in user.get_branches_for_perm('view_reportsnapshot')])
+        pk__in=[b.pk for b in user.get_branches_for_perm('view_reports')])
 
     report_type = request.GET.get('type') if request.GET.get('type') in dict(live.REPORT_TYPES) else 'branches'
     period = request.GET.get('period') if request.GET.get('period') in dict(live.PERIODS) else 'this_month'
