@@ -1,0 +1,31 @@
+{% extends 'permits/portal/base.html' %}
+
+{% block title %}مشهدك جاهز{% endblock %}
+{% block heading %}مشهدك جاهز{% endblock %}
+
+{% block content %}
+<div class="text-center mb-4">
+    <div class="fs-5">{{ permit.student.contact.get_full_name }}</div>
+    <div class="text-muted">{{ permit.program_name }} - {{ permit.branch.name }}</div>
+    <div class="mt-2">رقم المشهد: <strong dir="ltr">{{ permit.number }}</strong></div>
+    <div class="text-muted small">صالح حتى {{ permit.expiry_date|date:'Y-m-d' }}</div>
+</div>
+
+<div class="d-grid gap-2 mb-4">
+    <a href="{% url 'portal-download' token %}?download=1" class="btn btn-success btn-lg"><i class="bi bi-download"></i> تحميل المشهد PDF</a>
+    <a href="{% url 'portal-download' token %}" target="_blank" class="btn btn-outline-success"><i class="bi bi-eye"></i> عرض المشهد</a>
+</div>
+
+<form method="post" action="{% url 'portal-email' token %}">
+    {% csrf_token %}
+    <label class="form-label fw-bold" for="email">ابعته على إيميلك</label>
+    <div class="input-group">
+        <input type="email" name="email" id="email" class="form-control" placeholder="name@example.com" dir="ltr" required>
+        <button class="btn btn-primary"><i class="bi bi-envelope"></i> إرسال</button>
+    </div>
+    {% if email_sent %}<div class="text-success small mt-2">اتبعت المشهد على {{ email_sent }}.</div>{% endif %}
+    {% if email_error %}<div class="text-danger small mt-2">{{ email_error }}</div>{% endif %}
+</form>
+
+<p class="text-muted small mt-4 mb-0">احتفظ باللينك ده: تقدر تحمّل منه المشهد تاني لمدة 30 يوم.</p>
+{% endblock %}

@@ -26,6 +26,7 @@
                 <li class="list-group-item"><strong>تاريخ الإصدار:</strong> {{ permit.issue_date|date:'Y-m-d' }}</li>
                 <li class="list-group-item"><strong>تاريخ الانتهاء:</strong> {{ permit.expiry_date|date:'Y-m-d' }}</li>
                 <li class="list-group-item"><strong>أصدره:</strong> {% if permit.issued_by %}{{ permit.issued_by.get_full_name|default:permit.issued_by.email }}{% elif permit.issued_from_public %}البوابة العامة{% else %}-{% endif %}</li>
+                {% if permit.referral_employee %}<li class="list-group-item"><strong>عن طريق لينك:</strong> {{ permit.referral_employee.get_full_name|default:permit.referral_employee.email }} ({{ permit.referral_code }})</li>{% endif %}
                 {% if permit.offer %}<li class="list-group-item"><strong>العرض المرتبط:</strong> <a href="{% url 'studentoffer-detail' permit.offer.slug %}">{{ permit.offer.title }}</a></li>{% endif %}
                 {% if permit.notes %}<li class="list-group-item"><strong>ملاحظات:</strong> {{ permit.notes|linebreaksbr }}</li>{% endif %}
             </ul>

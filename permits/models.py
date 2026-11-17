@@ -90,6 +90,31 @@ class Permit(models.Model):
         return cls.objects.filter(status=cls.STATUS_ACTIVE, expiry_date__gte=timezone.localdate())
 
 
+class ReferralCode(models.Model):
+    """كود الإحالة بتاع الموظف: لينك البوابة العامة /certificate/<code>/ بيتسجل باسمه."""
+    person = models.OneToOneField('accounts.Person', on_delete=models.CASCADE, related_name='referral',
+                                  verbose_name='الموظف')
+    code = models.CharField(max_length=20, unique=True, verbose_name='الكود')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'كود إحالة'
+        verbose_name_plural = 'أكواد الإحالة'
+
+    def __str__(self):
+        return f'{self.code} - {self.person}'
+
+    @classmethod
+    def for_person(cls, person):
+        existing = cls.objects.filter(person=person).first()
+        if existing:
+            return existing
+        code = f'EMP{person.pk:03d}'
+        while cls.objects.filter(code__iexact=code).exists():
+            code = f'EMP{person.pk:03d}{secrets.randbelow(90) + 10}'
+        return cls.objects.create(person=person, code=code)
+
+
 class PermitTemplate(models.Model):
     """قالب الـ PDF بتاع المشهد لكل فرع (HTML)."""
     FONT_CHOICES = [

@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Permit, PermitTemplate
+from .models import Permit, PermitTemplate, ReferralCode
+
+
+@admin.register(ReferralCode)
+class ReferralCodeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'person', 'created_at')
+    search_fields = ('code', 'person__email', 'person__first_name')
+    raw_id_fields = ('person',)
 
 
 @admin.register(Permit)

@@ -1,0 +1,82 @@
+{% extends 'permits/portal/base.html' %}
+
+{% block content %}
+<p class="text-muted text-center">اختار الفرع والبرنامج واكتب بياناتك، والمشهد هيطلعلك PDF على طول.</p>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label fw-bold" for="id_branch">{{ form.branch.label }}</label>
+        {% if branch_locked %}
+            <input type="hidden" name="branch" id="id_branch" value="{{ form.branch.value }}">
+            <div class="form-control bg-light">{% for b in form.fields.branch.queryset %}{% if b.pk|stringformat:'s' == form.branch.value|stringformat:'s' %}{{ b.name }}{% endif %}{% endfor %}</div>
+        {% else %}
+            <select name="branch" id="id_branch" class="form-select" required>
+                <option value="">اختار الفرع</option>
+                {% for b in form.fields.branch.queryset %}
+                <option value="{{ b.pk }}" {% if b.pk|stringformat:'s' == form.branch.value|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
+        {% for e in form.branch.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold" for="id_course">{{ form.course.label }}</label>
+        <select name="course" id="id_course" class="form-select" required>
+            <option value="">اختار البرنامج</option>
+            {% for c in form.fields.course.queryset %}
+            <option value="{{ c.pk }}" {% if c.pk|stringformat:'s' == form.course.value|stringformat:'s' %}selected{% endif %}>{{ c.get_display_name }}</option>
+            {% endfor %}
+        </select>
+        {% for e in form.course.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold" for="id_study_mode">{{ form.study_mode.label }}</label>
+        {{ form.study_mode }}
+    </div>
+
+    <hr>
+
+    {% for field in form %}{% if field.name == 'national_id' or field.name == 'full_name' or field.name == 'phone' %}
+    <div class="mb-3">
+        <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <input type="{% if field.name == 'full_name' %}text{% else %}tel{% endif %}" name="{{ field.name }}" id="{{ field.id_for_label }}"
+               class="form-control" value="{{ field.value|default:'' }}" required
+               {% if field.name != 'full_name' %}dir="ltr" inputmode="numeric"{% endif %}>
+        {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}{% endfor %}
+
+    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="bi bi-file-earmark-pdf"></i> إصدار المشهد</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var branch = document.getElementById('id_branch');
+    var course = document.getElementById('id_course');
+    if (!branch || branch.tagName !== 'SELECT') return;
+    branch.addEventListener('change', function () {
+        course.innerHTML = '<option value="">جاري التحميل...</option>';
+        if (!branch.value) { course.innerHTML = '<option value="">اختار البرنامج</option>'; return; }
+        fetch('{% url "portal-programs" %}?branch=' + encodeURIComponent(branch.value))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                course.innerHTML = '<option value="">اختار البرنامج</option>';
+                data.programs.forEach(function (p) {
+                    var o = document.createElement('option');
+                    o.value = p.id; o.textContent = p.name;
+                    course.appendChild(o);
+                });
+            });
+    });
+})();
+</script>
+{% endblock %}

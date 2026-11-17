@@ -290,11 +290,19 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ users
     def map_users(self):
         """موظفين البرنامج القديم -> موظفين Smart Offer بالإيميل (مابنعملش حسابات جديدة)."""
+        from permits.models import ReferralCode
         result = {}
-        for user in self.rows('select id, email, username, first_name, last_name from accounts_user'):
+        for user in self.rows('select * from accounts_user'):
             person = Person.objects.filter(email__iexact=(user['email'] or '').strip()).first() if user['email'] else None
             name = f'{user["first_name"] or ""} {user["last_name"] or ""}'.strip() or user['username']
             result[user['id']] = (person, name)
+            # كود الإحالة القديم بيتنقل عشان لينكات البوابة اللي اتوزعت تفضل شغالة
+            code = (user.get('referral_code') or '').strip()
+            if code:
+                if person is None:
+                    self.warnings.append(f'لينك الإحالة {code} ({name}): الموظف مش موجود في Smart Offer بنفس الإيميل')
+                elif not ReferralCode.objects.filter(code__iexact=code).exists():
+                    ReferralCode.objects.update_or_create(person=person, defaults={'code': code})
         return result
 
     # ------------------------------------------------------------------ programs

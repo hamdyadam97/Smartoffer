@@ -1,8 +1,16 @@
 from django.urls import path
 
-from . import views
+from . import portal, views
 
 urlpatterns = [
+    # البوابة العامة (من غير تسجيل دخول) - نفس مسار برنامج المشاهد القديم عشان اللينكات القديمة تفضل شغالة
+    path('certificate/', portal.landing, name='portal'),
+    path('certificate/programs/', portal.programs_json, name='portal-programs'),
+    path('certificate/r/<str:token>/', portal.result, name='portal-result'),
+    path('certificate/r/<str:token>/pdf/', portal.download, name='portal-download'),
+    path('certificate/r/<str:token>/email/', portal.send_email, name='portal-email'),
+    path('certificate/<str:ref_code>/', portal.landing, name='portal-ref'),
+
     path('permits/', views.PermitListView.as_view(), name='permit-list'),
     path('permits/create/', views.PermitCreateView.as_view(), name='permit-create'),
     path('permits/templates/', views.PermitTemplateListView.as_view(), name='permittemplate-list'),

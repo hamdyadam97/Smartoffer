@@ -15,6 +15,16 @@
     </div>
 </div>
 
+{% if referral_link %}
+<div class="alert alert-light border d-flex flex-wrap align-items-center gap-2">
+    <i class="bi bi-link-45deg fs-4 text-primary"></i>
+    <span>لينكك للبوابة العامة (الطالب يطلّع مشهده بنفسه، والمشهد بيتسجل باسمك):</span>
+    <code dir="ltr" id="refLink">{{ referral_link }}</code>
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('refLink').textContent);this.textContent='اتنسخ';"><i class="bi bi-clipboard"></i> نسخ</button>
+    <a href="{{ portal_link }}" target="_blank" class="btn btn-sm btn-link">فتح البوابة</a>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
     <div class="col-md-4"><a href="?status=active" class="card text-decoration-none border-success"><div class="card-body d-flex justify-content-between"><span>نشط</span><strong class="text-success">{{ counts.active }}</strong></div></a></div>
     <div class="col-md-4"><a href="?status=expired" class="card text-decoration-none border-warning"><div class="card-body d-flex justify-content-between"><span>منتهي</span><strong class="text-warning">{{ counts.expired }}</strong></div></a></div>

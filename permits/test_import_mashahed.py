@@ -132,6 +132,19 @@ class ImportMashahedTests(TestCase):
         self.assertIn('{{ institute.name }}', template.body_content)
         self.assertEqual(PermitTemplate.objects.count(), 1)
 
+    def test_old_referral_codes_are_kept(self):
+        from accounts.models import Person
+        from permits.models import ReferralCode
+        person = Person.objects.create_user(email='OLD@example.com', password='x')
+        db = sqlite3.connect(self.path)
+        db.execute('alter table accounts_user add column referral_code text')
+        db.execute("update accounts_user set referral_code = 'EMP001' where id = 1")
+        db.commit()
+        db.close()
+        self.run_import('--commit')
+        self.assertEqual(ReferralCode.objects.get(person=person).code, 'EMP001')
+        self.assertEqual(Permit.objects.get(number='PERM-2026-111111').issued_by, person)
+
     def test_unmatched_institute_stops_without_changes(self):
         Branch.objects.filter(pk=self.hafr.pk).update(name='الدمام')
         with self.assertRaisesMessage(CommandError, 'صلّح ربط المعاهد'):

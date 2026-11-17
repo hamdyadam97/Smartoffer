@@ -71,6 +71,11 @@ class PermitListView(BranchPermissionMixin, ListView):
         ctx['counts'] = {key: _status_filter(base, key).count() for key in ('active', 'expired', 'cancelled')}
         ctx['branches'] = self.request.user.get_branches_for_perm('view_permit')
         ctx['can_add'] = self.request.user.has_perm_on_any_branch('add_permit')
+        if ctx['can_add']:
+            from .models import ReferralCode
+            code = ReferralCode.for_person(self.request.user).code
+            ctx['referral_link'] = self.request.build_absolute_uri(reverse('portal-ref', args=[code]))
+        ctx['portal_link'] = self.request.build_absolute_uri(reverse('portal'))
         return ctx
 
 
