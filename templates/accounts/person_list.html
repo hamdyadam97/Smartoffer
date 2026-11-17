@@ -171,12 +171,6 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <div class="form-check">
-                                <input type="checkbox" name="is_staff" id="id_is_staff" class="form-check-input">
-                                <label for="id_is_staff" class="form-check-label">موظف</label>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="form-check">
                                 <input type="checkbox" name="is_active" id="id_is_active" class="form-check-input" checked>
                                 <label for="id_is_active" class="form-check-label">نشط</label>
                             </div>
@@ -217,7 +211,6 @@
             document.getElementById('id_forth_name').value = forthName || '';
             document.getElementById('id_role').value = roleId || '';
             document.getElementById('id_branch').value = branchId || '';
-            document.getElementById('id_is_staff').checked = isStaff || false;
             document.getElementById('id_is_active').checked = isActive !== false;
             if (allBranchesBox) allBranchesBox.checked = allBranches || false;
             document.getElementById('id_password1').required = false;
@@ -227,7 +220,6 @@
         } else {
             document.getElementById('personModalLabel').textContent = 'إضافة موظف';
             document.getElementById('personId').value = '';
-            document.getElementById('id_is_staff').checked = false;
             document.getElementById('id_is_active').checked = true;
             document.getElementById('id_password1').required = true;
             document.getElementById('id_password2').required = true;

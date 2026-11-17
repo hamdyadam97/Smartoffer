@@ -88,7 +88,7 @@ class PersonCreationForm(PersonRoleMixin, forms.ModelForm):
         fields = [
             'email', 'first_name', 'second_name', 'third_name', 'forth_name',
             'mobile', 'phone', 'address', 'photo', 'branch',
-            'is_staff', 'is_active', 'is_superuser', 'options'
+            'is_active', 'is_superuser', 'options'
         ]
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -100,7 +100,6 @@ class PersonCreationForm(PersonRoleMixin, forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
-            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'options': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
@@ -156,7 +155,7 @@ class PersonChangeForm(PersonRoleMixin, forms.ModelForm):
         fields = [
             'email', 'first_name', 'second_name', 'third_name', 'forth_name',
             'mobile', 'phone', 'address', 'photo', 'branch',
-            'is_staff', 'is_active', 'is_superuser', 'options'
+            'is_active', 'is_superuser', 'options'
         ]
         widgets = {
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -168,7 +167,6 @@ class PersonChangeForm(PersonRoleMixin, forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'branch': forms.Select(attrs={'class': 'form-select'}),
-            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'options': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),

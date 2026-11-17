@@ -51,7 +51,6 @@
     <div class="card-header bg-secondary text-white"><i class="bi bi-shield-check"></i> الصلاحيات</div>
     <div class="card-body">
         <div class="d-flex gap-3">
-            {% if person.is_staff %}<span class="badge bg-success">موظف</span>{% endif %}
             {% if person.is_active %}<span class="badge bg-success">نشط</span>{% else %}<span class="badge bg-danger">غير نشط</span>{% endif %}
             {% if person.is_superuser %}<span class="badge bg-dark">مدير نظام</span>{% endif %}
         </div>

@@ -166,12 +166,21 @@ class PersonDeleteView(BranchPermissionMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+def _modal_form(form):
+    """شاشة الموظف (المودال) مفيهاش «مدير نظام» ولا «الإعدادات»: نشيلهم من الفورم عشان الحفظ
+    مايمسحهمش (كان تعديل مدير نظام من المودال بيشيل منه صلاحية مدير النظام)."""
+    for name in ('is_superuser', 'options'):
+        if name not in form.data:
+            form.fields.pop(name, None)
+    return form
+
+
 @require_POST
 @login_required
 def person_create_ajax(request):
     if not request.user.has_perm_on_any_branch('add_person'):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
-    form = PersonCreationForm(request.POST, request.FILES, user=request.user)
+    form = _modal_form(PersonCreationForm(request.POST, request.FILES, user=request.user))
     if form.is_valid():
         person = form.save()
         return JsonResponse({'success': True, 'message': 'تم إنشاء الموظف بنجاح', 'id': person.id, 'slug': person.slug})
@@ -186,7 +195,7 @@ def person_update_ajax(request, pk):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
     if not request.user.has_perm('change_person', branch=person.branch):
         return JsonResponse({'success': False, 'message': 'غير مسموح لك دخول هنا'}, status=403)
-    form = PersonChangeForm(request.POST, request.FILES, instance=person, user=request.user)
+    form = _modal_form(PersonChangeForm(request.POST, request.FILES, instance=person, user=request.user))
     if form.is_valid():
         form.save()
         return JsonResponse({'success': True, 'message': 'تم تحديث الموظف بنجاح'})

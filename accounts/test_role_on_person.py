@@ -59,6 +59,17 @@ class RoleOnPersonFormTests(TestCase):
         self.assertEqual(self.roles(person), {('موظف', 1)})
         self.assertTrue(EmployeeRole.objects.filter(pk=other.pk).exists())
 
+    def test_editing_from_modal_keeps_admin_and_staff_flags(self):
+        """الشاشة مفيهاش خانة «مدير نظام» ولا «موظف»: الحفظ منها مايغيرهمش."""
+        other_admin = Person.objects.create_user(email='boss@example.com', password='x', is_superuser=True,
+                                                 is_staff=True, branch=self.b1)
+        response = self.web.post(reverse('person-update-ajax', args=[other_admin.pk]), {
+            'email': other_admin.email, 'first_name': 'مدير', 'branch': self.b1.pk, 'is_active': 'on'})
+        self.assertTrue(response.json()['success'])
+        other_admin.refresh_from_db()
+        self.assertTrue(other_admin.is_superuser)
+        self.assertTrue(other_admin.is_staff)
+
     def test_employee_page_has_no_separate_role_screen(self):
         page = self.web.get(reverse('person-list'))
         self.assertContains(page, 'id_all_branches')
