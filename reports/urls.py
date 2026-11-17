@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # التقارير المباشرة + Excel
+    path('reports/live/', views.live_report, name='report-live'),
+
     # Dashboard
     path('reports/dashboard/', views.ReportDashboardView.as_view(), name='report-dashboard'),
 

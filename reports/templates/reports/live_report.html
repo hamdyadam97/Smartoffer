@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}التقارير{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h2><i class="bi bi-graph-up"></i> التقارير</h2>
+    <a href="{% url 'reportsnapshot-list' %}" class="btn btn-sm btn-link text-muted">التقارير المحفوظة القديمة</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end" id="reportForm">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">نوع التقرير</label>
+                <select name="type" class="form-select">
+                    {% for value, label in report_types %}<option value="{{ value }}" {% if selected.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">الفرع</label>
+                <select name="branch" class="form-select">
+                    <option value="">كل الفروع</option>
+                    {% for b in branches %}<option value="{{ b.pk }}" {% if selected.branch == b.pk|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">الفترة</label>
+                <select name="period" class="form-select" id="periodSelect">
+                    {% for value, label in periods %}<option value="{{ value }}" {% if selected.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 custom-dates">
+                <label class="form-label">من</label>
+                <input type="date" name="start" class="form-control" value="{{ selected.start }}">
+            </div>
+            <div class="col-md-2 custom-dates">
+                <label class="form-label">إلى</label>
+                <input type="date" name="end" class="form-control" value="{{ selected.end }}">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> عرض</button>
+                <a href="?{{ export_query }}{% if export_query %}&{% endif %}export=xlsx" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> تصدير Excel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+    <h4 class="mb-0">{{ table.title }}</h4>
+    <small class="text-muted">{{ branch_label }} | {{ period_label }} | {{ table.rows|length }} صف</small>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle">
+        <thead class="table-light">
+            <tr>{% for h in table.headers %}<th>{{ h }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+            {% for row in table.rows %}
+            <tr>{% for v in row %}<td>{{ v|default_if_none:'-' }}</td>{% endfor %}</tr>
+            {% empty %}
+            <tr><td colspan="{{ table.headers|length }}" class="text-center text-muted py-4">مفيش بيانات في الفترة دي</td></tr>
+            {% endfor %}
+        </tbody>
+        {% if table.totals and table.rows %}
+        <tfoot class="table-light fw-bold">
+            <tr>{% for v in table.totals %}<td>{{ v }}</td>{% endfor %}</tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var period = document.getElementById('periodSelect');
+    function toggle() {
+        document.querySelectorAll('.custom-dates').forEach(function (el) {
+            el.style.display = period.value === 'custom' ? '' : 'none';
+        });
+    }
+    period.addEventListener('change', toggle);
+    toggle();
+})();
+</script>
+{% endblock %}

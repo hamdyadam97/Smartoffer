@@ -6,7 +6,8 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 
 from accounts.mixins import BranchPermissionMixin, filter_by_branch
 from core.models import Branch
@@ -184,6 +185,55 @@ def reportsnapshot_update_ajax(request, pk):
         report.save(update_fields=['data_json'])
         return JsonResponse({'success': True, 'message': 'تم تحديث التقرير بنجاح'})
     return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+# ============================================================
+# التقارير المباشرة (فروع / موظفين / عروض / مشاهد / شهور) + Excel
+# ============================================================
+
+def _parse_date(value):
+    from datetime import date
+    try:
+        return date.fromisoformat(value) if value else None
+    except ValueError:
+        return None
+
+
+@login_required
+def live_report(request):
+    from . import live
+    user = request.user
+    if not user.is_executive() and not user.has_perm_on_any_branch('view_reportsnapshot'):
+        raise PermissionDenied('غير مسموح لك دخول هنا')
+    allowed = Branch.objects.all() if user.is_executive() else Branch.objects.filter(
+        pk__in=[b.pk for b in user.get_branches_for_perm('view_reportsnapshot')])
+
+    report_type = request.GET.get('type') if request.GET.get('type') in dict(live.REPORT_TYPES) else 'branches'
+    period = request.GET.get('period') if request.GET.get('period') in dict(live.PERIODS) else 'this_month'
+    start, end = live.period_range(period, _parse_date(request.GET.get('start')), _parse_date(request.GET.get('end')))
+    branch_id = request.GET.get('branch', '')
+    branches = allowed.filter(pk=branch_id) if branch_id.isdigit() else allowed
+
+    table = live.build(report_type, branches, start, end)
+    branch_label = branches.first().name if branch_id.isdigit() and branches.exists() else 'كل الفروع'
+    period_label = (f'من {start:%Y-%m-%d}' if start else 'من البداية') + (f' إلى {end:%Y-%m-%d}' if end else ' لحد النهارده')
+
+    if request.GET.get('export') == 'xlsx':
+        wb = live.to_excel(table, [f'الفرع: {branch_label}', f'الفترة: {period_label}',
+                                   f'اتطلع: {timezone.localtime():%Y-%m-%d %H:%M} - {user.get_full_name() or user.email}'])
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        name = f'{report_type}-{start or "all"}-{end or timezone.localdate()}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="report-{name}"'
+        wb.save(response)
+        return response
+
+    return render(request, 'reports/live_report.html', {
+        'table': table, 'report_types': live.REPORT_TYPES, 'periods': live.PERIODS, 'branches': allowed.order_by('code'),
+        'selected': {'type': report_type, 'period': period, 'branch': branch_id,
+                     'start': request.GET.get('start', ''), 'end': request.GET.get('end', '')},
+        'branch_label': branch_label, 'period_label': period_label,
+        'export_query': request.GET.urlencode(),
+    })
 
 
 # ============================================================

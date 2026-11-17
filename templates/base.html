@@ -807,7 +807,7 @@
                     {% if user|has_perm:'view_registration' %}<li class="nav-item"><a class="nav-link {% if '/registrations/' in request.path %}active{% endif %}" href="{% url 'registration-list' %}"><i class="bi bi-journal-check"></i> التسجيلات</a></li>{% endif %}
                     {% if user|has_perm:'view_studentoffer' %}<li class="nav-item"><a class="nav-link {% if '/student-offers/' in request.path %}active{% endif %}" href="{% url 'studentoffer-list' %}"><i class="bi bi-tag"></i> عروض الأسعار</a></li>{% endif %}
                     {% if user|has_perm:'view_permit' %}<li class="nav-item"><a class="nav-link {% if '/permits/' in request.path %}active{% endif %}" href="{% url 'permit-list' %}"><i class="bi bi-patch-check"></i> المشاهد</a></li>{% endif %}
-                    {% if user|has_perm:'view_reportsnapshot' %}<li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'reportsnapshot-list' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>{% endif %}
+                    {% if user|has_perm:'view_reportsnapshot' %}<li class="nav-item"><a class="nav-link {% if '/reports/' in request.path %}active{% endif %}" href="{% url 'report-live' %}"><i class="bi bi-graph-up"></i> التقارير</a></li>{% endif %}
                     <li class="nav-item"><a class="nav-link {% if '/project-assistant/' in request.path %}active{% endif %}" href="{% url 'project_assistant:chat_page' %}"><i class="bi bi-robot"></i> مساعد المشروع</a></li>
                 </ul>
             </nav>
