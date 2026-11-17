@@ -798,7 +798,6 @@
                                 {% if user|has_perm:'view_person' %}<li class="nav-item"><a class="nav-link {% if '/persons/' in request.path %}active{% endif %}" href="{% url 'person-list' %}"><i class="bi bi-person-badge"></i> الموظفين</a></li>{% endif %}
                                 {% if user|has_perm:'view_role' %}<li class="nav-item"><a class="nav-link {% if '/roles/' in request.path %}active{% endif %}" href="{% url 'role-list' %}"><i class="bi bi-shield-lock"></i> الأدوار</a></li>{% endif %}
                                 {% if user|has_perm:'view_permission' %}<li class="nav-item"><a class="nav-link {% if '/permissions/' in request.path %}active{% endif %}" href="{% url 'permission-list' %}"><i class="bi bi-key"></i> الصلاحيات</a></li>{% endif %}
-                                {% if user|has_perm:'view_employeerole' %}<li class="nav-item"><a class="nav-link {% if '/employee-roles/' in request.path %}active{% endif %}" href="{% url 'employeerole-list' %}"><i class="bi bi-person-check"></i> أدوار الموظفين</a></li>{% endif %}
                             </ul>
                         </div>
                     </li>

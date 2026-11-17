@@ -4,13 +4,23 @@ from .models import Person, BranchAccess, Role, EmployeeRole, EmployeePerformanc
 
 
 class PersonRoleMixin(forms.Form):
-    """الدور بيتحدد مع الموظف نفسه، وبيتطبق على فرعه الرئيسي."""
+    """الدور بيتحدد مع الموظف نفسه: بيتطبق على فرعه الرئيسي، أو على كل الفروع (مدير النظام بس يقدر يختار كده).
+    مفيش صفحة منفصلة لأدوار الموظفين."""
     role = forms.ModelChoiceField(
         queryset=Role.objects.order_by('name'),
         required=False,
         label='الدور',
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
+    all_branches = forms.BooleanField(
+        required=False,
+        label='الدور على كل الفروع (مش الفرع الرئيسي بس)',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
+    def _limit_role_fields(self, user):
+        if user is not None and not user.is_executive():
+            del self.fields['all_branches']
 
     def _set_role_initial(self):
         person = self.instance
@@ -18,10 +28,25 @@ class PersonRoleMixin(forms.Form):
             current = person.employee_roles.filter(branch_id=person.branch_id).first()
             if current:
                 self.fields['role'].initial = current.role_id
+                if 'all_branches' in self.fields:
+                    self.fields['all_branches'].initial = person.has_role_on_all_branches(current.role)
 
     def save_role(self, person):
+        from core.models import Branch
         role = self.cleaned_data.get('role')
-        if role and person.branch_id:
+        if not role or not person.branch_id:
+            return
+        if 'all_branches' in self.fields:
+            # مدير النظام: اللي في الفورم هو الدور كله، فبنشيل أي أدوار قديمة على فروع تانية
+            person.employee_roles.exclude(role=role).delete()
+            if self.cleaned_data.get('all_branches'):
+                for branch in Branch.objects.all():
+                    EmployeeRole.objects.get_or_create(person=person, role=role, branch=branch)
+            else:
+                person.employee_roles.exclude(branch_id=person.branch_id).delete()
+                EmployeeRole.objects.get_or_create(person=person, role=role, branch_id=person.branch_id)
+        else:
+            # مدير الفرع بيغير الدور على فرعه بس
             person.employee_roles.filter(branch_id=person.branch_id).exclude(role=role).delete()
             EmployeeRole.objects.get_or_create(person=person, role=role, branch_id=person.branch_id)
 
@@ -56,6 +81,7 @@ class PersonCreationForm(PersonRoleMixin, forms.ModelForm):
                 del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+        self._limit_role_fields(user)
 
     class Meta:
         model = Person
@@ -122,6 +148,7 @@ class PersonChangeForm(PersonRoleMixin, forms.ModelForm):
                 del self.fields['is_superuser']
         else:
             self.fields['branch'].queryset = Branch.objects.all().order_by('code', 'name')
+        self._limit_role_fields(user)
         self._set_role_initial()
 
     class Meta:

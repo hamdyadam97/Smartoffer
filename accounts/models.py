@@ -103,6 +103,15 @@ class Person(AbstractBaseUser, PermissionsMixin):
         er = self.employee_roles.select_related('role').filter(branch_id=self.branch_id).first()
         return er.role if er else None
 
+    def has_role_on_all_branches(self, role=None):
+        """الدور ده (أو الدور الرئيسي) متطبق على كل الفروع؟"""
+        from core.models import Branch
+        role = role or self.get_main_role()
+        if role is None:
+            return False
+        total = Branch.objects.count()
+        return bool(total) and self.employee_roles.filter(role=role).values('branch').distinct().count() >= total
+
     def get_branches(self):
         """Get all accessible branches (main + accessed)"""
         from core.models import Branch
