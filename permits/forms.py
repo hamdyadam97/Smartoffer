@@ -64,7 +64,7 @@ class PermitForm(forms.ModelForm):
 class PermitTemplateForm(forms.ModelForm):
     class Meta:
         model = PermitTemplate
-        fields = ['branch', 'institute_name', 'font_family', 'page_size', 'orientation', 'registration_officer',
+        fields = ['branch', 'institute_name', 'city', 'region', 'font_family', 'page_size', 'orientation', 'registration_officer',
                   'background_image', 'stamp_image', 'header_content', 'body_content', 'footer_content', 'custom_css']
         widgets = {
             'branch': forms.Select(attrs={'class': 'form-select'}),
@@ -73,6 +73,8 @@ class PermitTemplateForm(forms.ModelForm):
             'orientation': forms.Select(attrs={'class': 'form-select'}),
             'registration_officer': forms.TextInput(attrs={'class': 'form-control'}),
             'institute_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+            'region': forms.TextInput(attrs={'class': 'form-control'}),
             'header_content': forms.Textarea(attrs={'class': 'form-control font-monospace', 'rows': 6, 'dir': 'ltr'}),
             'body_content': forms.Textarea(attrs={'class': 'form-control font-monospace', 'rows': 14, 'dir': 'ltr'}),
             'footer_content': forms.Textarea(attrs={'class': 'form-control font-monospace', 'rows': 6, 'dir': 'ltr'}),

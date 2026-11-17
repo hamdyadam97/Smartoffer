@@ -152,6 +152,8 @@ class Command(BaseCommand):
                             help='ربط معهد بفرع يدوي (ممكن تتكرر)')
         parser.add_argument('--create-branches', action='store_true',
                             help='المعاهد اللي مالهاش فرع مطابق تتعمل فروع جديدة')
+        parser.add_argument('--update-templates', action='store_true',
+                            help='قوالب المشاهد الموجودة تتحدث من البرنامج القديم')
         parser.add_argument('--commit', action='store_true', help='نفّذ فعلاً (من غيرها تجربة بس)')
 
     # ------------------------------------------------------------------ helpers
@@ -199,6 +201,7 @@ class Command(BaseCommand):
                                'طلّع البيانات بـ dumpdata واستخدم ملف الـ JSON.')
         self.media_root = opts['media']
         self.commit = opts['commit']
+        self.update_templates = opts['update_templates']
         self.warnings = []
         self.stats = dict.fromkeys(
             ['branches_new', 'courses_matched', 'courses_new', 'students_matched', 'students_new',
@@ -437,17 +440,21 @@ class Command(BaseCommand):
 
     def import_template(self, row, branch, inst, officers):
         """نفس قالب المعهد بيتعمل لفرع الرجال وفرع النساء."""
-        if PermitTemplate.objects.filter(branch=branch).exists():
-            self.warnings.append(f'الفرع {branch.name} عنده قالب مشهد بالفعل، القالب القديم ما اتنقلش')
+        template = PermitTemplate.objects.filter(branch=branch).first()
+        if template and not self.update_templates:
+            self.warnings.append(f'الفرع {branch.name} عنده قالب مشهد بالفعل، القالب القديم ما اتنقلش '
+                                 '(لو عايز تستبدله بالقديم زوّد --update-templates)')
             return
-        template = PermitTemplate(
-            branch=branch, institute_name=inst.get('name', ''),
-            header_content=row['header_content'] or '', body_content=row['body_content'] or '',
-            footer_content=row['footer_content'] or '', custom_css=row['custom_css'] or '',
-            font_family=row['font_family'] if row['font_family'] in dict(PermitTemplate.FONT_CHOICES) else 'arial',
-            page_size=row['page_size'] or 'A4', orientation=row['orientation'] or 'portrait',
-            registration_officer=officers.get(inst.get('registration_officer_id'), ''),
-        )
+        template = template or PermitTemplate(branch=branch)
+        for field, value in {
+            'institute_name': inst.get('name', ''), 'city': inst.get('city') or '', 'region': inst.get('region') or '',
+            'header_content': row['header_content'] or '', 'body_content': row['body_content'] or '',
+            'footer_content': row['footer_content'] or '', 'custom_css': row['custom_css'] or '',
+            'font_family': row['font_family'] if row['font_family'] in dict(PermitTemplate.FONT_CHOICES) else 'arial',
+            'page_size': row['page_size'] or 'A4', 'orientation': row['orientation'] or 'portrait',
+            'registration_officer': officers.get(inst.get('registration_officer_id'), ''),
+        }.items():
+            setattr(template, field, value)
         self.copy_media(inst.get('stamp_image'), template.stamp_image)
         self.copy_media(inst.get('background_img'), template.background_image)
         template.save()

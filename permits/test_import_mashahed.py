@@ -121,6 +121,17 @@ class ImportMashahedTests(TestCase):
         self.assertEqual(Course.objects.count(), 2)
         self.assertEqual(Student.objects.count(), 2)
 
+    def test_update_templates_refreshes_existing(self):
+        self.run_import('--commit')
+        PermitTemplate.objects.filter(branch=self.riyadh).update(city='', body_content='قديم')
+        self.assertIn('--update-templates', self.run_import('--commit'))
+        self.assertEqual(PermitTemplate.objects.get(branch=self.riyadh).body_content, 'قديم')
+        self.run_import('--update-templates', '--commit')
+        template = PermitTemplate.objects.get(branch=self.riyadh)
+        self.assertEqual(template.city, 'الرياض')
+        self.assertIn('{{ institute.name }}', template.body_content)
+        self.assertEqual(PermitTemplate.objects.count(), 1)
+
     def test_unmatched_institute_stops_without_changes(self):
         Branch.objects.filter(pk=self.hafr.pk).update(name='الدمام')
         with self.assertRaisesMessage(CommandError, 'صلّح ربط المعاهد'):

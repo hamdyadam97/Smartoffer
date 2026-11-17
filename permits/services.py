@@ -119,6 +119,7 @@ def build_context(permit):
         logo=_file_or_none(branch.logo), signature_image=_file_or_none(branch.signature),
         stamp_image=_file_or_none(template.stamp_image) if template else None,
         registration_officer=template.registration_officer if template else '',
+        city=template.city if template else '', region=template.region if template else '',
     )
     program = SimpleNamespace(
         name=permit.program_name or (course.get_display_name() if course else ''),
@@ -133,6 +134,7 @@ def build_context(permit):
         'today': timezone.localdate(), 'registration_officer': institute.registration_officer,
         'logo_b64': _b64(branch.logo), 'sig_b64': _b64(branch.signature),
         'stamp_b64': _b64(template.stamp_image) if template else '',
+        'bg_b64': _b64(template.background_image) if template else '',
     }
 
 
@@ -150,7 +152,9 @@ def render_html(permit):
 
     font_css, font_stack = _font_face_css(template.font_family)
     background_css = background_html = ''
-    bg = _b64(template.background_image)
+    source = template.header_content + template.body_content + template.footer_content + template.custom_css
+    # لو القالب بيحط الخلفية بنفسه ({{ bg_b64 }}) مانحطهاش تاني
+    bg = '' if 'bg_b64' in source else _b64(template.background_image)
     if bg:
         background_css = (".bg-watermark { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;"
                           f" background-image: url('data:image/png;base64,{bg}'); background-size: 100% 100%; }}")

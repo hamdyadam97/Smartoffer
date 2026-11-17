@@ -191,6 +191,21 @@ class PermitPdfTests(PermitTestBase):
         self.assertIn("font-family: 'Amiri'", html)
         self.assertTrue(build_pdf(permit).startswith(b'%PDF'))
 
+    def test_old_afaq_template_with_hijri_city_and_background(self):
+        """قالب آفاق التطور القديم: {% load hijri_filters %} و institute.city و bg_b64."""
+        PermitTemplate.objects.create(
+            branch=self.riyadh, city='الدمام', region='الشرقية',
+            body_content='{% load hijri_filters %}<p>{{ institute.city }} - {{ institute.region }} | '
+                         '{{ program.start_date|hijri }} | {{ program.end_date|date:"Y/m/d" }}</p>'
+                         '{% if bg_b64 %}<img src="data:image/jpeg;base64,{{ bg_b64 }}">{% endif %}',
+        )
+        self.course.start_date = date(2026, 11, 17)
+        self.course.save()
+        html = render_html(self.issue())
+        self.assertIn('الدمام - الشرقية | 1448/06/07 |', html)
+        self.assertTrue(build_pdf(self.issue(student=make_student(self.hafr, national_id='1', mobile='1'),
+                                             branch=self.riyadh), strict=True).startswith(b'%PDF'))
+
     def test_broken_template_falls_back_to_default(self):
         template = PermitTemplate.objects.create(branch=self.riyadh, body_content='{% load hijri_tags %}')
         self.assertTrue(build_pdf(self.issue()).startswith(b'%PDF'))

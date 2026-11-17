@@ -103,6 +103,8 @@ class PermitTemplate(models.Model):
     branch = models.OneToOneField('core.Branch', on_delete=models.CASCADE, related_name='permit_template', verbose_name='الفرع')
     institute_name = models.CharField(max_length=255, blank=True, verbose_name='اسم المعهد في المشهد',
                                       help_text='لو فاضي بيتكتب اسم الفرع')
+    city = models.CharField(max_length=100, blank=True, verbose_name='المدينة')
+    region = models.CharField(max_length=100, blank=True, verbose_name='المنطقة')
     header_content = models.TextField(blank=True, verbose_name='رأس الصفحة (HTML)')
     body_content = models.TextField(blank=True, verbose_name='المحتوى (HTML)')
     footer_content = models.TextField(blank=True, verbose_name='تذييل الصفحة (HTML)')
