@@ -15,13 +15,14 @@ class LoginAndResetTests(TestCase):
     # ---------------------------------------------------------- الدخول
     def test_wrong_password_shows_clear_error_and_keeps_email(self):
         response = self.client.post(reverse('login'), {'username': 'ali@example.com', 'password': 'wrong'})
-        self.assertContains(response, 'الإيميل أو كلمة المرور غلط')
+        self.assertContains(response, 'كلمة المرور غلط')
+        self.assertNotContains(response, 'مش مسجل')
         self.assertContains(response, 'alert alert-danger')
         self.assertContains(response, 'value="ali@example.com"')
 
-    def test_unknown_email_same_message(self):
+    def test_unknown_email_message(self):
         response = self.client.post(reverse('login'), {'username': 'nobody@example.com', 'password': 'x'})
-        self.assertContains(response, 'الإيميل أو كلمة المرور غلط')
+        self.assertContains(response, 'الإيميل ده مش مسجل')
 
     def test_inactive_account_message(self):
         self.person.is_active = False
@@ -51,7 +52,7 @@ class LoginAndResetTests(TestCase):
 
     def test_full_reset_flow(self):
         response = self.request_code()
-        self.assertContains(response, 'هيوصلك كود')
+        self.assertContains(response, 'بعتنا كود من 6 أرقام على ali@example.com')
         self.assertEqual(mail.outbox[-1].to, ['ali@example.com'])
         response = self.client.post(reverse('password-reset-verify'), {
             'code': self.sent_code(), 'password1': 'New-pass-456!', 'password2': 'New-pass-456!'}, follow=True)
@@ -60,10 +61,19 @@ class LoginAndResetTests(TestCase):
         self.assertTrue(self.person.check_password('New-pass-456!'))
         self.assertFalse(PasswordResetCode.objects.filter(used=False).exists())
 
-    def test_unknown_email_gets_same_answer_without_email(self):
+    def test_unknown_email_is_reported(self):
         response = self.request_code('nobody@example.com')
-        self.assertContains(response, 'هيوصلك كود')
+        self.assertContains(response, 'الإيميل ده مش مسجل')
         self.assertEqual(len(mail.outbox), 0)
+        self.person.is_active = False
+        self.person.save()
+        self.assertContains(self.request_code(), 'الحساب ده موقوف')
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend')
+    def test_email_not_configured_is_reported(self):
+        response = self.request_code()
+        self.assertContains(response, 'إرسال الإيميلات مش متظبط على السيرفر')
+        self.assertFalse(PasswordResetCode.objects.exists())
 
     def test_wrong_code_counts_attempts(self):
         self.request_code()

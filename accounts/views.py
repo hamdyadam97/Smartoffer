@@ -37,11 +37,12 @@ def login_view(request):
                 return redirect(next_url)
             return redirect('dashboard')
         account = Person.objects.filter(email__iexact=email).first()
-        if account and not account.is_active and account.check_password(password):
+        if account is None:
+            error = 'الإيميل ده مش مسجل عندنا. اتأكد منه.'
+        elif not account.is_active:
             error = 'الحساب ده موقوف. كلّم الإدارة عشان تفعّله.'
         else:
-            # مابنقولش أنهي فيهم الغلط عشان محدش يعرف الإيميلات المسجلة من صفحة الدخول
-            error = 'الإيميل أو كلمة المرور غلط. اتأكد منهم وجرب تاني، أو استخدم «نسيت كلمة المرور».'
+            error = 'كلمة المرور غلط. جرب تاني، أو استخدم «نسيت كلمة المرور».'
     return render(request, 'registration/login.html', {'email': email, 'login_error': error})
 
 
