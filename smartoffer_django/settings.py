@@ -33,6 +33,9 @@ MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
 # في النسخة التجريبية: SITE_BANNER=نسخة تجريبية - البيانات هنا للتجربة بس
 SITE_BANNER = os.environ.get('SITE_BANNER', '')
 
+# رقم واتساب الدعم (زرار الواتساب في كل الصفحات). أرقام بس بكود الدولة، من غير + أو مسافات
+SUPPORT_WHATSAPP = ''.join(c for c in os.environ.get('SUPPORT_WHATSAPP', '966538766419') if c.isdigit())
+
 if not DEBUG:
     # السيرفر شغال HTTPS ورا reverse proxy
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
